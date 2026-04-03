@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Dossiers{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dossiers generes ({{ dossiers | length }})</h1>
+    <p>Dossiers de candidature generes automatiquement</p>
+</div>
+
+{% if dossiers %}
+    {% for d in dossiers %}
+    <div class="dossier-card">
+        <div class="dossier-info">
+            <h3>{{ d.nom }}</h3>
+            <p>{{ d.nb_fichiers }} fichier(s) - Cree le {{ d.date_creation }}</p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+                {% for f in d.fichiers | sort %}
+                <span class="badge" style="background:#f1f5f9; color:#334155; padding:3px 8px; font-size:0.7rem;">{{ f }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('{{ d.chemin | replace('\\', '\\\\') }}')">
+                Copier chemin
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card empty">
+        <p>Aucun dossier genere pour le moment</p>
+        <p style="font-size:0.85rem; margin-top:0.5rem;">Les dossiers sont generes automatiquement pour les AO avec un score &gt; 70%</p>
+    </div>
+{% endif %}
+{% endblock %}

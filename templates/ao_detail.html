@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}{{ ao.titre[:50] }}{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div>
+        <a href="{{ url_for('liste_ao') }}" class="btn btn-sm btn-outline" style="margin-bottom:0.75rem;">&larr; Retour</a>
+        <h1>{{ ao.titre }}</h1>
+    </div>
+    <div style="text-align:right;">
+        {% set score_pct = (ao.score_pertinence * 100) | int %}
+        <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}" style="font-size:1.5rem; padding:6px 20px;">
+            {{ score_pct }}%
+        </span>
+    </div>
+</div>
+
+<!-- Meta -->
+<div class="detail-meta">
+    <div class="meta-item">
+        <div class="meta-label">Source</div>
+        <div class="meta-value"><span class="badge badge-{{ ao.source | lower }}">{{ ao.source }}</span></div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Acheteur</div>
+        <div class="meta-value">{{ ao.acheteur or '-' }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Date limite</div>
+        <div class="meta-value">{{ ao.date_limite or 'Non precisee' }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Region</div>
+        <div class="meta-value">{{ ao.region|as_str or 'Non precisee' }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Budget estime</div>
+        <div class="meta-value">
+            {% if ao.budget_estime %}
+                {{ "{:,.0f}".format(ao.budget_estime) }} EUR
+            {% else %}
+                Non precise
+            {% endif %}
+        </div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Type de marche</div>
+        <div class="meta-value">{{ ao.type_marche or '-' }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Procedure</div>
+        <div class="meta-value">{{ ao.type_procedure or '-' }}</div>
+    </div>
+    <div class="meta-item">
+        <div class="meta-label">Duree</div>
+        <div class="meta-value">{{ ao.duree_mois ~ ' mois' if ao.duree_mois else '-' }}</div>
+    </div>
+</div>
+
+<!-- Statut + Actions -->
+<div class="card">
+    <div class="card-header">
+        <h2>Statut & Actions</h2>
+    </div>
+    <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+        <form class="statut-form" method="post" action="{{ url_for('changer_statut', ao_id=ao.id) }}">
+            <label style="font-size:0.85rem; font-weight:500;">Statut :</label>
+            <select name="statut" onchange="this.form.submit()">
+                {% for s in ['nouveau', 'analyse', 'candidature', 'ignore'] %}
+                <option value="{{ s }}" {% if ao.statut == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if ao.url %}
+        <a href="{{ ao.url }}" target="_blank" class="btn btn-sm btn-outline">Voir l'avis</a>
+        {% endif %}
+
+        {% if ao.url_profil_acheteur %}
+        <a href="{{ ao.url_profil_acheteur }}" target="_blank" class="btn btn-sm btn-outline">Profil acheteur</a>
+        {% endif %}
+
+        <!-- Generer dossier -->
+        {% if not dossier %}
+        <button id="btnGenerer" class="btn btn-sm btn-primary" onclick="lancerGeneration('{{ ao.id }}')">
+            Generer le dossier
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Generation log (hidden by default) -->
+<div id="genLog" class="card" style="display:none;">
+    <div class="card-header">
+        <h2>Generation en cours...</h2>
+        <span id="genSpinner" class="spinner"></span>
+    </div>
+    <div id="genMessages" class="gen-log"></div>
+</div>
+
+<!-- Notes -->
+<div class="card">
+    <div class="card-header">
+        <h2>Notes & Commentaires</h2>
+    </div>
+    <form method="post" action="{{ url_for('sauvegarder_note', ao_id=ao.id) }}">
+        <textarea name="note" rows="4" placeholder="Ajouter des notes sur cet AO..." class="note-textarea">{{ note }}</textarea>
+        <div style="margin-top:0.5rem;">
+            <button type="submit" class="btn btn-sm btn-primary">Sauvegarder la note</button>
+        </div>
+    </form>
+</div>
+
+<!-- Description -->
+<div class="card">
+    <div class="card-header">
+        <h2>Description</h2>
+    </div>
+    <div class="description-box">{{ ao.description or 'Aucune description disponible.' }}</div>
+</div>
+
+<!-- Contact -->
+{% if ao.contact_nom or ao.contact_email %}
+<div class="card">
+    <div class="card-header">
+        <h2>Contact</h2>
+    </div>
+    <div class="detail-meta">
+        {% if ao.contact_nom %}
+        <div class="meta-item">
+            <div class="meta-label">Nom</div>
+            <div class="meta-value">{{ ao.contact_nom }}</div>
+        </div>
+        {% endif %}
+        {% if ao.contact_email %}
+        <div class="meta-item">
+            <div class="meta-label">Email</div>
+            <div class="meta-value"><a href="mailto:{{ ao.contact_email }}">{{ ao.contact_email }}</a></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Criteres -->
+{% if ao.criteres_attribution %}
+<div class="card">
+    <div class="card-header">
+        <h2>Criteres d'attribution</h2>
+    </div>
+    <div class="description-box">{{ ao.criteres_attribution }}</div>
+</div>
+{% endif %}
+
+<!-- Dossier genere -->
+{% if dossier %}
+<div class="card">
+    <div class="card-header">
+        <h2>Dossier genere</h2>
+    </div>
+    <p style="margin-bottom:0.75rem; font-size:0.9rem;">
+        <strong>{{ dossier.nom }}</strong> - {{ dossier.fichiers | length }} fichier(s)
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+        {% for f in dossier.fichiers | sort %}
+        <span class="badge" style="background:#f1f5f9; color:#334155; padding:4px 10px; font-size:0.75rem;">{{ f }}</span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function lancerGeneration(aoId) {
+    const btn = document.getElementById('btnGenerer');
+    btn.disabled = true;
+    btn.textContent = 'Generation en cours...';
+
+    document.getElementById('genLog').style.display = 'block';
+
+    fetch('/ao/' + encodeURIComponent(aoId) + '/generer', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                addGenLog('Erreur: ' + data.error);
+            }
+        });
+}
+
+function addGenLog(msg) {
+    const div = document.getElementById('genMessages');
+    const p = document.createElement('p');
+    p.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+    div.appendChild(p);
+    div.scrollTop = div.scrollHeight;
+}
+
+if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('veille_log', function(data) {
+        addGenLog(data.msg);
+    });
+    socket.on('generation_complete', function(data) {
+        const btn = document.getElementById('btnGenerer');
+        const spinner = document.getElementById('genSpinner');
+        if (spinner) spinner.style.display = 'none';
+        if (data.error) {
+            addGenLog('ERREUR: ' + data.error);
+            if (btn) { btn.disabled = false; btn.textContent = 'Reessayer'; }
+        } else {
+            addGenLog('Dossier genere avec succes !');
+            if (btn) { btn.textContent = 'Dossier genere'; btn.classList.remove('btn-primary'); btn.classList.add('btn-outline'); }
+            setTimeout(() => location.reload(), 2000);
+        }
+    });
+}
+</script>
+{% endblock %}

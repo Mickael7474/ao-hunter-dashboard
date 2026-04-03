@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Tableau de bord</h1>
+    <p>Vue d'ensemble des appels d'offres et dossiers</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">AO detectes</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ "%.0f" | format(stats.score_moyen * 100) }}%</div>
+        <div class="stat-label">Score moyen</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-value">{{ nb_dossiers }}</div>
+        <div class="stat-label">Dossiers generes</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ stats.deadline_proche }}</div>
+        <div class="stat-label">Deadline &lt; 7 jours</div>
+    </div>
+</div>
+
+<!-- Graphs -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">
+            <h2>Distribution des scores</h2>
+        </div>
+        <canvas id="chartScores" height="200"></canvas>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2>Sources</h2>
+        </div>
+        <canvas id="chartSources" height="200"></canvas>
+    </div>
+</div>
+
+{% if stats.top_regions %}
+<div class="card">
+    <div class="card-header">
+        <h2>Top regions</h2>
+    </div>
+    <canvas id="chartRegions" height="150"></canvas>
+</div>
+{% endif %}
+
+<div class="grid-2">
+    <!-- Top AO -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Top 10 - Meilleurs scores</h2>
+            <a href="{{ url_for('liste_ao', tri='score') }}" class="btn btn-sm btn-outline">Voir tout</a>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Score</th>
+                        <th>Titre</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ao in top_ao %}
+                    <tr>
+                        <td>
+                            {% set score_pct = (ao.score_pertinence * 100) | int %}
+                            <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
+                                {{ score_pct }}%
+                            </span>
+                        </td>
+                        <td class="table-title">
+                            <a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre[:60] }}</a>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ ao.source | lower }}">{{ ao.source }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Urgents -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Deadlines proches</h2>
+        </div>
+        {% if urgents %}
+            {% for ao in urgents %}
+            <div class="urgent-item">
+                <span class="urgent-title">
+                    <a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre[:50] }}</a>
+                </span>
+                <span class="urgent-days {% if ao.jours_restants == 0 %}j0{% elif ao.jours_restants <= 3 %}j1-3{% else %}j4-7{% endif %}">
+                    {% if ao.jours_restants == 0 %}
+                        Aujourd'hui
+                    {% elif ao.jours_restants == 1 %}
+                        Demain
+                    {% else %}
+                        J-{{ ao.jours_restants }}
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty">
+                <p>Aucune deadline proche</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Scores distribution
+    const scoresData = {{ stats.scores_distribution | tojson }};
+    new Chart(document.getElementById('chartScores'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(scoresData).map(k => k + '%'),
+            datasets: [{
+                label: 'Nombre d\'AO',
+                data: Object.values(scoresData),
+                backgroundColor: ['#fee2e2', '#fed7aa', '#fef08a', '#bbf7d0', '#86efac'],
+                borderColor: ['#dc2626', '#f59e0b', '#eab308', '#22c55e', '#16a34a'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Sources
+    const sourcesData = {{ stats.sources | tojson }};
+    new Chart(document.getElementById('chartSources'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(sourcesData),
+            datasets: [{
+                data: Object.values(sourcesData),
+                backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#06b6d4']
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    // Regions
+    const regionsCanvas = document.getElementById('chartRegions');
+    if (regionsCanvas) {
+        const regionsData = {{ stats.top_regions | tojson }};
+        new Chart(regionsCanvas, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(regionsData),
+                datasets: [{
+                    label: 'AO par region',
+                    data: Object.values(regionsData),
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

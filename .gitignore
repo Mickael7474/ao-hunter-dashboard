@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.deps/
+*.egg-info/
+.env
+ao_notes.json

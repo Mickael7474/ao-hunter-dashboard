@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Appels d'offres{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Appels d'offres ({{ total_filtre }} / {{ total }})</h1>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('export_csv', source=filtre_source, score_min=filtre_score_min, statut=filtre_statut, q=filtre_recherche, tri=filtre_tri) }}" class="btn btn-sm btn-outline">Exporter CSV</a>
+    </div>
+</div>
+
+<!-- Filtres -->
+<form class="filters" method="get">
+    <div>
+        <label>Recherche</label><br>
+        <input type="text" name="q" value="{{ filtre_recherche }}" placeholder="Mot-cle...">
+    </div>
+    <div>
+        <label>Source</label><br>
+        <select name="source">
+            <option value="">Toutes</option>
+            {% for s in sources %}
+            <option value="{{ s }}" {% if s == filtre_source %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label>Score min</label><br>
+        <select name="score_min">
+            <option value="0" {% if filtre_score_min == 0 %}selected{% endif %}>Tous</option>
+            <option value="0.3" {% if filtre_score_min == 0.3 %}selected{% endif %}>30%+</option>
+            <option value="0.5" {% if filtre_score_min == 0.5 %}selected{% endif %}>50%+</option>
+            <option value="0.7" {% if filtre_score_min == 0.7 %}selected{% endif %}>70%+</option>
+        </select>
+    </div>
+    <div>
+        <label>Statut</label><br>
+        <select name="statut">
+            <option value="">Tous</option>
+            {% for s in statuts %}
+            <option value="{{ s }}" {% if s == filtre_statut %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label>Tri</label><br>
+        <select name="tri">
+            <option value="score" {% if filtre_tri == 'score' %}selected{% endif %}>Score</option>
+            <option value="date" {% if filtre_tri == 'date' %}selected{% endif %}>Date limite</option>
+            <option value="titre" {% if filtre_tri == 'titre' %}selected{% endif %}>Titre</option>
+        </select>
+    </div>
+    <div style="align-self: flex-end;">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+    </div>
+</form>
+
+<!-- Live search -->
+<div style="margin-bottom:0.75rem;">
+    <input type="text" id="liveSearch" placeholder="Recherche rapide dans la page..." class="live-search-input">
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="table-wrapper">
+        <table id="aoTable">
+            <thead>
+                <tr>
+                    <th>Score</th>
+                    <th>Source</th>
+                    <th>Titre</th>
+                    <th>Acheteur</th>
+                    <th>Date limite</th>
+                    <th>Region</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ao in appels %}
+                <tr>
+                    <td>
+                        {% set score_pct = (ao.score_pertinence * 100) | int %}
+                        <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
+                            {{ score_pct }}%
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ ao.source | lower }}">{{ ao.source }}</span>
+                    </td>
+                    <td class="table-title">
+                        <a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre[:70] }}</a>
+                    </td>
+                    <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        {{ (ao.acheteur|as_str)[:40] }}
+                    </td>
+                    <td>
+                        {% if ao.date_limite %}
+                            {% set dl = ao.date_limite.split('T')[0] %}
+                            <span class="deadline
+                                {%- set today = now.strftime('%Y-%m-%d') -%}
+                                {%- if dl < today %} deadline-expired
+                                {%- elif dl <= (now + timedelta(days=3)).strftime('%Y-%m-%d') %} deadline-urgent
+                                {%- elif dl <= (now + timedelta(days=7)).strftime('%Y-%m-%d') %} deadline-soon
+                                {%- else %} deadline-ok{% endif %}">
+                                {{ dl }}
+                            </span>
+                        {% else %}
+                            <span class="deadline deadline-ok">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem;">{{ (ao.region|as_str)[:20] }}</td>
+                    <td>
+                        <span class="statut statut-{{ ao.statut }}">{{ ao.statut }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not appels %}
+    <div class="empty">
+        <p>Aucun AO ne correspond aux filtres</p>
+    </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}&q={{ filtre_recherche }}&source={{ filtre_source }}&score_min={{ filtre_score_min }}&statut={{ filtre_statut }}&tri={{ filtre_tri }}" class="btn btn-sm btn-outline">&laquo; Precedent</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="btn btn-sm btn-primary">{{ p }}</span>
+            {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                <a href="?page={{ p }}&q={{ filtre_recherche }}&source={{ filtre_source }}&score_min={{ filtre_score_min }}&statut={{ filtre_statut }}&tri={{ filtre_tri }}" class="btn btn-sm btn-outline">{{ p }}</a>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <span class="btn btn-sm" style="border:none;">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}&q={{ filtre_recherche }}&source={{ filtre_source }}&score_min={{ filtre_score_min }}&statut={{ filtre_statut }}&tri={{ filtre_tri }}" class="btn btn-sm btn-outline">Suivant &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

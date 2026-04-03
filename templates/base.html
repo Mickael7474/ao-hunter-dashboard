@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AO Hunter{% endblock %} - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">AO</span> Hunter
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('liste_ao') }}" class="{% if request.endpoint == 'liste_ao' %}active{% endif %}">Appels d'offres</a>
+            <a href="{{ url_for('liste_dossiers') }}" class="{% if request.endpoint == 'liste_dossiers' %}active{% endif %}">Dossiers</a>
+        </div>
+        <div class="nav-actions">
+            <button id="darkModeToggle" class="btn-icon" title="Mode sombre">
+                <span class="icon-sun">&#9728;</span>
+                <span class="icon-moon" style="display:none;">&#9790;</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Notification toast -->
+    <div id="notifToast" class="notif-toast" style="display:none;"></div>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>AO Hunter - Almera &copy; 2026</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
