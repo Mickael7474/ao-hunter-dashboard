@@ -1,5 +1,11 @@
 # AO Hunter - Guide pour Claude AI
 
+## Règle de mise à jour de ce fichier
+
+A la fin de chaque session, mets à jour uniquement la section "Bugs connus et comportements à éviter" si tu as rencontré un bug, un comportement inattendu ou résolu un problème. Ne touche pas aux autres sections sauf si une information est devenue fausse (ex : changement de modèle, nouvelle source de veille, restructuration du projet).
+
+---
+
 ## Contexte projet
 
 AO Hunter est un outil de veille et reponse automatique aux appels d'offres publics francais, developpe pour **Almera** (raison sociale: AI MENTOR, SASU), organisme de formation en Intelligence Artificielle certifie Qualiopi et RS6776 France Competences.
@@ -153,7 +159,7 @@ Toutes les infos Almera sont dans `config.yaml` :
 - **Backend local**: Python 3.14, anthropic SDK, pdfplumber, pymupdf, python-docx, playwright
 - **Dashboard**: Flask 3, Flask-SocketIO, Gunicorn + gevent-websocket
 - **Scheduler**: APScheduler (BackgroundScheduler, toutes les 8h)
-- **API IA**: Claude Sonnet (memoire, lettre, BPU, programme), Claude Haiku (planning, CV, scoring)
+- **API IA**: Claude Sonnet 4 (`claude-sonnet-4-5-20251001`) pour mémoire, lettre, BPU, programme ; Claude Haiku 3.5 (`claude-haiku-3-5-20251001`) pour planning, CV, scoring local
 - **Sources veille**: BOAMP API open data, TED API v3, marches-securises.fr RSS, AWS Defense scraping
 - **Email**: Gmail SMTP (envoi) + IMAP (brouillons)
 - **Excel**: openpyxl (DPGF)
@@ -173,3 +179,11 @@ Toutes les infos Almera sont dans `config.yaml` :
 | historique_veille.json | Historique des cycles de veille (90 jours) |
 | rappels_envoyes.json | Anti-doublon rappels email |
 | pipeline_auto_log.json | Log du pipeline automatique |
+
+## Bugs connus et comportements à éviter
+
+| Date | Fichier concerné | Description | Statut |
+|---|---|---|---|
+| - | - | Aucun bug documenté pour l'instant | - |
+
+> Cette section est maintenue par Claude au fil des sessions. Ajouter une ligne à chaque bug résolu ou comportement inattendu découvert en prod ou en développement.
