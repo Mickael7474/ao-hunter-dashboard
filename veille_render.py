@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import httpx
+import feedparser
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger("ao_hunter.veille_render")
 
@@ -337,6 +339,143 @@ def rechercher_ted() -> list[dict]:
     return uniques
 
 
+def rechercher_marches_securises() -> list[dict]:
+    """Interroge marches-securises.fr via flux RSS."""
+    RSS_URL = "https://www.marches-securises.fr/entreprise/rss"
+    resultats = []
+
+    for mot in MOTS_CLES_RECHERCHE[:6]:
+        try:
+            with httpx.Client(timeout=30, follow_redirects=True) as client:
+                resp = client.get(RSS_URL, params={"q": mot})
+                if resp.status_code != 200:
+                    continue
+
+            feed = feedparser.parse(resp.text)
+
+            for entry in feed.entries[:30]:
+                entry_id = entry.get("id", entry.get("link", ""))
+                if not entry_id:
+                    continue
+                clean_id = re.sub(r"[^\w-]", "", entry_id[-30:])
+                titre = entry.get("title", "Sans titre")
+                description = entry.get("summary", entry.get("description", ""))
+                url = entry.get("link", "")
+
+                acheteur = ""
+                if " - " in titre:
+                    parts = titre.split(" - ", 1)
+                    if len(parts[0]) < 60:
+                        acheteur = parts[0].strip()
+
+                score = scorer_ao(titre, description)
+                if score < 0.15:
+                    continue
+
+                resultats.append({
+                    "id": f"MSEC-{clean_id}",
+                    "titre": titre,
+                    "source": "M-Securises",
+                    "acheteur": acheteur,
+                    "date_publication": entry.get("published", ""),
+                    "date_limite": "",
+                    "description": description,
+                    "url": url,
+                    "region": "",
+                    "code_cpv": "",
+                    "type_marche": "",
+                    "type_procedure": "",
+                    "budget_estime": None,
+                    "score_pertinence": score,
+                    "statut": "nouveau",
+                    "pieces_dossier": [],
+                })
+        except Exception as e:
+            logger.warning(f"Erreur M-Securises pour '{mot}': {e}")
+
+    # Dedoublonner
+    vus = set()
+    uniques = []
+    for ao in resultats:
+        if ao["id"] not in vus:
+            vus.add(ao["id"])
+            uniques.append(ao)
+    logger.info(f"M-Securises: {len(uniques)} AO trouves")
+    return uniques
+
+
+def rechercher_aws_defense() -> list[dict]:
+    """Interroge le portail achats du Ministere des Armees."""
+    SEARCH_URL = "https://www.achats.defense.gouv.fr/entreprises-recherche-annonces"
+    resultats = []
+
+    for mot in MOTS_CLES_RECHERCHE[:4]:
+        try:
+            with httpx.Client(timeout=30, follow_redirects=True) as client:
+                resp = client.get(SEARCH_URL, params={"fullText": mot})
+                if resp.status_code != 200:
+                    continue
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            annonces = soup.select(".annonce, .result-item, .consultation-item, tr.odd, tr.even")
+            if not annonces:
+                annonces = soup.find_all("a", href=re.compile(r"consultation|annonce|avis"))
+
+            for annonce in annonces[:20]:
+                if annonce.name == "a":
+                    titre = annonce.get_text(strip=True)
+                    url = annonce.get("href", "")
+                    if not url.startswith("http"):
+                        url = f"https://www.achats.defense.gouv.fr{url}"
+                else:
+                    titre = annonce.get_text(separator=" ", strip=True)[:150]
+                    links = annonce.find_all("a", href=True)
+                    url = ""
+                    for link in links:
+                        href = link.get("href", "")
+                        if "consultation" in href or "annonce" in href:
+                            url = href if href.startswith("http") else f"https://www.achats.defense.gouv.fr{href}"
+                            break
+
+                if not titre or len(titre) < 10:
+                    continue
+
+                score = scorer_ao(titre, titre)
+                if score < 0.15:
+                    continue
+
+                clean_id = re.sub(r"[^\w-]", "", titre[:40])
+                resultats.append({
+                    "id": f"AWS-{clean_id}",
+                    "titre": titre,
+                    "source": "AWS-Achat",
+                    "acheteur": "Ministere des Armees",
+                    "date_publication": "",
+                    "date_limite": "",
+                    "description": titre,
+                    "url": url,
+                    "region": "",
+                    "code_cpv": "",
+                    "type_marche": "",
+                    "type_procedure": "",
+                    "budget_estime": None,
+                    "score_pertinence": score,
+                    "statut": "nouveau",
+                    "pieces_dossier": [],
+                })
+        except Exception as e:
+            logger.warning(f"Erreur AWS pour '{mot}': {e}")
+
+    vus = set()
+    uniques = []
+    for ao in resultats:
+        if ao["id"] not in vus:
+            vus.add(ao["id"])
+            uniques.append(ao)
+    logger.info(f"AWS-Achat: {len(uniques)} AO trouves")
+    return uniques
+
+
 def detecter_doublons(appels: list[dict]) -> list[tuple]:
     """Detecte les doublons cross-sources par similarite de titre.
 
@@ -435,19 +574,20 @@ def lancer_veille() -> dict:
             existants = json.load(f)
     ids_existants = {ao["id"] for ao in existants}
 
-    # Rechercher
+    # Rechercher sur toutes les sources
     nouveaux_ao = []
-    try:
-        boamp = rechercher_boamp()
-        nouveaux_ao.extend(boamp)
-    except Exception as e:
-        logger.error(f"Erreur BOAMP: {e}")
-
-    try:
-        ted = rechercher_ted()
-        nouveaux_ao.extend(ted)
-    except Exception as e:
-        logger.error(f"Erreur TED: {e}")
+    sources = [
+        ("BOAMP", rechercher_boamp),
+        ("TED", rechercher_ted),
+        ("M-Securises", rechercher_marches_securises),
+        ("AWS-Achat", rechercher_aws_defense),
+    ]
+    for nom, func in sources:
+        try:
+            aos = func()
+            nouveaux_ao.extend(aos)
+        except Exception as e:
+            logger.error(f"Erreur {nom}: {e}")
 
     # Ajouter les nouveaux
     nb_nouveaux = 0
@@ -466,12 +606,16 @@ def lancer_veille() -> dict:
         encoding="utf-8",
     )
 
+    sources_count = {}
+    for ao in nouveaux_ao:
+        src = ao.get("source", "?")
+        sources_count[src] = sources_count.get(src, 0) + 1
+
     result = {
         "timestamp": datetime.now().isoformat(),
         "date": datetime.now().strftime("%Y-%m-%d"),
         "heure": datetime.now().strftime("%H:%M"),
-        "boamp": len([a for a in nouveaux_ao if a["source"] == "BOAMP"]),
-        "ted": len([a for a in nouveaux_ao if a["source"] == "TED"]),
+        "par_source": sources_count,
         "nouveaux": nb_nouveaux,
         "doublons_supprimes": nb_doublons,
         "total": len(existants),

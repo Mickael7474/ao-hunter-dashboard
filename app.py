@@ -95,6 +95,14 @@ def _veille_auto():
     except Exception as e:
         logger.error(f"Erreur rappels: {e}")
 
+    # Veille concurrentielle (1x par jour suffit)
+    try:
+        from veille_concurrence import lancer_veille_concurrence
+        conc = lancer_veille_concurrence()
+        logger.info(f"Veille concurrence: {conc['nouvelles']} nouvelles attributions")
+    except Exception as e:
+        logger.error(f"Erreur veille concurrence: {e}")
+
 logger = logging.getLogger("ao_hunter.dashboard")
 
 # Chemins - en local: ao_hunter/resultats/, sur Render: dossier dashboard/
@@ -161,6 +169,95 @@ def sauvegarder_notes(notes: dict):
 
 DOSSIERS_INDEX = DASHBOARD_DIR / "dossiers_index.json"
 DOSSIERS_GENERES_DIR = DASHBOARD_DIR / "dossiers_generes"
+CHECKLIST_FILE = DASHBOARD_DIR / "checklist_etat.json"
+COMMENTAIRES_FILE = DASHBOARD_DIR / "commentaires.json"
+
+
+def _generer_checklist(ao: dict, dossier: dict, modele: dict) -> list[dict]:
+    """Genere la checklist de soumission pour un AO."""
+    items = [
+        {"id": "memoire", "label": "Memoire technique", "categorie": "Offre"},
+        {"id": "bpu", "label": "BPU / DPGF (grille tarifaire)", "categorie": "Offre"},
+        {"id": "planning", "label": "Planning previsionnel", "categorie": "Offre"},
+        {"id": "dc1", "label": "DC1 - Lettre de candidature", "categorie": "Administratif"},
+        {"id": "dc2", "label": "DC2 - Declaration du candidat", "categorie": "Administratif"},
+        {"id": "kbis", "label": "Extrait Kbis (< 3 mois)", "categorie": "Administratif"},
+        {"id": "urssaf", "label": "Attestation URSSAF", "categorie": "Administratif"},
+        {"id": "fiscale", "label": "Attestation fiscale", "categorie": "Administratif"},
+        {"id": "qualiopi", "label": "Certificat Qualiopi", "categorie": "Administratif"},
+        {"id": "rib", "label": "RIB", "categorie": "Administratif"},
+        {"id": "assurance", "label": "Attestation RC Pro", "categorie": "Administratif"},
+        {"id": "cv", "label": "CV formateurs/consultants", "categorie": "Offre"},
+        {"id": "references", "label": "Liste de references", "categorie": "Offre"},
+    ]
+
+    # Ajouter les pieces specifiques du modele
+    if modele and modele.get("pieces_specifiques"):
+        ids_existants = {i["id"] for i in items}
+        for p in modele["pieces_specifiques"]:
+            pid = p.lower().replace(" ", "_").replace("/", "_")[:20]
+            if pid not in ids_existants:
+                items.append({"id": pid, "label": p, "categorie": "Specifique"})
+
+    # Marquer auto les pieces du dossier genere
+    if dossier and dossier.get("fichiers"):
+        fichiers_lower = [f.lower() for f in dossier["fichiers"]]
+        for item in items:
+            for f in fichiers_lower:
+                if item["id"] in f or item["label"].lower().split()[0] in f:
+                    item["auto_ok"] = True
+                    break
+
+    items.append({"id": "email", "label": "Email de soumission envoye", "categorie": "Soumission"})
+    items.append({"id": "depot", "label": "Depot sur la plateforme", "categorie": "Soumission"})
+
+    return items
+
+
+def _charger_checklist_etat(ao_id: str) -> dict:
+    """Charge l'etat de la checklist pour un AO."""
+    if CHECKLIST_FILE.exists():
+        try:
+            data = json.loads(CHECKLIST_FILE.read_text(encoding="utf-8"))
+            return data.get(ao_id, {})
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+
+def _sauvegarder_checklist_etat(ao_id: str, etat: dict):
+    data = {}
+    if CHECKLIST_FILE.exists():
+        try:
+            data = json.loads(CHECKLIST_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    data[ao_id] = etat
+    CHECKLIST_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _charger_commentaires(ao_id: str) -> list[dict]:
+    """Charge les commentaires pour un AO."""
+    if COMMENTAIRES_FILE.exists():
+        try:
+            data = json.loads(COMMENTAIRES_FILE.read_text(encoding="utf-8"))
+            return data.get(ao_id, [])
+        except (json.JSONDecodeError, OSError):
+            pass
+    return []
+
+
+def _sauvegarder_commentaire(ao_id: str, commentaire: dict):
+    data = {}
+    if COMMENTAIRES_FILE.exists():
+        try:
+            data = json.loads(COMMENTAIRES_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    if ao_id not in data:
+        data[ao_id] = []
+    data[ao_id].append(commentaire)
+    COMMENTAIRES_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _scan_dossiers_dir(base_dir: Path) -> list[dict]:
@@ -476,9 +573,10 @@ def kanban():
     total_soumis = len([a for a in appels if a.get("statut") in ("soumis", "gagne", "perdu")])
     gagnes = len([a for a in appels if a.get("statut") == "gagne"])
     taux_conversion = (gagnes / total_soumis * 100) if total_soumis > 0 else 0
+    sources = sorted(set(a.get("source", "") for a in appels if a.get("source")))
     return render_template("kanban.html", colonnes=colonnes, statuts=STATUTS_KANBAN,
                            taux_conversion=taux_conversion, total_soumis=total_soumis,
-                           gagnes=gagnes)
+                           gagnes=gagnes, sources=sources)
 
 
 @app.route("/ao/<path:ao_id>/statut-ajax", methods=["POST"])
@@ -533,9 +631,18 @@ def detail_ao(ao_id):
     type_presta = detecter_type_prestation(ao)
     modele = get_modele(type_presta)
 
+    # Checklist de soumission
+    checklist = _generer_checklist(ao, dossier_genere, modele)
+    checklist_etat = _charger_checklist_etat(ao_id)
+
+    # Commentaires
+    commentaires = _charger_commentaires(ao_id)
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
                            prestations=prestations, go_nogo=go_nogo,
-                           type_presta=type_presta, modele=modele)
+                           type_presta=type_presta, modele=modele,
+                           checklist=checklist, checklist_etat=checklist_etat,
+                           commentaires=commentaires)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])
@@ -560,6 +667,61 @@ def sauvegarder_note(ao_id):
         del notes[ao_id]
     sauvegarder_notes(notes)
     return redirect(url_for("detail_ao", ao_id=ao_id))
+
+
+@app.route("/ao/<path:ao_id>/checklist", methods=["POST"])
+def maj_checklist(ao_id):
+    """Met a jour l'etat d'un item de la checklist via AJAX."""
+    data = request.get_json()
+    if not data or "item_id" not in data:
+        return jsonify({"error": "item_id requis"}), 400
+    etat = _charger_checklist_etat(ao_id)
+    etat[data["item_id"]] = data.get("checked", False)
+    _sauvegarder_checklist_etat(ao_id, etat)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/ao/<path:ao_id>/commentaire", methods=["POST"])
+def ajouter_commentaire(ao_id):
+    """Ajoute un commentaire sur un AO."""
+    auteur = request.form.get("auteur", "").strip()
+    texte = request.form.get("texte", "").strip()
+    if not texte:
+        return redirect(url_for("detail_ao", ao_id=ao_id))
+    commentaire = {
+        "auteur": auteur or "Anonyme",
+        "texte": texte,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+    _sauvegarder_commentaire(ao_id, commentaire)
+    return redirect(url_for("detail_ao", ao_id=ao_id))
+
+
+@app.route("/ao/<path:ao_id>/telecharger-dce", methods=["POST"])
+def telecharger_dce_route(ao_id):
+    """POST - Tente de telecharger le DCE automatiquement."""
+    appels = charger_ao()
+    ao_dict = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao_dict:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    def _dl_bg():
+        try:
+            from dce_auto import telecharger_dce_auto
+            socketio.emit("veille_log", {"msg": f"Telechargement DCE: {ao_dict.get('titre', '')[:50]}..."})
+            result = telecharger_dce_auto(ao_dict)
+            if result["success"]:
+                socketio.emit("veille_log", {"msg": f"DCE: {result['nb_fichiers']} fichier(s) telecharge(s)"})
+            else:
+                socketio.emit("veille_log", {"msg": f"DCE: {result['erreur']}"})
+            socketio.emit("dce_complete", result)
+        except Exception as e:
+            socketio.emit("veille_log", {"msg": f"Erreur DCE: {e}"})
+            socketio.emit("dce_complete", {"success": False, "erreur": str(e)})
+
+    thread = threading.Thread(target=_dl_bg, daemon=True)
+    thread.start()
+    return jsonify({"status": "started"})
 
 
 @app.route("/ao/<path:ao_id>/generer", methods=["POST"])
@@ -707,6 +869,40 @@ def servir_fichier(nom, fichier):
     return "Fichier non trouve", 404
 
 
+@app.route("/dossiers/<path:nom>/zip")
+def export_dossier_zip(nom):
+    """Telecharge tout le dossier en ZIP."""
+    import zipfile
+    from flask import send_file
+
+    # Trouver le dossier
+    dossier_path = None
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        candidate = base / nom
+        if candidate.exists() and candidate.is_dir():
+            dossier_path = candidate
+            break
+
+    if not dossier_path:
+        return "Dossier non trouve", 404
+
+    # Creer le ZIP en memoire
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fichier in dossier_path.rglob("*"):
+            if fichier.is_file():
+                arcname = fichier.relative_to(dossier_path)
+                zf.write(fichier, arcname)
+
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{nom}.zip",
+    )
+
+
 @app.route("/export/csv")
 def export_csv():
     """Exporte les AO filtres en CSV."""
@@ -834,6 +1030,19 @@ def api_urgents():
     """GET /api/urgents - AO avec deadline proche (pour notifications)."""
     appels = charger_ao()
     return jsonify(_ao_urgents(appels, max_days=3))
+
+
+@app.route("/api/concurrence")
+def api_concurrence():
+    """GET /api/concurrence - Top concurrents et attributions recentes."""
+    from veille_concurrence import charger_concurrence, analyser_concurrents
+    attributions = charger_concurrence()
+    concurrents = analyser_concurrents(attributions)
+    return jsonify({
+        "total_attributions": len(attributions),
+        "top_concurrents": concurrents[:15],
+        "dernieres_attributions": attributions[-10:][::-1],
+    })
 
 
 @app.route("/api/historique-veille")

@@ -16,6 +16,25 @@
     </div>
 </div>
 
+<!-- Filtres -->
+<div class="card" style="padding:0.75rem 1rem; margin-bottom:1rem;">
+    <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <label style="font-size:0.8rem; font-weight:600;">Filtres :</label>
+        <select id="kanbanFilterSource" onchange="filterKanban()" style="padding:4px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text); font-size:0.8rem;">
+            <option value="">Toutes sources</option>
+            {% for src in sources %}<option value="{{ src }}">{{ src }}</option>{% endfor %}
+        </select>
+        <select id="kanbanFilterScore" onchange="filterKanban()" style="padding:4px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text); font-size:0.8rem;">
+            <option value="0">Score min : tous</option>
+            <option value="30">Score &ge; 30%</option>
+            <option value="50">Score &ge; 50%</option>
+            <option value="70">Score &ge; 70%</option>
+        </select>
+        <input id="kanbanSearch" type="text" placeholder="Rechercher..." onkeyup="filterKanban()" style="padding:4px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text); font-size:0.8rem; width:200px;">
+        <span id="kanbanFilterCount" style="font-size:0.75rem; color:var(--text-light);"></span>
+    </div>
+</div>
+
 <div class="kanban-board">
     {% for statut in statuts %}
     <div class="kanban-col" data-statut="{{ statut }}">
@@ -117,5 +136,43 @@ document.addEventListener('dragend', function(e) {
     document.querySelectorAll('.dragging').forEach(function(el) { el.classList.remove('dragging'); });
     document.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
 });
+
+function filterKanban() {
+    var src = document.getElementById('kanbanFilterSource').value.toLowerCase();
+    var scoreMin = parseInt(document.getElementById('kanbanFilterScore').value) || 0;
+    var search = document.getElementById('kanbanSearch').value.toLowerCase();
+    var visible = 0, total = 0;
+
+    document.querySelectorAll('.kanban-card').forEach(function(card) {
+        total++;
+        var badges = card.querySelectorAll('.badge');
+        var cardSrc = '';
+        badges.forEach(function(b) {
+            if (b.classList.length > 1) cardSrc = b.textContent.trim().toLowerCase();
+        });
+        var scoreEl = card.querySelector('.score');
+        var cardScore = scoreEl ? parseInt(scoreEl.textContent) : 0;
+        var cardText = card.textContent.toLowerCase();
+
+        var show = true;
+        if (src && cardSrc !== src) show = false;
+        if (cardScore < scoreMin) show = false;
+        if (search && !cardText.includes(search)) show = false;
+
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    document.getElementById('kanbanFilterCount').textContent =
+        visible + '/' + total + ' affiches';
+
+    // Update counts per column
+    document.querySelectorAll('.kanban-col').forEach(function(col) {
+        var cards = col.querySelectorAll('.kanban-card');
+        var visibleCount = 0;
+        cards.forEach(function(c) { if (c.style.display !== 'none') visibleCount++; });
+        col.querySelector('.kanban-count').textContent = visibleCount;
+    });
+}
 </script>
 {% endblock %}

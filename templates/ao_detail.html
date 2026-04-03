@@ -80,6 +80,11 @@
         <a href="{{ ao.url_profil_acheteur }}" target="_blank" class="btn btn-sm btn-outline">Profil acheteur</a>
         {% endif %}
 
+        <!-- DCE auto -->
+        <button id="btnDCE" class="btn btn-sm btn-outline" onclick="lancerDCE('{{ ao.id }}')">
+            Telecharger DCE
+        </button>
+
         <!-- Generer dossier -->
         {% if not dossier %}
         <button id="btnGenerer" class="btn btn-sm btn-primary" onclick="lancerGeneration('{{ ao.id }}')">
@@ -241,15 +246,73 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Checklist de soumission -->
+{% if checklist %}
+<div class="card">
+    <div class="card-header">
+        <h2>Checklist de soumission</h2>
+        <span id="checklistProgress" style="font-size:0.8rem; color:var(--text-light);"></span>
+    </div>
+    {% set categories = [] %}
+    {% for item in checklist %}
+        {% if item.categorie not in categories %}
+            {% if categories %}
+                </div>
+            {% endif %}
+            {% set _ = categories.append(item.categorie) %}
+            <div class="checklist-cat">
+                <div class="checklist-cat-label">{{ item.categorie }}</div>
+        {% endif %}
+        <label class="checklist-item {% if checklist_etat.get(item.id) or item.get('auto_ok') %}checked{% endif %}">
+            <input type="checkbox"
+                   data-ao="{{ ao.id }}" data-item="{{ item.id }}"
+                   {% if checklist_etat.get(item.id) or item.get('auto_ok') %}checked{% endif %}
+                   onchange="toggleChecklist(this)">
+            <span>{{ item.label }}</span>
+            {% if item.get('auto_ok') %}
+                <span class="badge" style="background:#dcfce7; color:#166534; font-size:0.65rem; padding:1px 6px; margin-left:4px;">auto</span>
+            {% endif %}
+        </label>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Commentaires -->
+<div class="card">
+    <div class="card-header">
+        <h2>Commentaires</h2>
+        <span style="font-size:0.8rem; color:var(--text-light);">{{ commentaires|length }} commentaire(s)</span>
+    </div>
+    {% if commentaires %}
+    <div class="commentaires-list">
+        {% for c in commentaires|reverse %}
+        <div class="commentaire-item">
+            <div class="commentaire-header">
+                <strong>{{ c.auteur }}</strong>
+                <span style="color:var(--text-light); font-size:0.75rem;">{{ c.date }}</span>
+            </div>
+            <div class="commentaire-texte">{{ c.texte }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <form method="post" action="{{ url_for('ajouter_commentaire', ao_id=ao.id) }}" style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <input type="text" name="auteur" placeholder="Votre nom" style="flex:0 0 150px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text);">
+        <input type="text" name="texte" placeholder="Ajouter un commentaire..." style="flex:1; min-width:200px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text);">
+        <button type="submit" class="btn btn-sm btn-primary">Envoyer</button>
+    </form>
+</div>
+
 <!-- Notes -->
 <div class="card">
     <div class="card-header">
-        <h2>Notes & Commentaires</h2>
+        <h2>Notes internes</h2>
     </div>
     <form method="post" action="{{ url_for('sauvegarder_note', ao_id=ao.id) }}">
-        <textarea name="note" rows="4" placeholder="Ajouter des notes sur cet AO..." class="note-textarea">{{ note }}</textarea>
+        <textarea name="note" rows="3" placeholder="Notes internes..." class="note-textarea">{{ note }}</textarea>
         <div style="margin-top:0.5rem;">
-            <button type="submit" class="btn btn-sm btn-primary">Sauvegarder la note</button>
+            <button type="submit" class="btn btn-sm btn-primary">Sauvegarder</button>
         </div>
     </form>
 </div>
@@ -315,6 +378,39 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 
 {% block scripts %}
 <script>
+function toggleChecklist(cb) {
+    const aoId = cb.dataset.ao;
+    const itemId = cb.dataset.item;
+    fetch('/ao/' + encodeURIComponent(aoId) + '/checklist', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({item_id: itemId, checked: cb.checked})
+    });
+    cb.closest('.checklist-item').classList.toggle('checked', cb.checked);
+    updateChecklistProgress();
+}
+function updateChecklistProgress() {
+    const boxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+    const total = boxes.length;
+    const done = [...boxes].filter(b => b.checked).length;
+    const el = document.getElementById('checklistProgress');
+    if (el) el.textContent = done + '/' + total + ' (' + Math.round(done/total*100) + '%)';
+}
+document.addEventListener('DOMContentLoaded', updateChecklistProgress);
+
+function lancerDCE(aoId) {
+    const btn = document.getElementById('btnDCE');
+    btn.disabled = true;
+    btn.textContent = 'Telechargement...';
+    document.getElementById('genLog').style.display = 'block';
+
+    fetch('/ao/' + encodeURIComponent(aoId) + '/telecharger-dce', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) addGenLog('Erreur: ' + data.error);
+        });
+}
+
 function copierEmail() {
     const text = document.getElementById('emailTemplate').value;
     navigator.clipboard.writeText(text).then(() => {
@@ -355,6 +451,17 @@ if (typeof io !== 'undefined') {
     const socket = io();
     socket.on('veille_log', function(data) {
         addGenLog(data.msg);
+    });
+    socket.on('dce_complete', function(data) {
+        const btn = document.getElementById('btnDCE');
+        if (data.success) {
+            addGenLog('DCE telecharge: ' + data.nb_fichiers + ' fichier(s)');
+            btn.textContent = 'DCE OK';
+            btn.style.background = '#16a34a'; btn.style.color = 'white';
+        } else {
+            addGenLog('DCE: ' + (data.erreur || 'Aucun document trouve'));
+            btn.disabled = false; btn.textContent = 'Telecharger DCE';
+        }
     });
     socket.on('generation_complete', function(data) {
         const btn = document.getElementById('btnGenerer');

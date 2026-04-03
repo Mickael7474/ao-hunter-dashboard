@@ -833,6 +833,60 @@ tr:hover { background: var(--table-hover); }
     line-height: 1.5;
 }
 
+/* Checklist */
+.checklist-cat {
+    margin-bottom: 0.75rem;
+}
+.checklist-cat-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.5px;
+}
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.checklist-item:hover { background: var(--meta-bg); }
+.checklist-item.checked span {
+    text-decoration: line-through;
+    color: var(--text-light);
+}
+.checklist-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--success);
+}
+
+/* Commentaires */
+.commentaires-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+.commentaire-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.commentaire-item:last-child { border-bottom: none; }
+.commentaire-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+}
+.commentaire-texte {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
 /* ROI Dashboard */
 .roi-kpis {
     display: grid;
