@@ -77,7 +77,6 @@ def _veille_auto():
         from veille_render import lancer_veille
         result = lancer_veille()
         logger.info(f"Veille auto terminee: {result}")
-        # Notifier les clients WebSocket connectes
         socketio.emit("veille_complete", {
             "nouveaux": result["nouveaux"],
             "total": result["total"],
@@ -85,6 +84,16 @@ def _veille_auto():
         })
     except Exception as e:
         logger.error(f"Erreur veille auto: {e}")
+
+    # Verifier les deadlines et envoyer les rappels
+    try:
+        from rappels import envoyer_rappels
+        appels = charger_ao()
+        rappels_result = envoyer_rappels(appels)
+        if rappels_result["envoyes"] > 0:
+            logger.info(f"Rappels envoyes: {rappels_result['envoyes']}")
+    except Exception as e:
+        logger.error(f"Erreur rappels: {e}")
 
 logger = logging.getLogger("ao_hunter.dashboard")
 
@@ -563,31 +572,53 @@ def generer_dossier(ao_id):
 
     def _generer_en_bg():
         try:
-            from veille import AppelOffre
-            from generateur import GenerateurMemoire
-            from dce_downloader import telecharger_dce
-
-            config = charger_config()
-            ao = AppelOffre(**{k: v for k, v in ao_dict.items()
-                              if k in AppelOffre.__dataclass_fields__})
-
-            socketio.emit("veille_log", {"msg": f"Generation dossier: {ao.titre[:60]}..."})
-
-            # DCE
-            dossier_ao = RESULTATS_DIR / f"AO_{ao.id}"
-            dce_path = None
+            # Essayer le generateur complet (local)
             try:
-                fichiers_dce = telecharger_dce(ao, dossier_ao, config=config)
-                if fichiers_dce:
-                    dce_path = dossier_ao / "DCE"
-                    socketio.emit("veille_log", {"msg": f"DCE telecharge: {len(fichiers_dce)} fichier(s)"})
-            except Exception as e:
-                socketio.emit("veille_log", {"msg": f"DCE non disponible: {e}"})
+                from veille import AppelOffre
+                from generateur import GenerateurMemoire
+                from dce_downloader import telecharger_dce
 
-            generateur = GenerateurMemoire(config)
-            dossier = generateur.generer_dossier_complet(ao, dce_path=dce_path)
-            socketio.emit("veille_log", {"msg": f"Dossier genere: {dossier.name}"})
-            socketio.emit("generation_complete", {"ao_id": ao_id, "dossier": str(dossier)})
+                config = charger_config()
+                ao = AppelOffre(**{k: v for k, v in ao_dict.items()
+                                  if k in AppelOffre.__dataclass_fields__})
+
+                socketio.emit("veille_log", {"msg": f"Generation dossier: {ao.titre[:60]}..."})
+
+                dossier_ao = RESULTATS_DIR / f"AO_{ao.id}"
+                dce_path = None
+                try:
+                    fichiers_dce = telecharger_dce(ao, dossier_ao, config=config)
+                    if fichiers_dce:
+                        dce_path = dossier_ao / "DCE"
+                        socketio.emit("veille_log", {"msg": f"DCE telecharge: {len(fichiers_dce)} fichier(s)"})
+                except Exception as e:
+                    socketio.emit("veille_log", {"msg": f"DCE non disponible: {e}"})
+
+                generateur = GenerateurMemoire(config)
+                dossier = generateur.generer_dossier_complet(ao, dce_path=dce_path)
+                socketio.emit("veille_log", {"msg": f"Dossier genere: {dossier.name}"})
+                socketio.emit("generation_complete", {"ao_id": ao_id, "dossier": str(dossier)})
+                return
+
+            except ImportError:
+                pass  # Pas en local, utiliser le generateur Render
+
+            # Generateur Render (leger, memoire technique via API Claude)
+            from generateur_render import generer_memoire_technique
+            from modeles_reponse import detecter_type_prestation
+
+            socketio.emit("veille_log", {"msg": f"Generation (Render): {ao_dict.get('titre', '')[:60]}..."})
+            type_presta = detecter_type_prestation(ao_dict)
+            socketio.emit("veille_log", {"msg": f"Type detecte: {type_presta}"})
+
+            result = generer_memoire_technique(ao_dict, type_presta)
+            if result["success"]:
+                socketio.emit("veille_log", {"msg": f"Memoire genere: {result['nb_mots']} mots"})
+                socketio.emit("generation_complete", {"ao_id": ao_id, "dossier": result["dossier_nom"]})
+            else:
+                socketio.emit("veille_log", {"msg": f"Erreur: {result['erreur']}"})
+                socketio.emit("generation_complete", {"ao_id": ao_id, "error": result["erreur"]})
+
         except Exception as e:
             socketio.emit("veille_log", {"msg": f"Erreur generation: {e}"})
             socketio.emit("generation_complete", {"ao_id": ao_id, "error": str(e)})
@@ -803,6 +834,32 @@ def api_urgents():
     """GET /api/urgents - AO avec deadline proche (pour notifications)."""
     appels = charger_ao()
     return jsonify(_ao_urgents(appels, max_days=3))
+
+
+@app.route("/api/historique-veille")
+def api_historique_veille():
+    """GET /api/historique-veille - Historique des cycles de veille + tendances."""
+    from veille_render import charger_historique, stats_tendances
+    historique = charger_historique()
+    tendances = stats_tendances(historique)
+    return jsonify(tendances)
+
+
+@app.route("/api/deadlines")
+def api_deadlines():
+    """GET /api/deadlines - AO avec deadlines a surveiller (J-7)."""
+    from rappels import verifier_deadlines
+    appels = charger_ao()
+    alertes = verifier_deadlines(appels)
+    return jsonify([{
+        "id": a["ao"].get("id"),
+        "titre": a["ao"].get("titre"),
+        "acheteur": a["ao"].get("acheteur"),
+        "statut": a["ao"].get("statut"),
+        "date_limite": a["date_limite"],
+        "jours_restants": a["jours_restants"],
+        "urgence": a["urgence"],
+    } for a in alertes])
 
 
 @app.route("/api/veille", methods=["POST"])

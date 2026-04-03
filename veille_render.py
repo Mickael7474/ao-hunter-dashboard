@@ -15,6 +15,7 @@ logger = logging.getLogger("ao_hunter.veille_render")
 
 DASHBOARD_DIR = Path(__file__).parent
 AO_CACHE = DASHBOARD_DIR / "ao_pertinents.json"
+HISTORIQUE_VEILLE = DASHBOARD_DIR / "historique_veille.json"
 
 # Mots-cles principaux pour la recherche (subset du config.yaml)
 MOTS_CLES_RECHERCHE = [
@@ -336,6 +337,92 @@ def rechercher_ted() -> list[dict]:
     return uniques
 
 
+def detecter_doublons(appels: list[dict]) -> list[tuple]:
+    """Detecte les doublons cross-sources par similarite de titre.
+
+    Returns:
+        list de tuples (ao1_id, ao2_id, score_similarite)
+    """
+    doublons = []
+
+    def normaliser(texte: str) -> set:
+        """Extrait les mots significatifs (>3 chars) en minuscule."""
+        mots = re.sub(r"[^\w\s]", " ", texte.lower()).split()
+        return {m for m in mots if len(m) > 3}
+
+    # Indexer par mots-cles significatifs pour eviter O(n^2)
+    ao_mots = []
+    for ao in appels:
+        titre = ao.get("titre", "")
+        acheteur = ao.get("acheteur", "")
+        mots = normaliser(f"{titre} {acheteur}")
+        ao_mots.append((ao, mots))
+
+    for i, (ao1, mots1) in enumerate(ao_mots):
+        if not mots1:
+            continue
+        for j in range(i + 1, len(ao_mots)):
+            ao2, mots2 = ao_mots[j]
+            if not mots2:
+                continue
+            # Meme source = pas un doublon cross-source
+            if ao1.get("source") == ao2.get("source"):
+                continue
+            # Similarite Jaccard
+            intersection = mots1 & mots2
+            union = mots1 | mots2
+            if not union:
+                continue
+            similarite = len(intersection) / len(union)
+            if similarite >= 0.5:
+                doublons.append((ao1["id"], ao2["id"], round(similarite, 2)))
+
+    return doublons
+
+
+def fusionner_doublons(appels: list[dict]) -> tuple[list[dict], int]:
+    """Detecte et fusionne les doublons, garde le meilleur score.
+
+    Returns:
+        (liste_nettoyee, nb_supprimes)
+    """
+    doublons = detecter_doublons(appels)
+    if not doublons:
+        return appels, 0
+
+    ids_a_supprimer = set()
+    index = {ao["id"]: ao for ao in appels}
+
+    for id1, id2, sim in doublons:
+        if id1 in ids_a_supprimer or id2 in ids_a_supprimer:
+            continue
+        ao1 = index.get(id1)
+        ao2 = index.get(id2)
+        if not ao1 or not ao2:
+            continue
+
+        # Garder celui avec le meilleur score, ou le plus d'infos
+        score1 = ao1.get("score_pertinence", 0) or 0
+        score2 = ao2.get("score_pertinence", 0) or 0
+        info1 = len(str(ao1.get("description", ""))) + (1 if ao1.get("budget_estime") else 0)
+        info2 = len(str(ao2.get("description", ""))) + (1 if ao2.get("budget_estime") else 0)
+
+        if score1 + info1 / 1000 >= score2 + info2 / 1000:
+            ids_a_supprimer.add(id2)
+            # Enrichir le gagnant avec les infos du doublon
+            if not ao1.get("budget_estime") and ao2.get("budget_estime"):
+                ao1["budget_estime"] = ao2["budget_estime"]
+            if not ao1.get("contact_email") and ao2.get("contact_email"):
+                ao1["contact_email"] = ao2["contact_email"]
+        else:
+            ids_a_supprimer.add(id1)
+            if not ao2.get("budget_estime") and ao1.get("budget_estime"):
+                ao2["budget_estime"] = ao1["budget_estime"]
+
+    nettoyee = [ao for ao in appels if ao["id"] not in ids_a_supprimer]
+    return nettoyee, len(ids_a_supprimer)
+
+
 def lancer_veille() -> dict:
     """Lance la veille BOAMP + TED et met a jour ao_pertinents.json.
     Retourne un dict avec les stats."""
@@ -370,6 +457,9 @@ def lancer_veille() -> dict:
             ids_existants.add(ao["id"])
             nb_nouveaux += 1
 
+    # Deduplication cross-sources
+    existants, nb_doublons = fusionner_doublons(existants)
+
     # Sauvegarder
     AO_CACHE.write_text(
         json.dumps(existants, ensure_ascii=False, indent=2),
@@ -378,10 +468,77 @@ def lancer_veille() -> dict:
 
     result = {
         "timestamp": datetime.now().isoformat(),
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "heure": datetime.now().strftime("%H:%M"),
         "boamp": len([a for a in nouveaux_ao if a["source"] == "BOAMP"]),
         "ted": len([a for a in nouveaux_ao if a["source"] == "TED"]),
         "nouveaux": nb_nouveaux,
+        "doublons_supprimes": nb_doublons,
         "total": len(existants),
     }
-    logger.info(f"Veille terminee: {nb_nouveaux} nouveaux, {len(existants)} total")
+
+    # Sauvegarder dans l'historique
+    _sauvegarder_historique(result)
+
+    logger.info(f"Veille terminee: {nb_nouveaux} nouveaux, {nb_doublons} doublons, {len(existants)} total")
     return result
+
+
+def _sauvegarder_historique(result: dict):
+    """Ajoute un cycle de veille a l'historique."""
+    historique = []
+    if HISTORIQUE_VEILLE.exists():
+        try:
+            historique = json.loads(HISTORIQUE_VEILLE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            historique = []
+
+    historique.append(result)
+    # Garder les 90 derniers jours
+    historique = historique[-270:]  # ~3 cycles/jour x 90 jours
+
+    HISTORIQUE_VEILLE.write_text(
+        json.dumps(historique, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def charger_historique() -> list[dict]:
+    """Charge l'historique des veilles."""
+    if HISTORIQUE_VEILLE.exists():
+        try:
+            return json.loads(HISTORIQUE_VEILLE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return []
+
+
+def stats_tendances(historique: list[dict]) -> dict:
+    """Calcule les tendances a partir de l'historique."""
+    if not historique:
+        return {"par_jour": {}, "total_nouveaux": 0, "moyenne_jour": 0}
+
+    par_jour = {}
+    for h in historique:
+        date = h.get("date", "")
+        if date not in par_jour:
+            par_jour[date] = {"nouveaux": 0, "total": 0, "cycles": 0}
+        par_jour[date]["nouveaux"] += h.get("nouveaux", 0)
+        par_jour[date]["total"] = h.get("total", 0)  # dernier total du jour
+        par_jour[date]["cycles"] += 1
+
+    total_nouveaux = sum(h.get("nouveaux", 0) for h in historique)
+    nb_jours = len(par_jour) or 1
+    moyenne_jour = total_nouveaux / nb_jours
+
+    # 7 derniers jours
+    dates_triees = sorted(par_jour.keys(), reverse=True)[:14]
+    derniers_jours = {d: par_jour[d] for d in reversed(dates_triees)}
+
+    return {
+        "par_jour": derniers_jours,
+        "total_nouveaux": total_nouveaux,
+        "moyenne_jour": round(moyenne_jour, 1),
+        "nb_cycles": len(historique),
+        "dernier_cycle": historique[-1] if historique else None,
+    }

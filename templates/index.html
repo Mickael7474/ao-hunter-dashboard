@@ -56,6 +56,15 @@
 </div>
 {% endif %}
 
+<!-- Tendances veille -->
+<div class="card" id="tendancesCard" style="display:none;">
+    <div class="card-header">
+        <h2>Historique veille</h2>
+        <span id="tendancesInfo" style="font-size:0.8rem; color:var(--text-light);"></span>
+    </div>
+    <canvas id="chartTendances" height="130"></canvas>
+</div>
+
 <div class="grid-2">
     <!-- Top AO -->
     <div class="card">
@@ -185,6 +194,52 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Tendances veille (async)
+    fetch('/api/historique-veille')
+        .then(r => r.json())
+        .then(data => {
+            if (data.par_jour && Object.keys(data.par_jour).length > 0) {
+                document.getElementById('tendancesCard').style.display = '';
+                const info = document.getElementById('tendancesInfo');
+                info.textContent = data.nb_cycles + ' cycles | Moy. ' + data.moyenne_jour + ' AO/jour';
+
+                const jours = data.par_jour;
+                new Chart(document.getElementById('chartTendances'), {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(jours),
+                        datasets: [
+                            {
+                                label: 'Nouveaux AO',
+                                data: Object.values(jours).map(d => d.nouveaux),
+                                borderColor: '#2563eb',
+                                backgroundColor: '#2563eb22',
+                                fill: true,
+                                tension: 0.3,
+                            },
+                            {
+                                label: 'Total cumule',
+                                data: Object.values(jours).map(d => d.total),
+                                borderColor: '#16a34a',
+                                borderDash: [5,3],
+                                fill: false,
+                                tension: 0.3,
+                                yAxisID: 'y1',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Nouveaux' } },
+                            y1: { position: 'right', title: { display: true, text: 'Total' }, grid: { drawOnChartArea: false } }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(() => {});
 });
 </script>
 {% endblock %}

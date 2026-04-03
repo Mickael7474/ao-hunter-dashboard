@@ -86,8 +86,38 @@
             Generer le dossier
         </button>
         {% endif %}
+
+        <!-- Email de candidature -->
+        <button class="btn btn-sm btn-outline" onclick="copierEmail()">Copier email candidature</button>
     </div>
 </div>
+
+<!-- Template email (hidden) -->
+<textarea id="emailTemplate" style="display:none;">Objet : Candidature Almera - {{ ao.titre[:80] }}
+
+Madame, Monsieur,
+
+Nous avons l'honneur de vous adresser notre candidature en reponse a votre consultation "{{ ao.titre }}".
+
+Almera (AI MENTOR - SASU) est un organisme de formation certifie Qualiopi, specialise dans l'Intelligence Artificielle et la transformation numerique. Nous accompagnons les entreprises, collectivites et organismes publics depuis 2022 avec plus de 2 000 personnes formees et 50+ entreprises accompagnees.
+
+Vous trouverez ci-joint notre dossier de candidature comprenant :
+- Le memoire technique detaillant notre approche et methodologie
+- Les pieces administratives demandees (DC1, DC2, attestations)
+- Les CV de nos formateurs/consultants
+- Nos references clients
+
+Nous restons a votre entiere disposition pour tout complement d'information.
+
+Cordialement,
+
+Mickael Bertolla
+President - Almera (AI MENTOR)
+25 rue Campagne Premiere, 75014 Paris
+Tel : 06 86 68 06 11
+Email : contact@almera.one
+Web : almera.one
+SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 
 <!-- Go/No-Go -->
 {% if go_nogo %}
@@ -285,6 +315,18 @@
 
 {% block scripts %}
 <script>
+function copierEmail() {
+    const text = document.getElementById('emailTemplate').value;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = 'Copie !';
+        btn.style.background = '#16a34a';
+        btn.style.color = 'white';
+        setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+    });
+}
+
 function lancerGeneration(aoId) {
     const btn = document.getElementById('btnGenerer');
     btn.disabled = true;
