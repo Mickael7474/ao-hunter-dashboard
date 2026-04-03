@@ -672,7 +672,25 @@ tr:hover { background: var(--table-hover); }
 }
 
 .kanban-card:hover { box-shadow: var(--shadow-lg); }
-.kanban-card.dragging { opacity: 0.4; }
+.kanban-card.dragging {
+    opacity: 0.3;
+    border: 2px dashed var(--primary);
+    background: rgba(37, 99, 235, 0.05);
+}
+.kanban-card-ghost {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    border: 2px solid var(--primary);
+    padding: 0.6rem;
+    max-width: 260px;
+    opacity: 0.95;
+}
 
 .kanban-card-score {
     display: flex;
@@ -958,6 +976,204 @@ tr:hover { background: var(--table-hover); }
 .pipeline-arrow {
     font-size: 1.5rem;
     color: var(--text-light);
+}
+
+/* ROI Enhanced */
+.roi-kpis-6 {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.roi-kpi-warning { border-left: 4px solid var(--warning); }
+
+.roi-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Funnel CSS bars */
+.roi-funnel {
+    padding: 1rem 1.5rem 1.5rem;
+}
+.funnel-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+.funnel-label {
+    width: 100px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+    flex-shrink: 0;
+}
+.funnel-bar-container {
+    flex: 1;
+    background: var(--meta-bg);
+    border-radius: 4px;
+    height: 28px;
+    overflow: hidden;
+}
+.funnel-bar {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    min-width: 30px;
+    transition: width 0.5s ease;
+}
+.funnel-bar-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+}
+.funnel-bar-1 { background: #94a3b8; }
+.funnel-bar-2 { background: #60a5fa; }
+.funnel-bar-3 { background: #38bdf8; }
+.funnel-bar-4 { background: var(--warning); }
+.funnel-bar-5 { background: var(--success); }
+.funnel-pct {
+    width: 45px;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Score par statut bars */
+.roi-scores-statut {
+    padding: 1rem 1.5rem 1.5rem;
+}
+.score-statut-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.score-statut-label {
+    width: 100px;
+    flex-shrink: 0;
+}
+.score-statut-bar-container {
+    flex: 1;
+    background: var(--meta-bg);
+    border-radius: 4px;
+    height: 20px;
+    overflow: hidden;
+}
+.score-statut-bar {
+    height: 100%;
+    border-radius: 4px;
+    min-width: 2px;
+    transition: width 0.5s ease;
+}
+.score-statut-value {
+    width: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Evolution mensuelle */
+.roi-evolution {
+    padding: 1rem 1.5rem 1.5rem;
+}
+.evolution-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+.evolution-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+.evolution-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+}
+.evolution-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 160px;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+.evolution-month {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 40px;
+    height: 100%;
+}
+.evolution-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    flex: 1;
+    width: 100%;
+    justify-content: center;
+}
+.evolution-bar {
+    width: 14px;
+    min-height: 4px;
+    border-radius: 2px 2px 0 0;
+    position: relative;
+    transition: height 0.4s ease;
+}
+.evolution-bar-detectes { background: var(--primary); }
+.evolution-bar-gagnes { background: var(--success); }
+.evolution-bar-value {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+.evolution-label {
+    font-size: 0.65rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+    white-space: nowrap;
+}
+
+/* Responsive ROI */
+@media (max-width: 768px) {
+    .roi-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    .roi-kpis-6 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .funnel-label {
+        width: 70px;
+        font-size: 0.75rem;
+    }
+    .funnel-pct { width: 35px; }
+    .evolution-chart { height: 120px; }
+    .evolution-bar { width: 10px; }
+    .score-statut-label { width: 80px; }
+}
+@media (max-width: 480px) {
+    .roi-kpis-6 {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Go/No-Go */

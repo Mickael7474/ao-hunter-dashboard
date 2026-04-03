@@ -143,9 +143,75 @@ def lancer_pipeline(nouveaux_ao: list[dict] = None) -> dict:
 
         traites += 1
 
-        # --- Etape 1 : Go/No-Go ---
+        # --- Etape 0 : Tentative de telechargement et parsing DCE ---
+        dce_texte = ""
+        rc_info = {}
+        dossier_dce = None
         try:
-            resultat_gng = go_no_go(ao)
+            from dce_auto import telecharger_dce_auto
+            from dce_parser import extraire_texte_dce, analyser_dce_complet
+
+            result_dce = telecharger_dce_auto(ao)
+            if result_dce.get("success") and result_dce.get("dossier"):
+                dossier_dce = Path(__file__).parent / "dossiers_generes" / result_dce["dossier"]
+                dce_texte = extraire_texte_dce(dossier_dce)
+                if dce_texte:
+                    log_entry["dce_telecharge"] = True
+                    log_entry["dce_nb_chars"] = len(dce_texte)
+                    logger.info(f"Pipeline: DCE extrait pour {ao_id} ({len(dce_texte)} chars)")
+        except Exception as e:
+            logger.warning(f"Pipeline: echec DCE pour {ao_id}: {e}")
+
+        # --- Etape 0b : Extraction du Reglement de Consultation (RC) ---
+        try:
+            if dossier_dce and dossier_dce.exists():
+                from extraction_rc import extraire_rc, adapter_dossier
+                rc_info = extraire_rc(dossier_dce)
+                if rc_info.get("fichier_rc"):
+                    log_entry["rc_extrait"] = True
+                    log_entry["rc_fichier"] = rc_info["fichier_rc"]
+                    log_entry["rc_nb_criteres"] = len(rc_info.get("criteres_attribution", []))
+                    log_entry["rc_nb_pieces"] = len(rc_info.get("pieces_exigees", []))
+                    logger.info(f"Pipeline: RC extrait pour {ao_id} ({rc_info['fichier_rc']})")
+
+                    # Enrichir l'AO avec les infos du RC
+                    if rc_info.get("date_limite") and not ao.get("date_limite"):
+                        ao["date_limite"] = rc_info["date_limite"]
+                    if rc_info.get("montant_estime") and not ao.get("budget_estime"):
+                        ao["budget_estime"] = rc_info["montant_estime"]
+                    if rc_info.get("criteres_attribution"):
+                        ao["criteres_rc"] = rc_info["criteres_attribution"]
+                    if rc_info.get("lots"):
+                        ao["lots_rc"] = rc_info["lots"]
+                    if rc_info.get("pieces_exigees"):
+                        ao["pieces_exigees_rc"] = rc_info["pieces_exigees"]
+
+                    # Adapter le dossier
+                    adaptations = adapter_dossier(rc_info, ao)
+                    if adaptations.get("alertes"):
+                        log_entry["rc_alertes"] = adaptations["alertes"]
+                    if adaptations.get("recommandations"):
+                        log_entry["rc_recommandations"] = adaptations["recommandations"][:5]
+
+                    # Enrichir le dce_texte avec les criteres pour le memoire
+                    if rc_info.get("criteres_attribution") and dce_texte:
+                        criteres_txt = "\n--- CRITERES D'ATTRIBUTION (extraits du RC) ---\n"
+                        for c in rc_info["criteres_attribution"]:
+                            criteres_txt += f"- {c['nom']} : {c['poids']}%\n"
+                        dce_texte = criteres_txt + "\n" + dce_texte
+        except Exception as e:
+            logger.warning(f"Pipeline: echec extraction RC pour {ao_id}: {e}")
+
+        # --- Etape 1 : Go/No-Go (enrichi DCE si disponible) ---
+        try:
+            if dce_texte:
+                from dce_parser import analyser_dce_complet
+                result_analyse = analyser_dce_complet(dce_texte, ao)
+                resultat_gng = result_analyse["go_no_go"]
+                log_entry["analyse_dce"] = True
+            else:
+                resultat_gng = go_no_go(ao)
+
             decision = resultat_gng.get("decision", "NO-GO")
             score_gng = resultat_gng.get("score", 0)
             log_entry["go_no_go"] = decision
@@ -176,7 +242,7 @@ def lancer_pipeline(nouveaux_ao: list[dict] = None) -> dict:
         # --- Etape 3 : Generation dossier ---
         try:
             from generateur_render import generer_dossier_complet
-            result_gen = generer_dossier_complet(ao, type_presta, gng_result=resultat_gng)
+            result_gen = generer_dossier_complet(ao, type_presta, gng_result=resultat_gng, dce_texte=dce_texte)
 
             if not result_gen.get("success"):
                 log_entry["action"] = "ERREUR_GEN"

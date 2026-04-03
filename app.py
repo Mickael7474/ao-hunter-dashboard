@@ -95,6 +95,15 @@ def _veille_auto():
     except Exception as e:
         logger.error(f"Erreur rappels: {e}")
 
+    # Veille attributions (AO soumis -> gagne/perdu)
+    try:
+        from veille_attributions import verifier_attributions
+        attr_result = verifier_attributions()
+        if attr_result["trouves"] > 0:
+            logger.info(f"Attributions: {attr_result['trouves']} trouvees ({attr_result['gagnes']} gagnes)")
+    except Exception as e:
+        logger.error(f"Erreur veille attributions: {e}")
+
     # Veille concurrentielle (1x par jour suffit)
     try:
         from veille_concurrence import lancer_veille_concurrence
@@ -496,36 +505,34 @@ def liste_ao():
     )
 
 
-@app.route("/roi")
-def roi():
-    """Tableau de bord ROI - temps economise, couts, valeur contrats."""
+def _calculer_roi_stats():
+    """Calcule toutes les stats ROI a partir des donnees. Retourne un dict."""
     appels = charger_ao()
     dossiers = lister_dossiers()
 
     # Stats pipeline
     nb_total = len(appels)
     nb_analyses = len([a for a in appels if a.get("statut") not in ("nouveau", "ignore")])
+    nb_candidatures = len([a for a in appels if a.get("statut") in ("candidature", "soumis", "gagne", "perdu")])
     nb_soumis = len([a for a in appels if a.get("statut") in ("soumis", "gagne", "perdu")])
     nb_gagnes = len([a for a in appels if a.get("statut") == "gagne"])
     nb_perdus = len([a for a in appels if a.get("statut") == "perdu"])
+    nb_ignores = len([a for a in appels if a.get("statut") == "ignore"])
     nb_dossiers = len(dossiers)
 
     # Taux de conversion
     taux_conversion = (nb_gagnes / nb_soumis * 100) if nb_soumis > 0 else 0
 
     # Estimation temps economise (en heures)
-    # Veille manuelle : ~2h/jour pour surveiller les sources
-    # Analyse AO : ~30min par AO pour lire et evaluer
-    # Dossier complet : ~8h par dossier en manuel
-    temps_veille = nb_total * 0.5  # 30min economisees par AO detecte automatiquement
-    temps_analyse = nb_analyses * 0.5  # 30min par AO analyse via Go/No-Go
-    temps_dossiers = nb_dossiers * 8  # 8h par dossier genere
+    temps_veille = nb_total * 0.5
+    temps_analyse = nb_analyses * 0.5
+    temps_dossiers = nb_dossiers * 8
     temps_total_h = temps_veille + temps_analyse + temps_dossiers
 
-    # Cout API estime (Claude Haiku pour scoring + Sonnet pour generation)
-    # Haiku : ~0.003$/AO pour scoring, Sonnet : ~0.15$/dossier
+    # Cout API estime
     cout_scoring = nb_total * 0.003
-    cout_generation = nb_dossiers * 0.15
+    cout_par_dossier = 0.15
+    cout_generation = nb_dossiers * cout_par_dossier
     cout_api_total = cout_scoring + cout_generation
 
     # Valeur des contrats
@@ -534,42 +541,130 @@ def roi():
     valeur_pipeline = sum(a.get("budget_estime") or 0 for a in appels
                          if a.get("statut") in ("analyse", "candidature"))
 
-    # ROI = valeur gagnee / cout total
-    cout_total = cout_api_total + (nb_dossiers * 5)  # +5 EUR/dossier pour infra
-    roi_ratio = (valeur_gagnes / cout_total) if cout_total > 0 else 0
+    # CA en cours = budget soumis x taux de conversion historique
+    ca_en_cours = valeur_soumis * (taux_conversion / 100) if taux_conversion > 0 else 0
 
-    # Cout journalier equivalent (si on payait un consultant 500 EUR/jour)
+    # Temps moyen par dossier (basé sur timestamps de generation)
+    temps_moyen_dossier = 0
+    if dossiers:
+        durees = []
+        for d in dossiers:
+            dc = d.get("date_creation", "")
+            if dc:
+                durees.append(1)  # chaque dossier ~ quelques minutes en auto
+        temps_moyen_dossier = round(temps_dossiers * 60 / len(dossiers), 1) if dossiers else 0  # min economisees/dossier
+
+    # ROI
+    tarif_horaire = 62.5  # 500 EUR/jour / 8h
+    cout_temps_valorise = temps_total_h * tarif_horaire
+    cout_total = cout_api_total + (nb_dossiers * 5)
+    roi_ratio = (valeur_gagnes / cout_total) if cout_total > 0 else 0
+    roi_global = (valeur_gagnes / (cout_api_total + cout_temps_valorise)) if (cout_api_total + cout_temps_valorise) > 0 else 0
+
     tarif_consultant = 500
     jours_economises = temps_total_h / 8
     economie_consultant = jours_economises * tarif_consultant
 
-    # Stats par source
+    # Stats par source avec taux conversion
     sources_stats = {}
     for ao in appels:
         src = ao.get("source", "Inconnu")
         if src not in sources_stats:
-            sources_stats[src] = {"total": 0, "soumis": 0, "gagnes": 0, "valeur": 0}
+            sources_stats[src] = {"total": 0, "soumis": 0, "gagnes": 0, "perdus": 0, "valeur": 0, "taux": 0}
         sources_stats[src]["total"] += 1
         if ao.get("statut") in ("soumis", "gagne", "perdu"):
             sources_stats[src]["soumis"] += 1
         if ao.get("statut") == "gagne":
             sources_stats[src]["gagnes"] += 1
             sources_stats[src]["valeur"] += ao.get("budget_estime") or 0
+        if ao.get("statut") == "perdu":
+            sources_stats[src]["perdus"] += 1
+    for src, s in sources_stats.items():
+        s["taux"] = round(s["gagnes"] / s["soumis"] * 100, 1) if s["soumis"] > 0 else 0
 
-    return render_template("roi.html",
-        nb_total=nb_total, nb_analyses=nb_analyses, nb_soumis=nb_soumis,
-        nb_gagnes=nb_gagnes, nb_perdus=nb_perdus, nb_dossiers=nb_dossiers,
-        taux_conversion=taux_conversion,
-        temps_veille=temps_veille, temps_analyse=temps_analyse,
-        temps_dossiers=temps_dossiers, temps_total_h=temps_total_h,
-        cout_scoring=cout_scoring, cout_generation=cout_generation,
-        cout_api_total=cout_api_total,
-        valeur_gagnes=valeur_gagnes, valeur_soumis=valeur_soumis,
-        valeur_pipeline=valeur_pipeline,
-        roi_ratio=roi_ratio, economie_consultant=economie_consultant,
-        jours_economises=jours_economises,
-        sources_stats=sources_stats,
-    )
+    # Evolution mensuelle (AO detectes et gagnes par mois)
+    evolution_mensuelle = {}
+    for ao in appels:
+        dp = ao.get("date_publication", "")
+        if dp and len(dp) >= 7:
+            mois = dp[:7]  # YYYY-MM
+            if mois not in evolution_mensuelle:
+                evolution_mensuelle[mois] = {"detectes": 0, "gagnes": 0}
+            evolution_mensuelle[mois]["detectes"] += 1
+            if ao.get("statut") == "gagne":
+                evolution_mensuelle[mois]["gagnes"] += 1
+    # Trier par mois
+    evolution_mensuelle = dict(sorted(evolution_mensuelle.items()))
+
+    # Top acheteurs
+    acheteurs_stats = {}
+    for ao in appels:
+        acheteur = ao.get("acheteur", "Inconnu")
+        if not acheteur:
+            acheteur = "Inconnu"
+        if acheteur not in acheteurs_stats:
+            acheteurs_stats[acheteur] = {"total": 0, "soumis": 0, "gagnes": 0, "valeur": 0}
+        acheteurs_stats[acheteur]["total"] += 1
+        if ao.get("statut") in ("soumis", "gagne", "perdu"):
+            acheteurs_stats[acheteur]["soumis"] += 1
+        if ao.get("statut") == "gagne":
+            acheteurs_stats[acheteur]["gagnes"] += 1
+            acheteurs_stats[acheteur]["valeur"] += ao.get("budget_estime") or 0
+    # Top 10 par nombre d'interactions
+    top_acheteurs = sorted(acheteurs_stats.items(), key=lambda x: x[1]["total"], reverse=True)[:10]
+
+    # Score moyen par statut
+    scores_par_statut = {}
+    for ao in appels:
+        statut = ao.get("statut", "nouveau")
+        score = ao.get("score_pertinence")
+        if score is not None:
+            if statut not in scores_par_statut:
+                scores_par_statut[statut] = {"somme": 0, "count": 0}
+            scores_par_statut[statut]["somme"] += score
+            scores_par_statut[statut]["count"] += 1
+    scores_moyens = {}
+    for statut, data in scores_par_statut.items():
+        scores_moyens[statut] = round(data["somme"] / data["count"] * 100, 1) if data["count"] > 0 else 0
+
+    # Funnel data (pour les barres CSS)
+    funnel_max = max(nb_total, 1)
+    funnel = [
+        {"label": "Detectes", "count": nb_total, "pct": 100},
+        {"label": "Analyses", "count": nb_analyses, "pct": round(nb_analyses / funnel_max * 100, 1)},
+        {"label": "Candidatures", "count": nb_candidatures, "pct": round(nb_candidatures / funnel_max * 100, 1)},
+        {"label": "Soumis", "count": nb_soumis, "pct": round(nb_soumis / funnel_max * 100, 1)},
+        {"label": "Gagnes", "count": nb_gagnes, "pct": round(nb_gagnes / funnel_max * 100, 1)},
+    ]
+
+    return {
+        "nb_total": nb_total, "nb_analyses": nb_analyses, "nb_candidatures": nb_candidatures,
+        "nb_soumis": nb_soumis, "nb_gagnes": nb_gagnes, "nb_perdus": nb_perdus,
+        "nb_ignores": nb_ignores, "nb_dossiers": nb_dossiers,
+        "taux_conversion": round(taux_conversion, 1),
+        "temps_veille": temps_veille, "temps_analyse": temps_analyse,
+        "temps_dossiers": temps_dossiers, "temps_total_h": temps_total_h,
+        "temps_moyen_dossier": temps_moyen_dossier,
+        "cout_scoring": round(cout_scoring, 2), "cout_generation": round(cout_generation, 2),
+        "cout_api_total": round(cout_api_total, 2), "cout_par_dossier": cout_par_dossier,
+        "valeur_gagnes": valeur_gagnes, "valeur_soumis": valeur_soumis,
+        "valeur_pipeline": valeur_pipeline, "ca_en_cours": ca_en_cours,
+        "roi_ratio": round(roi_ratio, 1), "roi_global": round(roi_global, 1),
+        "economie_consultant": economie_consultant,
+        "jours_economises": jours_economises,
+        "sources_stats": sources_stats,
+        "evolution_mensuelle": evolution_mensuelle,
+        "top_acheteurs": top_acheteurs,
+        "scores_moyens": scores_moyens,
+        "funnel": funnel,
+    }
+
+
+@app.route("/roi")
+def roi():
+    """Tableau de bord ROI ameliore - stats avancees, funnel, evolution."""
+    stats = _calculer_roi_stats()
+    return render_template("roi.html", **stats)
 
 
 @app.route("/kanban")
@@ -632,6 +727,14 @@ def detail_ao(ao_id):
     notes = charger_notes()
     note = notes.get(ao_id, "")
 
+    # Detection lots si pas encore fait
+    if "lots_detectes" not in ao:
+        from veille_render import detecter_lots_pertinents
+        lots = detecter_lots_pertinents(ao)
+        if lots:
+            ao["lots_detectes"] = lots
+            ao["lots_pertinents"] = sum(1 for l in lots if l.get("pertinent"))
+
     prestations = detecter_prestations(ao)
 
     # Go/No-Go rapide
@@ -650,11 +753,36 @@ def detail_ao(ao_id):
     # Commentaires
     commentaires = _charger_commentaires(ao_id)
 
+    # Estimation budget / concurrence / accessibilite
+    try:
+        from estimation_marche import estimer_marche
+        estimation = estimer_marche(ao)
+    except Exception:
+        estimation = None
+
+    # Score acheteur
+    try:
+        from score_acheteur import scorer_acheteur
+        score_acheteur_data = scorer_acheteur(ao)
+    except Exception:
+        score_acheteur_data = None
+
+    # AO similaires (si gagne)
+    ao_similaires = []
+    if ao.get("statut") == "gagne":
+        try:
+            from alertes_similaires import trouver_similaires
+            ao_similaires = trouver_similaires(ao, appels, n=5)
+        except Exception:
+            ao_similaires = []
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
                            prestations=prestations, go_nogo=go_nogo,
                            type_presta=type_presta, modele=modele,
                            checklist=checklist, checklist_etat=checklist_etat,
-                           commentaires=commentaires)
+                           commentaires=commentaires, estimation=estimation,
+                           score_acheteur=score_acheteur_data,
+                           ao_similaires=ao_similaires)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])
@@ -1104,6 +1232,20 @@ def api_pipeline():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/estimation/<path:ao_id>")
+def api_estimation(ao_id):
+    """GET /api/estimation/<id> - Estimation budget/concurrence/accessibilite."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+    try:
+        from estimation_marche import estimer_marche
+        return jsonify(estimer_marche(ao))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/veille", methods=["POST"])
 def api_lancer_veille():
     """POST /api/veille - Lance une veille en arriere-plan.
@@ -1154,6 +1296,15 @@ def api_lancer_veille():
     return jsonify({"status": "started"})
 
 
+@app.route("/api/roi")
+def api_roi():
+    """GET /api/roi - Stats ROI completes en JSON."""
+    stats = _calculer_roi_stats()
+    # Convertir top_acheteurs (list of tuples) en list of dicts pour JSON
+    stats["top_acheteurs"] = [{"acheteur": nom, **data} for nom, data in stats["top_acheteurs"]]
+    return jsonify(stats)
+
+
 @app.route("/api/veille/status")
 def api_veille_status():
     """GET /api/veille/status - Statut du scheduler et derniere veille."""
@@ -1163,6 +1314,65 @@ def api_veille_status():
         if job:
             status["prochaine_execution"] = str(job.next_run_time)
     return jsonify(status)
+
+
+@app.route("/api/attributions")
+def api_attributions():
+    """GET /api/attributions - Historique des resultats d'attribution."""
+    from veille_attributions import charger_attributions
+    attributions = charger_attributions()
+    return jsonify({
+        "total": len(attributions),
+        "attributions": attributions,
+        "gagnes": [a for a in attributions if a.get("notre_statut") == "gagne"],
+        "perdus": [a for a in attributions if a.get("notre_statut") == "perdu"],
+    })
+
+
+@app.route("/api/acheteurs-cles")
+def api_acheteurs_cles():
+    """GET /api/acheteurs-cles - Top acheteurs les plus compatibles avec Almera."""
+    from score_acheteur import top_acheteurs
+    n = int(request.args.get("n", "15"))
+    return jsonify(top_acheteurs(n=n))
+
+
+# --- API Prix ---
+
+@app.route("/api/prix/stats")
+def api_prix_stats():
+    """GET /api/prix/stats - Statistiques de prix par type de prestation."""
+    from modeles_prix import stats_prix
+    type_prestation = request.args.get("type")
+    return jsonify(stats_prix(type_prestation=type_prestation))
+
+
+@app.route("/api/prix/enregistrer", methods=["POST"])
+def api_prix_enregistrer():
+    """POST /api/prix/enregistrer - Enregistrer un prix soumis."""
+    from modeles_prix import enregistrer_prix
+    data = request.get_json(force=True)
+    ao_id = data.get("ao_id")
+    type_prestation = data.get("type_prestation", "formation_intra")
+    montant = data.get("montant")
+
+    if not ao_id or not montant:
+        return jsonify({"error": "ao_id et montant requis"}), 400
+
+    try:
+        montant = float(montant)
+    except (ValueError, TypeError):
+        return jsonify({"error": "montant doit etre un nombre"}), 400
+
+    entree = enregistrer_prix(
+        ao_id=ao_id,
+        type_prestation=type_prestation,
+        montant=montant,
+        nb_jours=data.get("nb_jours"),
+        nb_personnes=data.get("nb_personnes"),
+        resultat=data.get("resultat"),
+    )
+    return jsonify({"status": "ok", "entree": entree})
 
 
 # --- WebSocket ---

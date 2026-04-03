@@ -15,6 +15,7 @@ Genere un dossier complet :
 """
 
 import os
+import re
 import json
 import logging
 from pathlib import Path
@@ -134,10 +135,178 @@ Chiffres cles : {ent['chiffres']}
 Formateur principal : {ent['formateur_principal']}"""
 
 
+# --- Helpers ---
+
+def _extraire_criteres_attribution(ao: dict, dce_texte: str = "") -> list[dict]:
+    """Extrait les criteres d'attribution de l'AO et du DCE.
+
+    Retourne une liste triee par poids decroissant :
+    [{"nom": "Valeur technique", "poids_pct": 60, "sous_criteres": [
+        {"nom": "Methodologie", "poids_pct": 30}, ...
+    ]}, ...]
+    """
+    criteres = []
+    texte_criteres = ""
+
+    # Source 1 : champ criteres_attribution de l'AO
+    crit_ao = ao.get("criteres_attribution", "")
+    if isinstance(crit_ao, str) and crit_ao and crit_ao != "Non precises":
+        texte_criteres += " " + crit_ao
+    elif isinstance(crit_ao, list):
+        for c in crit_ao:
+            if isinstance(c, dict):
+                criteres.append({
+                    "nom": c.get("nom", c.get("name", "")),
+                    "poids_pct": c.get("poids_pct", c.get("poids", c.get("weight", 0))),
+                    "sous_criteres": c.get("sous_criteres", []),
+                })
+            elif isinstance(c, str):
+                texte_criteres += " " + c
+
+    # Source 2 : texte du DCE
+    if dce_texte:
+        # Chercher la section criteres dans le DCE
+        for pattern in [
+            r"crit[eè]res?\s+d['']attribution",
+            r"crit[eè]res?\s+de\s+jugement",
+            r"crit[eè]res?\s+d['']analyse",
+            r"pond[eé]ration",
+            r"notation\s+des\s+offres",
+        ]:
+            match = re.search(pattern, dce_texte, re.IGNORECASE)
+            if match:
+                # Extraire un bloc de 2000 chars autour du match
+                start = max(0, match.start() - 200)
+                end = min(len(dce_texte), match.end() + 2000)
+                texte_criteres += " " + dce_texte[start:end]
+                break
+
+    # Si on a deja des criteres structures, les retourner
+    if criteres:
+        criteres.sort(key=lambda c: c["poids_pct"], reverse=True)
+        return criteres
+
+    # Parser le texte pour extraire criteres et ponderations
+    if not texte_criteres.strip():
+        return []
+
+    # Pattern : "Nom du critere XX%" ou "Nom du critere : XX %" ou "Nom (XX%)"
+    # Ex: "Valeur technique 60%" ou "Prix : 40 %"
+    pattern_critere = re.compile(
+        r'([A-ZÀ-Ÿa-zà-ÿ][A-ZÀ-Ÿa-zà-ÿ\s/\-\']+?)\s*[:(\s]\s*(\d{1,3})\s*%',
+        re.UNICODE
+    )
+    matches = pattern_critere.findall(texte_criteres)
+
+    for nom_raw, poids_raw in matches:
+        nom = nom_raw.strip().rstrip(" :(")
+        poids = int(poids_raw)
+        # Filtrer les faux positifs (poids hors limites, noms trop courts)
+        if poids < 1 or poids > 100 or len(nom) < 3:
+            continue
+        # Eviter les doublons
+        if any(c["nom"].lower() == nom.lower() for c in criteres):
+            continue
+        criteres.append({"nom": nom, "poids_pct": poids, "sous_criteres": []})
+
+    # Detecter les sous-criteres : "dont Xxx YY%, Yyy ZZ%"
+    pattern_dont = re.compile(
+        r'dont\s+(.*?)(?:\.|;|\n|$)',
+        re.IGNORECASE | re.UNICODE
+    )
+    for match in pattern_dont.finditer(texte_criteres):
+        bloc_sous = match.group(1)
+        sous_matches = re.findall(
+            r'([A-ZÀ-Ÿa-zà-ÿ][A-ZÀ-Ÿa-zà-ÿ\s/\-\']+?)\s*(\d{1,3})\s*%',
+            bloc_sous
+        )
+        if sous_matches:
+            # Trouver le critere parent (le plus proche avant "dont")
+            pos_dont = match.start()
+            parent = None
+            for c in criteres:
+                if c["nom"].lower() in texte_criteres[:pos_dont + 50].lower():
+                    parent = c
+            # Si pas de parent trouve, attribuer au premier critere non-prix
+            if not parent:
+                for c in criteres:
+                    if "prix" not in c["nom"].lower():
+                        parent = c
+                        break
+            if parent:
+                for sc_nom, sc_poids in sous_matches:
+                    sc_nom = sc_nom.strip()
+                    if len(sc_nom) >= 3 and int(sc_poids) <= parent["poids_pct"]:
+                        parent["sous_criteres"].append({
+                            "nom": sc_nom,
+                            "poids_pct": int(sc_poids),
+                        })
+
+    criteres.sort(key=lambda c: c["poids_pct"], reverse=True)
+    return criteres
+
+
 # --- Generation de chaque piece du dossier ---
 
-def _generer_memoire(ao: dict, type_presta: str) -> str:
+def _generer_memoire(ao: dict, type_presta: str, dce_texte: str = "", personnalisation: dict = None) -> str:
     """Genere le memoire technique (piece maitresse)."""
+    dce_bloc = ""
+    if dce_texte:
+        dce_bloc = f"""
+
+=== EXTRAIT DU DCE ===
+Utilise ces extraits du Dossier de Consultation des Entreprises pour personnaliser
+au maximum le memoire (reprendre les termes exacts, repondre aux exigences detectees) :
+{dce_texte[:8000]}
+==="""
+
+    # Feature 1 : Structure en miroir des criteres d'attribution
+    criteres = _extraire_criteres_attribution(ao, dce_texte)
+    criteres_bloc = ""
+    structure_bloc = ""
+    if criteres:
+        criteres_lignes = []
+        for c in criteres:
+            ligne = f"- {c['nom']} ({c['poids_pct']}%)"
+            if c.get("sous_criteres"):
+                for sc in c["sous_criteres"]:
+                    ligne += f"\n  - {sc['nom']} ({sc['poids_pct']}%)"
+            criteres_lignes.append(ligne)
+
+        criteres_bloc = f"""
+
+=== CRITERES D'ATTRIBUTION DETECTES ===
+{chr(10).join(criteres_lignes)}
+==="""
+
+        # Generer la structure imposee du memoire
+        sections = []
+        for i, c in enumerate(criteres, 1):
+            if "prix" in c["nom"].lower():
+                continue  # Le prix est traite dans le BPU, pas dans le memoire
+            if c.get("sous_criteres"):
+                sections.append(f"## {i}. {c['nom']} ({c['poids_pct']}%)")
+                for j, sc in enumerate(c["sous_criteres"], 1):
+                    sections.append(f"### {i}.{j}. {sc['nom']} ({sc['poids_pct']}%)")
+            else:
+                sections.append(f"## {i}. {c['nom']} ({c['poids_pct']}%)")
+
+        structure_bloc = f"""
+
+=== STRUCTURE OBLIGATOIRE DU MEMOIRE ===
+IMPORTANT : Le memoire DOIT reprendre EXACTEMENT ces sections dans cet ordre,
+en utilisant les INTITULES EXACTS des criteres d'attribution.
+Le volume de chaque section doit etre proportionnel a son poids dans la notation.
+
+{chr(10).join(sections)}
+==="""
+
+    # Feature 2 : Personnalisation acheteur
+    perso_bloc = ""
+    if personnalisation:
+        from personnalisation_acheteur import bloc_personnalisation_prompt
+        perso_bloc = bloc_personnalisation_prompt(personnalisation)
+
     prompt = f"""Tu es un expert en reponse aux appels d'offres publics francais.
 Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
@@ -148,10 +317,11 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
 ## ENTREPRISE CANDIDATE
 {_bloc_infos_entreprise()}
+{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}
 
 ## INSTRUCTIONS
 1. Redige un memoire technique COMPLET en francais (minimum 3000 mots)
-2. Structure avec sections standard pour "{type_presta}"
+2. {"Structure le memoire en MIROIR EXACT des criteres d'attribution ci-dessus, en respectant l'ordre et les intitules." if criteres else f'Structure avec sections standard pour "{type_presta}"'}
 3. Personnalise chaque section au contexte de l'acheteur
 4. Utilise UNIQUEMENT les vraies references et certifications d'Almera
 5. N'invente JAMAIS de noms de formateurs ou de references clients
@@ -160,14 +330,22 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 8. Si Formation : objectifs pedagogiques, methodes, supports, evaluation
 9. Si Consulting/AMO : methodologie en 4 etapes (diagnostic, feuille de route, accompagnement, deploiement)
 10. Sois precis, concret, quantifie. Pas de phrases generiques.
-11. Format Markdown avec titres # ## ###"""
+11. Format Markdown avec titres # ## ###
+{"12. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}"""
 
     return _appel_claude(prompt, max_tokens=8000)
 
 
-def _generer_lettre(ao: dict) -> str:
+def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
     """Genere la lettre de candidature."""
     ent = ENTREPRISE
+
+    # Feature 2 : Personnalisation acheteur
+    perso_bloc = ""
+    if personnalisation:
+        from personnalisation_acheteur import bloc_personnalisation_prompt
+        perso_bloc = bloc_personnalisation_prompt(personnalisation)
+
     prompt = f"""Redige une LETTRE DE CANDIDATURE professionnelle et COMPLETE pour cet appel d'offres.
 
 === APPEL D'OFFRES ===
@@ -175,6 +353,7 @@ def _generer_lettre(ao: dict) -> str:
 
 === INFORMATIONS ENTREPRISE CANDIDATE ===
 {_bloc_infos_entreprise()}
+{perso_bloc}
 
 === REGLES IMPERATIVES ===
 - NE LAISSE AUCUN TEXTE ENTRE CROCHETS []. Toutes les informations sont ci-dessus.
@@ -190,16 +369,53 @@ def _generer_lettre(ao: dict) -> str:
 - Attester etre en regle vis-a-vis obligations fiscales et sociales
 - Mentionner les certifications (Qualiopi, RS6776)
 - Signature par le representant legal avec nom, titre, date
+{"- Adapter le ton et le vocabulaire au type d'acheteur (" + personnalisation['type_acheteur'] + ")" if personnalisation else ""}
 
 Format : Lettre professionnelle formelle, prete a imprimer."""
 
     return _appel_claude(prompt, max_tokens=2000)
 
 
-def _generer_bpu(ao: dict) -> str:
-    """Genere le BPU/DPGF."""
+def _generer_bpu(ao: dict, dce_texte: str = "") -> str:
+    """Genere le BPU/DPGF avec recommandation de prix dynamique."""
     ent = ENTREPRISE
     grille = "\n".join(f"- {k.replace('_', ' ').title()}: {v}" for k, v in ent["grille_tarifaire"].items())
+
+    # Recommandation de prix dynamique
+    reco_bloc = ""
+    strategie_commentaire = ""
+    try:
+        from modeles_prix import recommander_prix
+        reco = recommander_prix(ao)
+        reco_bloc = f"""
+
+=== RECOMMANDATION DE PRIX (basee sur l'historique) ===
+TJM recommande : {reco['tjm_recommande']} EUR/jour
+Fourchette competitive : {reco['fourchette'][0]} - {reco['fourchette'][1]} EUR/jour
+Prix total estime : {reco['prix_total_estime']} EUR HT
+Nb jours estime : {reco['nb_jours_estime']}
+Strategie : {reco['strategie']}
+Type prestation : {reco['type_prestation']}
+IMPORTANT : Utilise le TJM recommande comme base pour les prix unitaires.
+==="""
+        strategie_commentaire = (
+            f"\n\n> **Strategie tarifaire retenue : {reco['strategie'].upper()}** "
+            f"| TJM cible : {reco['tjm_recommande']} EUR/jour "
+            f"| Fourchette : {reco['fourchette'][0]}-{reco['fourchette'][1]} EUR/jour"
+        )
+        logger.info(f"BPU: recommandation prix TJM={reco['tjm_recommande']}, strategie={reco['strategie']}")
+    except Exception as e:
+        logger.warning(f"Recommandation prix indisponible: {e}")
+
+    dce_bloc = ""
+    if dce_texte:
+        dce_bloc = f"""
+
+=== EXTRAIT DU DCE ===
+Utilise ces extraits pour adapter les postes de prix, quantites et unites
+aux exigences exactes du cahier des charges :
+{dce_texte[:8000]}
+==="""
 
     prompt = f"""Genere un BORDEREAU DE PRIX UNITAIRES (BPU) et une DECOMPOSITION DU PRIX GLOBAL FORFAITAIRE (DPGF).
 
@@ -213,6 +429,7 @@ def _generer_bpu(ao: dict) -> str:
 Raison sociale : {ent['raison_sociale']}
 SIRET : {ent['siret']}
 TVA : Exoneree (article 261-4-4 du CGI)
+{reco_bloc}{dce_bloc}
 
 === STRUCTURE ===
 
@@ -227,12 +444,18 @@ Phases : preparatoire, formation, suivi, e-learning, option certification
 Total HT + note TVA exoneree + "Prix fermes et non revisables"
 
 === REGLES ===
-- Utilise EXACTEMENT les tarifs fournis
+- Utilise les tarifs de la RECOMMANDATION DE PRIX si disponible, sinon la grille tarifaire
 - Viser 80-90% du budget si connu
 - Certification RS6776 en OPTION separee
 - Format Markdown avec tableaux"""
 
-    return _appel_claude(prompt, max_tokens=4000)
+    resultat = _appel_claude(prompt, max_tokens=4000)
+
+    # Ajouter le commentaire strategie en fin de BPU
+    if strategie_commentaire:
+        resultat += strategie_commentaire
+
+    return resultat
 
 
 def _generer_planning(ao: dict) -> str:
@@ -417,10 +640,20 @@ def _generer_analyse_gonogo(ao: dict, gng_result: dict) -> str:
 """
 
 
-def _generer_programme_formation(ao: dict) -> str:
+def _generer_programme_formation(ao: dict, dce_texte: str = "") -> str:
     """Genere le programme de formation detaille en selectionnant dans le catalogue."""
     # Charger le catalogue YAML
     catalogue_txt = _charger_catalogue()
+
+    dce_bloc = ""
+    if dce_texte:
+        dce_bloc = f"""
+
+=== EXTRAIT DU DCE ===
+Utilise ces extraits pour adapter le programme aux exigences exactes du cahier
+des charges (durees, publics, objectifs, modalites demandees) :
+{dce_texte[:8000]}
+==="""
 
     prompt = f"""Tu es un ingenieur pedagogique expert en formation professionnelle.
 Genere un PROGRAMME DE FORMATION DETAILLE pour cet appel d'offres.
@@ -430,6 +663,7 @@ Genere un PROGRAMME DE FORMATION DETAILLE pour cet appel d'offres.
 
 === CATALOGUE DE FORMATIONS ALMERA (a utiliser comme base) ===
 {catalogue_txt}
+{dce_bloc}
 
 === INSTRUCTIONS ===
 1. Selectionne les 1 a 4 formations du catalogue les plus pertinentes pour cet AO
@@ -1148,13 +1382,14 @@ def _generer_checklist_soumission(ao: dict, fichiers_generes: list[str]) -> str:
 
 # --- Fonction principale ---
 
-def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result: dict = None) -> dict:
+def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result: dict = None, dce_texte: str = "") -> dict:
     """Genere un dossier de candidature COMPLET via l'API Claude.
 
     Args:
         ao: Dictionnaire de l'appel d'offres
         type_presta: Type de prestation detecte
         gng_result: Resultat du Go/No-Go (si deja calcule)
+        dce_texte: Texte extrait du DCE (optionnel, enrichit les prompts)
 
     Returns:
         dict avec: success, dossier_nom, fichiers, nb_mots, erreur
@@ -1177,6 +1412,27 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     nb_mots_total = 0
     erreurs = []
 
+    # Feature 2 : Personnalisation automatique par type d'acheteur
+    personnalisation = None
+    try:
+        from personnalisation_acheteur import personnaliser
+        # Passer les references du fichier _generer_references_clients
+        refs_list = [
+            {"client": "Havas", "secteur": "Communication et publicite", "mission": "Formation IA generative pour les equipes creatives et strategiques"},
+            {"client": "Eiffage", "secteur": "BTP / Construction", "mission": "Formation IA pour les cadres dirigeants et chefs de projet"},
+            {"client": "Carrefour", "secteur": "Grande distribution", "mission": "Acculturation IA et ChatGPT pour les equipes marketing et supply chain"},
+            {"client": "Orange", "secteur": "Telecommunications", "mission": "Formation IA generative et prompt engineering pour les equipes techniques"},
+            {"client": "Caisse des Depots", "secteur": "Institution financiere publique", "mission": "Formation IA pour les agents et cadres de la CDC"},
+            {"client": "Eli Lilly", "secteur": "Pharmaceutique", "mission": "Formation IA generative pour les equipes R&D et marketing"},
+            {"client": "3DS (Dassault Systemes)", "secteur": "Technologie / Ingenierie", "mission": "Formation IA et automatisation pour les ingenieurs"},
+            {"client": "Action Logement", "secteur": "Logement social", "mission": "Acculturation IA et transformation digitale"},
+            {"client": "CCI", "secteur": "Chambre de commerce", "mission": "Formation IA pour les conseillers et equipes d'accompagnement"},
+        ]
+        personnalisation = personnaliser(ao, references=refs_list)
+        logger.info(f"Personnalisation: type_acheteur={personnalisation['type_acheteur']}")
+    except Exception as e:
+        logger.warning(f"Personnalisation acheteur non disponible: {e}")
+
     # 1. Analyse Go/No-Go (pas d'appel API)
     logger.info("1/7 - Analyse Go/No-Go...")
     try:
@@ -1195,7 +1451,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 2. Memoire technique (appel API principal)
     logger.info("2/7 - Memoire technique...")
     try:
-        memoire = _generer_memoire(ao, type_presta)
+        memoire = _generer_memoire(ao, type_presta, dce_texte=dce_texte, personnalisation=personnalisation)
         _sauvegarder(dossier_path, "02_memoire_technique.md", memoire)
         fichiers_generes.append("02_memoire_technique.md")
         nb_mots_total += len(memoire.split())
@@ -1207,7 +1463,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 3. Lettre de candidature (appel API)
     logger.info("3/7 - Lettre de candidature...")
     try:
-        lettre = _generer_lettre(ao)
+        lettre = _generer_lettre(ao, personnalisation=personnalisation)
         _sauvegarder(dossier_path, "03_lettre_candidature.md", lettre)
         fichiers_generes.append("03_lettre_candidature.md")
         nb_mots_total += len(lettre.split())
@@ -1218,7 +1474,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 4. BPU / DPGF (appel API)
     logger.info("4/7 - BPU / DPGF...")
     try:
-        bpu = _generer_bpu(ao)
+        bpu = _generer_bpu(ao, dce_texte=dce_texte)
         _sauvegarder(dossier_path, "04_bpu_dpgf.md", bpu)
         fichiers_generes.append("04_bpu_dpgf.md")
         nb_mots_total += len(bpu.split())
@@ -1262,7 +1518,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 8. Programme de formation detaille (appel API)
     logger.info("8/13 - Programme de formation detaille...")
     try:
-        programme = _generer_programme_formation(ao)
+        programme = _generer_programme_formation(ao, dce_texte=dce_texte)
         _sauvegarder(dossier_path, "08_programme_formation.md", programme)
         fichiers_generes.append("08_programme_formation.md")
         nb_mots_total += len(programme.split())
@@ -1334,10 +1590,60 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     except Exception as e:
         erreurs.append(f"Checklist: {e}")
 
-    # 15. Fiche AO en JSON
+    # 15. Conversion des documents cles en DOCX
+    try:
+        _convertir_en_docx(dossier_path, ao, fichiers_generes)
+    except Exception as e:
+        erreurs.append(f"Conversion DOCX: {e}")
+        logger.error(f"Erreur conversion DOCX globale: {e}")
+
+    # 16. Pre-remplissage formulaires natifs du DCE (DC1/DC2/DUME PDF/DOCX)
+    try:
+        from formulaires_natifs import preremplir_formulaires
+        # Chercher le dossier DCE (telecharge par dce_auto)
+        clean_id = ao.get("id", "inconnu").replace("/", "_").replace("\\", "_")
+        dossier_dce_candidat = DOSSIERS_DIR / f"DCE_{clean_id}"
+        if not dossier_dce_candidat.exists():
+            # Tenter aussi le dossier courant (les fichiers DCE sont parfois dans le meme dossier)
+            dossier_dce_candidat = dossier_path
+        formulaires_ok = preremplir_formulaires(dossier_dce_candidat, dossier_path)
+        if formulaires_ok:
+            fichiers_generes.extend(formulaires_ok)
+            logger.info(f"  {len(formulaires_ok)} formulaire(s) pre-rempli(s)")
+    except Exception as e:
+        erreurs.append(f"Pre-remplissage formulaires: {e}")
+        logger.error(f"Erreur pre-remplissage formulaires: {e}")
+
+    # 17. Fiche AO en JSON
     fiche_path = dossier_path / "fiche_ao.json"
     fiche_path.write_text(json.dumps(ao, ensure_ascii=False, indent=2), encoding="utf-8")
     fichiers_generes.append("fiche_ao.json")
+
+    # Feature 3 : Auto-review IA du dossier avant soumission
+    review_result = None
+    logger.info("Auto-review IA du dossier...")
+    try:
+        from auto_review import review_dossier
+
+        # Charger tous les fichiers markdown generes
+        fichiers_contenu = {}
+        for f_nom in fichiers_generes:
+            if f_nom.endswith(".md"):
+                f_path = dossier_path / f_nom
+                if f_path.exists():
+                    fichiers_contenu[f_nom] = f_path.read_text(encoding="utf-8")
+
+        criteres_pour_review = _extraire_criteres_attribution(ao, dce_texte)
+        review_result = review_dossier(fichiers_contenu, ao, criteres_attribution=criteres_pour_review)
+
+        # Sauvegarder le resultat dans review_auto.json
+        review_path = dossier_path / "review_auto.json"
+        review_path.write_text(json.dumps(review_result, ensure_ascii=False, indent=2), encoding="utf-8")
+        fichiers_generes.append("review_auto.json")
+        logger.info(f"Auto-review: score={review_result.get('score_qualite', '?')}/100, conforme={review_result.get('conforme', '?')}")
+    except Exception as e:
+        erreurs.append(f"Auto-review: {e}")
+        logger.error(f"Erreur auto-review: {e}")
 
     # Mettre a jour l'index
     _maj_index(dossier_nom, ao, dossier_path)
@@ -1352,6 +1658,14 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         "erreurs": erreurs,
     }
 
+    # Ajouter les infos de review et personnalisation au resultat
+    if review_result:
+        result["review"] = review_result
+    if personnalisation:
+        result["personnalisation"] = {
+            "type_acheteur": personnalisation["type_acheteur"],
+        }
+
     if erreurs:
         result["avertissement"] = f"{len(erreurs)} erreur(s) lors de la generation"
         logger.warning(f"Dossier {dossier_nom}: {len(erreurs)} erreurs - {erreurs}")
@@ -1364,6 +1678,65 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
 def generer_memoire_technique(ao: dict, type_presta: str = "Formation") -> dict:
     """Compatibilite arriere - genere maintenant un dossier complet."""
     return generer_dossier_complet(ao, type_presta)
+
+
+def _convertir_en_docx(dossier_path: Path, ao: dict, fichiers_generes: list):
+    """Convertit les documents Markdown cles en DOCX avec branding Almera."""
+    try:
+        from export_docx_render import markdown_to_docx, DOCX_DISPONIBLE
+    except ImportError:
+        logger.info("export_docx_render non disponible - pas de conversion DOCX")
+        return
+
+    if not DOCX_DISPONIBLE:
+        logger.info("python-docx non installe - pas de conversion DOCX")
+        return
+
+    titre_ao = ao.get("titre", "Appel d'offres")
+
+    # Mapping: nom fichier md -> titre du document DOCX
+    documents_a_convertir = {
+        "02_memoire_technique.md": "Memoire Technique",
+        "03_lettre_candidature.md": "Lettre de Candidature",
+        "04_bpu_dpgf.md": "Bordereau de Prix Unitaires - DPGF",
+        "05_planning_previsionnel.md": "Planning Previsionnel",
+        "06_cv_formateurs.md": "CV des Formateurs",
+        "07_dc1_dc2.md": "DC1 - DC2",
+        "08_programme_formation.md": "Programme de Formation",
+        "09_references_clients.md": "References Clients",
+        "11_acte_engagement.md": "Acte d'Engagement",
+        "12_dume.md": "Document Unique de Marche Europeen",
+        "13_moyens_techniques.md": "Moyens Techniques et Materiels",
+    }
+
+    nb_convertis = 0
+    for md_filename, titre_doc in documents_a_convertir.items():
+        if md_filename not in fichiers_generes:
+            continue
+
+        md_path = dossier_path / md_filename
+        if not md_path.exists():
+            continue
+
+        docx_filename = md_filename.replace(".md", ".docx")
+        docx_path = dossier_path / docx_filename
+
+        try:
+            contenu_md = md_path.read_text(encoding="utf-8")
+            markdown_to_docx(
+                contenu_md=contenu_md,
+                output_path=docx_path,
+                titre_document=titre_doc,
+                sous_titre=titre_ao,
+            )
+            fichiers_generes.append(docx_filename)
+            nb_convertis += 1
+        except Exception as e:
+            logger.warning(f"Erreur conversion DOCX {md_filename}: {e}")
+            continue
+
+    if nb_convertis:
+        logger.info(f"{nb_convertis} document(s) converti(s) en DOCX")
 
 
 def _sauvegarder(dossier_path: Path, nom_fichier: str, contenu: str):

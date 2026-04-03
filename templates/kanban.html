@@ -86,7 +86,23 @@ function kanbanDragStart(e) {
     if (!card) return;
     e.dataTransfer.setData('text/plain', card.dataset.id);
     e.dataTransfer.effectAllowed = 'move';
-    card.classList.add('dragging');
+
+    // Creer un ghost qui garde le format de la carte
+    var ghost = card.cloneNode(true);
+    ghost.classList.add('kanban-card-ghost');
+    ghost.style.width = card.offsetWidth + 'px';
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, card.offsetWidth / 2, 20);
+
+    // Nettoyer le ghost apres le debut du drag
+    requestAnimationFrame(function() {
+        card.classList.add('dragging');
+    });
+
+    // Supprimer le ghost du DOM apres utilisation
+    setTimeout(function() {
+        if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    }, 0);
 }
 
 function kanbanDrop(e) {

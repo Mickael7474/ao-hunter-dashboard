@@ -222,10 +222,26 @@ def _extraire_delais(texte: str) -> list[str]:
 
 def _extraire_lots(texte: str) -> list[dict]:
     """Detecte si le marche est alloti et extrait les lots."""
+    texte_lower = texte.lower()
+
+    # Detecter marche non alloti / lot unique
+    if re.search(r"march[eé]\s+non\s+alloti", texte_lower) or \
+       re.search(r"marche\s+non\s+alloti", texte_lower):
+        return [{"numero": 0, "description": "Marche non alloti (lot unique)",
+                 "pertinent": None, "score": None}]
+
+    if re.search(r"lot\s+unique", texte_lower):
+        return [{"numero": 1, "description": "Lot unique",
+                 "pertinent": None, "score": None}]
+
+    # Detecter "marche alloti en X lots"
+    match_alloti = re.search(r"march[eé]?\s+alloti\s+en\s+(\d+)\s+lots?", texte_lower)
+
     lots = []
     patterns = [
         r"lot\s*n?\s*[°º]?\s*(\d+)\s*[:\-–]\s*(.+?)(?:\n|$)",
         r"lot\s+(\d+)\s*[:\-–]\s*(.+?)(?:\n|$)",
+        r"lot\s+(\d+)\s*[:\-–]\s*(.+?)(?:\.|;|$)",
     ]
     for pattern in patterns:
         matches = re.findall(pattern, texte, re.IGNORECASE)
@@ -241,6 +257,18 @@ def _extraire_lots(texte: str) -> list[dict]:
         if lot["numero"] not in vus:
             vus.add(lot["numero"])
             uniques.append(lot)
+
+    # Evaluer la pertinence de chaque lot
+    for lot in uniques:
+        desc_lower = lot["description"].lower()
+        # Verifier hors perimetre
+        exclu = any(s in desc_lower for s in SECTEURS_HORS_PERIMETRE)
+        # Compter les competences matchees
+        hits = sum(1 for c in COMPETENCES_ALMERA if c.lower() in desc_lower)
+        score = min(hits / 4.0, 1.0) if not exclu else 0.0
+        lot["score"] = round(score, 2)
+        lot["pertinent"] = score >= 0.2 and not exclu
+
     return uniques[:20]
 
 

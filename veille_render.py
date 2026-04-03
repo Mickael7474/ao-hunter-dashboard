@@ -88,6 +88,67 @@ def scorer_ao(titre: str, description: str, code_cpv: str = "") -> float:
     return round(score, 2)
 
 
+LOTS_NON_PERTINENTS = [
+    "travaux", "btp", "construction", "nettoyage", "restauration",
+    "transport", "voirie", "assainissement", "cablage", "fibre optique",
+    "cybersecurite", "pentest", "videosurveillance", "infrastructure",
+    "fourniture", "materiel informatique", "equipement", "mobilier",
+    "electricite", "plomberie", "chauffage", "climatisation", "espaces verts",
+    "securite incendie", "gardiennage", "maintenance batiment",
+]
+
+
+def detecter_lots_pertinents(ao: dict) -> list[dict]:
+    """Detecte les lots dans le titre/description d'un AO et evalue leur pertinence.
+
+    Returns:
+        list de {numero, description, pertinent: bool, score}
+    """
+    titre = ao.get("titre") or ""
+    description = ao.get("description") or ""
+    texte = f"{titre}\n{description}"
+
+    lots = []
+    patterns = [
+        r"lot\s*n?\s*[°º]?\s*(\d+)\s*[:\-–]\s*(.+?)(?:\n|$)",
+        r"lot\s+(\d+)\s*[:\-–]\s*(.+?)(?:\n|$)",
+        r"lot\s+(\d+)\s*[:\-–]\s*(.+?)(?:\.|;|$)",
+    ]
+    for pattern in patterns:
+        matches = re.findall(pattern, texte, re.IGNORECASE)
+        for num, desc in matches:
+            desc = desc.strip()[:150]
+            if len(desc) > 3:
+                lots.append({"numero": int(num), "description": desc})
+
+    # Dedoublonner par numero
+    vus = set()
+    uniques = []
+    for lot in lots:
+        if lot["numero"] not in vus:
+            vus.add(lot["numero"])
+            uniques.append(lot)
+
+    # Scorer chaque lot
+    for lot in uniques:
+        desc_lower = lot["description"].lower()
+
+        # Verifier exclusion
+        exclu = any(e in desc_lower for e in LOTS_NON_PERTINENTS)
+
+        # Compter les mots-cles positifs
+        hits = 0
+        for mot in MOTS_CLES_SCORING:
+            if mot.lower() in desc_lower:
+                hits += 1
+        score = min(hits / 5.0, 1.0) if not exclu else 0.0
+
+        lot["score"] = round(score, 2)
+        lot["pertinent"] = score >= 0.2 and not exclu
+
+    return uniques
+
+
 def rechercher_boamp() -> list[dict]:
     """Interroge l'API open data BOAMP."""
     API_URL = "https://www.boamp.fr/api/explore/v2.1/catalog/datasets/boamp/records"
@@ -588,6 +649,13 @@ def lancer_veille() -> dict:
             nouveaux_ao.extend(aos)
         except Exception as e:
             logger.error(f"Erreur {nom}: {e}")
+
+    # Enrichir les AO avec detection de lots
+    for ao in nouveaux_ao:
+        lots = detecter_lots_pertinents(ao)
+        if lots:
+            ao["lots_detectes"] = lots
+            ao["lots_pertinents"] = sum(1 for l in lots if l.get("pertinent"))
 
     # Ajouter les nouveaux
     nb_nouveaux = 0

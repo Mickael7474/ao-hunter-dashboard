@@ -57,6 +57,53 @@
     </div>
 </div>
 
+<!-- Score acheteur -->
+{% if score_acheteur %}
+<div class="card">
+    <div class="card-header">
+        <h2>Compatibilite acheteur</h2>
+        <span class="score {% if score_acheteur.score >= 70 %}score-high{% elif score_acheteur.score >= 40 %}score-mid{% else %}score-low{% endif %}" style="font-size:1.1rem; padding:4px 14px;">
+            {{ score_acheteur.score }}/100
+        </span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">{{ score_acheteur.recommandation }}</p>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+        {% for d in score_acheteur.details %}
+        <span class="badge" style="background:var(--meta-bg); color:var(--text); padding:3px 10px; font-size:0.75rem;">{{ d }}</span>
+        {% endfor %}
+    </div>
+    {% if score_acheteur.historique and score_acheteur.historique.nb_ao > 0 %}
+    <details style="margin-top:0.5rem;">
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Historique acheteur</summary>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.75rem; margin-top:0.5rem; font-size:0.8rem;">
+            <div style="text-align:center; padding:0.5rem; background:var(--meta-bg); border-radius:var(--radius);">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">AO vus</div>
+                <div style="font-size:1.2rem; font-weight:700;">{{ score_acheteur.historique.nb_ao }}</div>
+            </div>
+            <div style="text-align:center; padding:0.5rem; background:var(--meta-bg); border-radius:var(--radius);">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Formation/IA</div>
+                <div style="font-size:1.2rem; font-weight:700;">{{ score_acheteur.historique.nb_formation_ia }}</div>
+            </div>
+            <div style="text-align:center; padding:0.5rem; background:var(--meta-bg); border-radius:var(--radius);">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Soumis</div>
+                <div style="font-size:1.2rem; font-weight:700;">{{ score_acheteur.historique.nb_soumis }}</div>
+            </div>
+            <div style="text-align:center; padding:0.5rem; background:var(--meta-bg); border-radius:var(--radius);">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Gagnes</div>
+                <div style="font-size:1.2rem; font-weight:700; color:var(--success);">{{ score_acheteur.historique.nb_gagnes }}</div>
+            </div>
+            {% if score_acheteur.historique.budget_moyen %}
+            <div style="text-align:center; padding:0.5rem; background:var(--meta-bg); border-radius:var(--radius);">
+                <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Budget moyen</div>
+                <div style="font-size:1rem; font-weight:700;">{{ "{:,.0f}".format(score_acheteur.historique.budget_moyen) }} EUR</div>
+            </div>
+            {% endif %}
+        </div>
+    </details>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Statut + Actions -->
 <div class="card">
     <div class="card-header">
@@ -169,6 +216,135 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
         <ul>{% for r in go_nogo.risques %}<li>{{ r }}</li>{% endfor %}</ul>
     </div>
     {% endif %}
+</div>
+{% endif %}
+
+<!-- Estimation marche -->
+{% if estimation %}
+<div class="card">
+    <div class="card-header">
+        <h2>Estimation du marche</h2>
+        {% if estimation.accessibilite %}
+        <span class="badge" style="padding:4px 12px; color:white; font-weight:600;
+            {% if estimation.accessibilite.score >= 70 %}background:#16a34a;
+            {% elif estimation.accessibilite.score >= 40 %}background:#f59e0b;
+            {% else %}background:#dc2626;{% endif %}">
+            Accessibilite : {{ estimation.accessibilite.score }}/100
+        </span>
+        {% endif %}
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; margin-bottom:1rem;">
+        <!-- Budget estime -->
+        {% if estimation.budget %}
+        <div style="text-align:center; padding:1rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">Budget estime</div>
+            <div style="font-size:1.5rem; font-weight:700; color:var(--primary);">
+                {{ "{:,.0f}".format(estimation.budget.montant).replace(",", " ") }} EUR
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-light); margin-top:0.25rem;">
+                {{ "{:,.0f}".format(estimation.budget.fourchette[0]).replace(",", " ") }} - {{ "{:,.0f}".format(estimation.budget.fourchette[1]).replace(",", " ") }} EUR
+            </div>
+            <div style="margin-top:0.5rem;">
+                <span class="badge" style="font-size:0.7rem; padding:2px 8px;
+                    {% if estimation.budget.confiance == 'haute' %}background:#dcfce7; color:#166534;
+                    {% elif estimation.budget.confiance == 'moyenne' %}background:#fef3c7; color:#92400e;
+                    {% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+                    Confiance {{ estimation.budget.confiance }}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Concurrence -->
+        {% if estimation.concurrence %}
+        <div style="text-align:center; padding:1rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">Concurrence</div>
+            <div style="font-size:1.5rem; font-weight:700;
+                {% if estimation.concurrence.niveau == 'faible' %}color:#16a34a;
+                {% elif estimation.concurrence.niveau == 'moderee' %}color:#f59e0b;
+                {% else %}color:#dc2626;{% endif %}">
+                {{ estimation.concurrence.niveau | capitalize }}
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-light); margin-top:0.25rem;">
+                ~{{ estimation.concurrence.nb_candidats_estime }} candidats estimes
+            </div>
+            <div style="margin-top:0.5rem;">
+                <div style="height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; width:{{ estimation.concurrence.score }}%; border-radius:3px;
+                        {% if estimation.concurrence.score <= 35 %}background:#16a34a;
+                        {% elif estimation.concurrence.score <= 65 %}background:#f59e0b;
+                        {% else %}background:#dc2626;{% endif %}"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Accessibilite -->
+        {% if estimation.accessibilite %}
+        <div style="text-align:center; padding:1rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem;">Accessibilite Almera</div>
+            <div style="font-size:1.5rem; font-weight:700;
+                {% if estimation.accessibilite.score >= 70 %}color:#16a34a;
+                {% elif estimation.accessibilite.score >= 40 %}color:#f59e0b;
+                {% else %}color:#dc2626;{% endif %}">
+                {{ estimation.accessibilite.score }}/100
+            </div>
+            <div style="font-size:0.8rem; margin-top:0.25rem;">
+                <span class="badge" style="padding:2px 10px; font-size:0.75rem;
+                    {% if estimation.accessibilite.phase == 1 %}background:#dbeafe; color:#1e40af;
+                    {% elif estimation.accessibilite.phase == 2 %}background:#fef3c7; color:#92400e;
+                    {% else %}background:#dcfce7; color:#166534;{% endif %}">
+                    {{ estimation.accessibilite.recommandation }}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Facteurs -->
+    {% if estimation.concurrence and estimation.concurrence.facteurs %}
+    <details style="margin-top:0.5rem;">
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Facteurs d'analyse</summary>
+        <ul style="font-size:0.8rem; padding-left:1.2rem; margin-top:0.5rem; color:var(--text-light);">
+            {% for f in estimation.concurrence.facteurs %}
+            <li style="margin-bottom:3px;">{{ f }}</li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Lots detectes -->
+{% if ao.lots_detectes %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lots detectes</h2>
+        <span style="font-size:0.85rem; color:var(--text-light);">
+            {{ ao.lots_pertinents or 0 }} lot(s) pertinent(s) sur {{ ao.lots_detectes | length }}
+        </span>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+                <th style="padding:8px 6px; width:50px;">N&deg;</th>
+                <th style="padding:8px 6px;">Description</th>
+                <th style="padding:8px 6px; width:80px; text-align:center;">Pertinent</th>
+                <th style="padding:8px 6px; width:80px; text-align:center;">Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lot in ao.lots_detectes | sort(attribute='numero') %}
+            <tr style="border-bottom:1px solid var(--border); {% if lot.pertinent %}background:rgba(22,163,74,0.08);{% endif %}">
+                <td style="padding:6px; font-weight:600;">{{ lot.numero }}</td>
+                <td style="padding:6px;">{{ lot.description }}</td>
+                <td style="padding:6px; text-align:center;">{% if lot.pertinent %}&#x2705;{% else %}&#x274C;{% endif %}</td>
+                <td style="padding:6px; text-align:center;">{{ (lot.score * 100) | int }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endif %}
 
@@ -355,6 +531,90 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
         <h2>Criteres d'attribution</h2>
     </div>
     <div class="description-box">{{ ao.criteres_attribution }}</div>
+</div>
+{% endif %}
+
+<!-- AO similaires (apres victoire) -->
+{% if ao.statut == "gagne" and ao_similaires %}
+<div class="card">
+    <div class="card-header">
+        <h2>AO similaires en cours</h2>
+        <span style="font-size:0.8rem; color:var(--text-light);">Capitalisez sur cette victoire</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">
+        Ces appels d'offres actifs sont similaires a celui que vous avez remporte. Votre experience recente est un atout majeur.
+    </p>
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+                <th style="padding:8px 6px;">Titre</th>
+                <th style="padding:8px 6px; width:100px;">Acheteur</th>
+                <th style="padding:8px 6px; width:90px; text-align:center;">Similarite</th>
+                <th style="padding:8px 6px; width:80px; text-align:center;">Score AO</th>
+                <th style="padding:8px 6px;">Mots communs</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sim in ao_similaires %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px;">
+                    <a href="{{ url_for('detail_ao', ao_id=sim.ao.id) }}" style="color:var(--primary); text-decoration:none; font-weight:500;">
+                        {{ sim.ao.titre[:80] }}{% if sim.ao.titre|length > 80 %}...{% endif %}
+                    </a>
+                </td>
+                <td style="padding:6px; font-size:0.8rem; color:var(--text-light);">{{ sim.ao.acheteur or '-' }}</td>
+                <td style="padding:6px; text-align:center;">
+                    <span class="badge" style="padding:2px 10px; font-size:0.75rem;
+                        {% if sim.similarite_pct >= 50 %}background:#dcfce7; color:#166534;
+                        {% elif sim.similarite_pct >= 25 %}background:#fef3c7; color:#92400e;
+                        {% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+                        {{ sim.similarite_pct }}%
+                    </span>
+                </td>
+                <td style="padding:6px; text-align:center;">
+                    {% set s_pct = ((sim.ao.score_pertinence or 0) * 100) | int %}
+                    <span class="score {% if s_pct >= 70 %}score-high{% elif s_pct >= 40 %}score-mid{% else %}score-low{% endif %}" style="font-size:0.75rem; padding:2px 8px;">
+                        {{ s_pct }}%
+                    </span>
+                </td>
+                <td style="padding:6px; font-size:0.75rem; color:var(--text-light);">
+                    {{ sim.mots_communs[:5] | join(', ') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Attribution (si gagne ou perdu) -->
+{% if ao.statut in ['gagne', 'perdu'] and ao.attribution_titulaire is defined and ao.attribution_titulaire %}
+<div class="card">
+    <div class="card-header">
+        <h2>Resultat d'attribution</h2>
+        <span class="badge" style="padding:4px 12px; color:white; font-weight:600;
+            {% if ao.statut == 'gagne' %}background:#16a34a;{% else %}background:#dc2626;{% endif %}">
+            {{ ao.statut | upper }}
+        </span>
+    </div>
+    <div class="detail-meta">
+        <div class="meta-item">
+            <div class="meta-label">Titulaire</div>
+            <div class="meta-value">{{ ao.attribution_titulaire }}</div>
+        </div>
+        {% if ao.attribution_montant %}
+        <div class="meta-item">
+            <div class="meta-label">Montant attribue</div>
+            <div class="meta-value">{{ "{:,.0f}".format(ao.attribution_montant) }} EUR</div>
+        </div>
+        {% endif %}
+        {% if ao.attribution_date %}
+        <div class="meta-item">
+            <div class="meta-label">Date d'attribution</div>
+            <div class="meta-value">{{ ao.attribution_date }}</div>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endif %}
 
