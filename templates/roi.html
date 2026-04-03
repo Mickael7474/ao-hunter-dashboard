@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}ROI{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Tableau de bord ROI</h1>
+</div>
+
+<!-- KPIs principaux -->
+<div class="roi-kpis">
+    <div class="roi-kpi roi-kpi-primary">
+        <div class="roi-kpi-value">{{ "%.0f"|format(temps_total_h) }}h</div>
+        <div class="roi-kpi-label">Temps economise</div>
+        <div class="roi-kpi-detail">~{{ "%.1f"|format(jours_economises) }} jours de travail</div>
+    </div>
+    <div class="roi-kpi roi-kpi-success">
+        <div class="roi-kpi-value">{{ "{:,.0f}".format(valeur_gagnes) }} EUR</div>
+        <div class="roi-kpi-label">Contrats gagnes</div>
+        <div class="roi-kpi-detail">{{ nb_gagnes }} marche(s)</div>
+    </div>
+    <div class="roi-kpi roi-kpi-info">
+        <div class="roi-kpi-value">{{ "{:,.0f}".format(economie_consultant) }} EUR</div>
+        <div class="roi-kpi-label">Economie vs consultant</div>
+        <div class="roi-kpi-detail">Base {{ "%.0f"|format(jours_economises) }}j x 500 EUR/j</div>
+    </div>
+    <div class="roi-kpi">
+        <div class="roi-kpi-value">{{ "%.1f"|format(cout_api_total) }} EUR</div>
+        <div class="roi-kpi-label">Cout API IA</div>
+        <div class="roi-kpi-detail">Scoring + generation</div>
+    </div>
+</div>
+
+<!-- Pipeline -->
+<div class="card">
+    <div class="card-header">
+        <h2>Pipeline commercial</h2>
+    </div>
+    <div class="roi-pipeline">
+        <div class="pipeline-step">
+            <div class="pipeline-count">{{ nb_total }}</div>
+            <div class="pipeline-label">AO detectes</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+            <div class="pipeline-count">{{ nb_analyses }}</div>
+            <div class="pipeline-label">Analyses</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+            <div class="pipeline-count">{{ nb_dossiers }}</div>
+            <div class="pipeline-label">Dossiers generes</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step">
+            <div class="pipeline-count">{{ nb_soumis }}</div>
+            <div class="pipeline-label">Soumis</div>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-step pipeline-step-success">
+            <div class="pipeline-count">{{ nb_gagnes }}</div>
+            <div class="pipeline-label">Gagnes</div>
+        </div>
+    </div>
+    {% if taux_conversion > 0 %}
+    <div style="text-align:center; margin-top:0.75rem;">
+        <span class="score {% if taux_conversion >= 30 %}score-high{% elif taux_conversion >= 15 %}score-mid{% else %}score-low{% endif %}" style="font-size:1rem; padding:4px 14px;">
+            {{ "%.0f"|format(taux_conversion) }}% taux de conversion
+        </span>
+    </div>
+    {% endif %}
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+    <!-- Temps economise detail -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Temps economise (detail)</h2>
+        </div>
+        <table class="ao-table" style="margin:0;">
+            <thead>
+                <tr><th>Tache</th><th>Heures</th><th>Detail</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Veille automatique</td>
+                    <td><strong>{{ "%.0f"|format(temps_veille) }}h</strong></td>
+                    <td>{{ nb_total }} AO x 30min/AO</td>
+                </tr>
+                <tr>
+                    <td>Analyse Go/No-Go</td>
+                    <td><strong>{{ "%.0f"|format(temps_analyse) }}h</strong></td>
+                    <td>{{ nb_analyses }} AO x 30min</td>
+                </tr>
+                <tr>
+                    <td>Generation dossiers</td>
+                    <td><strong>{{ "%.0f"|format(temps_dossiers) }}h</strong></td>
+                    <td>{{ nb_dossiers }} dossiers x 8h</td>
+                </tr>
+                <tr style="font-weight:700; border-top:2px solid var(--border);">
+                    <td>TOTAL</td>
+                    <td>{{ "%.0f"|format(temps_total_h) }}h</td>
+                    <td>~{{ "%.1f"|format(jours_economises) }} jours</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Couts et valeur -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Couts vs Valeur</h2>
+        </div>
+        <table class="ao-table" style="margin:0;">
+            <thead>
+                <tr><th>Poste</th><th>Montant</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Scoring IA (Haiku)</td>
+                    <td>{{ "%.2f"|format(cout_scoring) }} EUR</td>
+                </tr>
+                <tr>
+                    <td>Generation dossiers (Sonnet)</td>
+                    <td>{{ "%.2f"|format(cout_generation) }} EUR</td>
+                </tr>
+                <tr style="font-weight:700; border-top:2px solid var(--border);">
+                    <td>Total couts IA</td>
+                    <td>{{ "%.2f"|format(cout_api_total) }} EUR</td>
+                </tr>
+                <tr style="color:var(--success);">
+                    <td>Contrats gagnes</td>
+                    <td>{{ "{:,.0f}".format(valeur_gagnes) }} EUR</td>
+                </tr>
+                <tr>
+                    <td>En attente (soumis)</td>
+                    <td>{{ "{:,.0f}".format(valeur_soumis) }} EUR</td>
+                </tr>
+                <tr>
+                    <td>Pipeline (analyse/candidature)</td>
+                    <td>{{ "{:,.0f}".format(valeur_pipeline) }} EUR</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Performance par source -->
+<div class="card">
+    <div class="card-header">
+        <h2>Performance par source</h2>
+    </div>
+    <table class="ao-table" style="margin:0;">
+        <thead>
+            <tr><th>Source</th><th>AO detectes</th><th>Soumis</th><th>Gagnes</th><th>Valeur gagnee</th></tr>
+        </thead>
+        <tbody>
+            {% for src, s in sources_stats.items() | sort(attribute='1.total', reverse=True) %}
+            <tr>
+                <td><span class="badge badge-{{ src | lower }}">{{ src }}</span></td>
+                <td>{{ s.total }}</td>
+                <td>{{ s.soumis }}</td>
+                <td>{{ s.gagnes }}</td>
+                <td>{{ "{:,.0f}".format(s.valeur) }} EUR</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Graphiques -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+    <div class="card">
+        <div class="card-header"><h2>Pipeline (funnel)</h2></div>
+        <canvas id="funnelChart" height="200"></canvas>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>Repartition des couts</h2></div>
+        <canvas id="costsChart" height="200"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funnel chart
+    new Chart(document.getElementById('funnelChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Detectes', 'Analyses', 'Dossiers', 'Soumis', 'Gagnes'],
+            datasets: [{
+                data: [{{ nb_total }}, {{ nb_analyses }}, {{ nb_dossiers }}, {{ nb_soumis }}, {{ nb_gagnes }}],
+                backgroundColor: ['#94a3b8', '#60a5fa', '#38bdf8', '#f59e0b', '#16a34a'],
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true } }
+        }
+    });
+
+    // Costs chart
+    new Chart(document.getElementById('costsChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Scoring IA', 'Generation dossiers', 'Infrastructure'],
+            datasets: [{
+                data: [{{ "%.2f"|format(cout_scoring) }}, {{ "%.2f"|format(cout_generation) }}, {{ nb_dossiers * 5 }}],
+                backgroundColor: ['#60a5fa', '#f59e0b', '#94a3b8'],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

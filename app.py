@@ -378,6 +378,82 @@ def liste_ao():
     )
 
 
+@app.route("/roi")
+def roi():
+    """Tableau de bord ROI - temps economise, couts, valeur contrats."""
+    appels = charger_ao()
+    dossiers = lister_dossiers()
+
+    # Stats pipeline
+    nb_total = len(appels)
+    nb_analyses = len([a for a in appels if a.get("statut") not in ("nouveau", "ignore")])
+    nb_soumis = len([a for a in appels if a.get("statut") in ("soumis", "gagne", "perdu")])
+    nb_gagnes = len([a for a in appels if a.get("statut") == "gagne"])
+    nb_perdus = len([a for a in appels if a.get("statut") == "perdu"])
+    nb_dossiers = len(dossiers)
+
+    # Taux de conversion
+    taux_conversion = (nb_gagnes / nb_soumis * 100) if nb_soumis > 0 else 0
+
+    # Estimation temps economise (en heures)
+    # Veille manuelle : ~2h/jour pour surveiller les sources
+    # Analyse AO : ~30min par AO pour lire et evaluer
+    # Dossier complet : ~8h par dossier en manuel
+    temps_veille = nb_total * 0.5  # 30min economisees par AO detecte automatiquement
+    temps_analyse = nb_analyses * 0.5  # 30min par AO analyse via Go/No-Go
+    temps_dossiers = nb_dossiers * 8  # 8h par dossier genere
+    temps_total_h = temps_veille + temps_analyse + temps_dossiers
+
+    # Cout API estime (Claude Haiku pour scoring + Sonnet pour generation)
+    # Haiku : ~0.003$/AO pour scoring, Sonnet : ~0.15$/dossier
+    cout_scoring = nb_total * 0.003
+    cout_generation = nb_dossiers * 0.15
+    cout_api_total = cout_scoring + cout_generation
+
+    # Valeur des contrats
+    valeur_gagnes = sum(a.get("budget_estime") or 0 for a in appels if a.get("statut") == "gagne")
+    valeur_soumis = sum(a.get("budget_estime") or 0 for a in appels if a.get("statut") == "soumis")
+    valeur_pipeline = sum(a.get("budget_estime") or 0 for a in appels
+                         if a.get("statut") in ("analyse", "candidature"))
+
+    # ROI = valeur gagnee / cout total
+    cout_total = cout_api_total + (nb_dossiers * 5)  # +5 EUR/dossier pour infra
+    roi_ratio = (valeur_gagnes / cout_total) if cout_total > 0 else 0
+
+    # Cout journalier equivalent (si on payait un consultant 500 EUR/jour)
+    tarif_consultant = 500
+    jours_economises = temps_total_h / 8
+    economie_consultant = jours_economises * tarif_consultant
+
+    # Stats par source
+    sources_stats = {}
+    for ao in appels:
+        src = ao.get("source", "Inconnu")
+        if src not in sources_stats:
+            sources_stats[src] = {"total": 0, "soumis": 0, "gagnes": 0, "valeur": 0}
+        sources_stats[src]["total"] += 1
+        if ao.get("statut") in ("soumis", "gagne", "perdu"):
+            sources_stats[src]["soumis"] += 1
+        if ao.get("statut") == "gagne":
+            sources_stats[src]["gagnes"] += 1
+            sources_stats[src]["valeur"] += ao.get("budget_estime") or 0
+
+    return render_template("roi.html",
+        nb_total=nb_total, nb_analyses=nb_analyses, nb_soumis=nb_soumis,
+        nb_gagnes=nb_gagnes, nb_perdus=nb_perdus, nb_dossiers=nb_dossiers,
+        taux_conversion=taux_conversion,
+        temps_veille=temps_veille, temps_analyse=temps_analyse,
+        temps_dossiers=temps_dossiers, temps_total_h=temps_total_h,
+        cout_scoring=cout_scoring, cout_generation=cout_generation,
+        cout_api_total=cout_api_total,
+        valeur_gagnes=valeur_gagnes, valeur_soumis=valeur_soumis,
+        valeur_pipeline=valeur_pipeline,
+        roi_ratio=roi_ratio, economie_consultant=economie_consultant,
+        jours_economises=jours_economises,
+        sources_stats=sources_stats,
+    )
+
+
 @app.route("/kanban")
 def kanban():
     appels = charger_ao()
@@ -438,8 +514,19 @@ def detail_ao(ao_id):
     note = notes.get(ao_id, "")
 
     prestations = detecter_prestations(ao)
+
+    # Go/No-Go rapide
+    from analyse_dce import go_no_go
+    go_nogo = go_no_go(ao)
+
+    # Modele de reponse recommande
+    from modeles_reponse import detecter_type_prestation, get_modele
+    type_presta = detecter_type_prestation(ao)
+    modele = get_modele(type_presta)
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
-                           prestations=prestations)
+                           prestations=prestations, go_nogo=go_nogo,
+                           type_presta=type_presta, modele=modele)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])

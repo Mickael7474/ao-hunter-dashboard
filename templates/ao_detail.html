@@ -89,6 +89,54 @@
     </div>
 </div>
 
+<!-- Go/No-Go -->
+{% if go_nogo %}
+<div class="card">
+    <div class="card-header">
+        <h2>Analyse Go/No-Go</h2>
+        <span class="gonogo-badge gonogo-{{ go_nogo.decision | lower | replace(' ', '-') }}">
+            {{ go_nogo.decision }}
+        </span>
+    </div>
+    <div class="gonogo-score">
+        <div class="gonogo-bar">
+            <div class="gonogo-bar-fill gonogo-fill-{{ go_nogo.decision | lower | replace(' ', '-') }}" style="width:{{ go_nogo.score }}%;"></div>
+        </div>
+        <span class="gonogo-score-text">{{ go_nogo.score }}/{{ go_nogo.max_score }}</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">{{ go_nogo.raison }}</p>
+
+    <div class="gonogo-grid">
+        {% for c in go_nogo.criteres %}
+        <div class="gonogo-critere">
+            <div class="gonogo-critere-header">
+                <span>{{ c.nom }}</span>
+                <span class="gonogo-pts">{{ c.score }}/{{ c.max }}</span>
+            </div>
+            <div class="gonogo-mini-bar">
+                <div class="gonogo-mini-fill" style="width:{{ (c.score / c.max * 100) | int }}%;"></div>
+            </div>
+            <div class="gonogo-comment">{{ c.commentaire }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if go_nogo.atouts %}
+    <div class="gonogo-section gonogo-atouts">
+        <strong>Atouts :</strong>
+        <ul>{% for a in go_nogo.atouts %}<li>{{ a }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if go_nogo.risques %}
+    <div class="gonogo-section gonogo-risques">
+        <strong>Risques :</strong>
+        <ul>{% for r in go_nogo.risques %}<li>{{ r }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Generation log (hidden by default) -->
 <div id="genLog" class="card" style="display:none;">
     <div class="card-header">
@@ -113,6 +161,53 @@
         </div>
         {% endfor %}
     </div>
+</div>
+{% endif %}
+
+<!-- Modele de reponse recommande -->
+{% if modele %}
+<div class="card">
+    <div class="card-header">
+        <h2>Modele de reponse</h2>
+        <span class="badge" style="background:{{ modele.couleur }}; color:white; padding:4px 12px;">{{ modele.titre }}</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Structure memoire technique</h3>
+            <ol style="font-size:0.8rem; padding-left:1.2rem; margin:0; color:var(--text-light);">
+                {% for s in modele.sections_memoire %}
+                <li style="margin-bottom:2px;">{{ s.split('. ', 1)[-1] if '. ' in s else s }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+        <div>
+            <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">Points forts a mettre en avant</h3>
+            <ul style="font-size:0.8rem; padding-left:1.2rem; margin:0;">
+                {% for p in modele.points_forts %}
+                <li style="margin-bottom:2px; color:var(--success);">{{ p }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <details style="margin-bottom:0.5rem;">
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Conseils de redaction</summary>
+        <ul style="font-size:0.8rem; padding-left:1.2rem; margin-top:0.5rem;">
+            {% for c in modele.conseils_redaction %}
+            <li style="margin-bottom:3px;">{{ c }}</li>
+            {% endfor %}
+        </ul>
+    </details>
+
+    <details>
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Pieces specifiques a fournir</summary>
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+            {% for p in modele.pieces_specifiques %}
+            <span class="badge" style="background:var(--meta-bg); color:var(--text); padding:3px 10px; font-size:0.75rem;">{{ p }}</span>
+            {% endfor %}
+        </div>
+    </details>
 </div>
 {% endif %}
 

@@ -833,9 +833,192 @@ tr:hover { background: var(--table-hover); }
     line-height: 1.5;
 }
 
+/* ROI Dashboard */
+.roi-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.roi-kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+.roi-kpi-primary { border-left: 4px solid var(--primary); }
+.roi-kpi-success { border-left: 4px solid var(--success); }
+.roi-kpi-info { border-left: 4px solid var(--info); }
+.roi-kpi-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+}
+.roi-kpi-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+.roi-kpi-detail {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+}
+
+.roi-pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+}
+.pipeline-step {
+    text-align: center;
+    padding: 0.75rem 1.25rem;
+    background: var(--meta-bg);
+    border-radius: var(--radius);
+    min-width: 90px;
+}
+.pipeline-step-success {
+    background: #dcfce7;
+    border: 2px solid var(--success);
+}
+[data-theme="dark"] .pipeline-step-success {
+    background: #14532d33;
+    border-color: #16a34a;
+}
+.pipeline-count {
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+.pipeline-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+.pipeline-arrow {
+    font-size: 1.5rem;
+    color: var(--text-light);
+}
+
+/* Go/No-Go */
+.gonogo-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.gonogo-go { background: #dcfce7; color: #166534; }
+.gonogo-no-go { background: #fef2f2; color: #991b1b; }
+.gonogo-a-evaluer { background: #fef9c3; color: #854d0e; }
+
+[data-theme="dark"] .gonogo-go { background: #14532d; color: #86efac; }
+[data-theme="dark"] .gonogo-no-go { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .gonogo-a-evaluer { background: #422006; color: #fde047; }
+
+.gonogo-score {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.gonogo-bar {
+    flex: 1;
+    height: 10px;
+    background: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.gonogo-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+.gonogo-fill-go { background: var(--success); }
+.gonogo-fill-no-go { background: var(--danger); }
+.gonogo-fill-a-evaluer { background: var(--warning); }
+.gonogo-score-text {
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-width: 60px;
+    text-align: right;
+}
+
+.gonogo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.gonogo-critere {
+    background: var(--meta-bg);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.75rem;
+}
+.gonogo-critere-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.gonogo-pts {
+    color: var(--text-light);
+    font-weight: 500;
+}
+.gonogo-mini-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.gonogo-mini-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+}
+.gonogo-comment {
+    font-size: 0.72rem;
+    color: var(--text-light);
+}
+
+.gonogo-section {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+.gonogo-section ul {
+    margin: 0.25rem 0 0 1.2rem;
+    padding: 0;
+}
+.gonogo-section li {
+    margin-bottom: 2px;
+}
+.gonogo-atouts {
+    background: #f0fdf4;
+    color: #166534;
+}
+.gonogo-risques {
+    background: #fef2f2;
+    color: #991b1b;
+}
+[data-theme="dark"] .gonogo-atouts { background: #14532d33; color: #86efac; }
+[data-theme="dark"] .gonogo-risques { background: #450a0a33; color: #fca5a5; }
+
 @media (max-width: 768px) {
     .kanban-board { flex-direction: column; }
     .kanban-col { min-width: 100%; }
     .fichier-item { flex-wrap: wrap; }
     .fichier-actions { width: 100%; justify-content: flex-end; }
+    .gonogo-grid { grid-template-columns: 1fr; }
 }
