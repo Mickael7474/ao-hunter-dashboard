@@ -91,12 +91,34 @@ function kanbanDragStart(e) {
 
 function kanbanDrop(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+    var dropZone = e.currentTarget;
+    dropZone.classList.remove('drag-over');
     var aoId = e.dataTransfer.getData('text/plain');
     if (!aoId) return;
-    var newStatut = e.currentTarget.dataset.statut;
+    var newStatut = dropZone.dataset.statut;
     var card = document.querySelector('.kanban-card[data-id="' + aoId + '"]');
     if (card) card.classList.remove('dragging');
+
+    // Deplacer la carte immediatement (optimistic UI)
+    if (card) {
+        dropZone.appendChild(card);
+        var empty = dropZone.querySelector('.kanban-empty');
+        if (empty) empty.remove();
+        // Ajouter placeholder "Aucun AO" si l'ancienne colonne est vide
+        document.querySelectorAll('.kanban-cards').forEach(function(col) {
+            if (col.querySelectorAll('.kanban-card').length === 0 && !col.querySelector('.kanban-empty')) {
+                var emptyDiv = document.createElement('div');
+                emptyDiv.className = 'kanban-empty';
+                emptyDiv.textContent = 'Aucun AO';
+                col.appendChild(emptyDiv);
+            }
+        });
+        // Update counts
+        document.querySelectorAll('.kanban-col').forEach(function(col) {
+            var cards = col.querySelector('.kanban-cards').querySelectorAll('.kanban-card');
+            col.querySelector('.kanban-count').textContent = cards.length;
+        });
+    }
 
     fetch('/ao/' + encodeURIComponent(aoId) + '/statut-ajax', {
         method: 'POST',
@@ -105,18 +127,16 @@ function kanbanDrop(e) {
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-        if (data.status === 'ok' && card) {
-            e.currentTarget.appendChild(card);
-            var empty = e.currentTarget.querySelector('.kanban-empty');
-            if (empty) empty.remove();
-            // Update counts
-            document.querySelectorAll('.kanban-col').forEach(function(col) {
-                var cards = col.querySelector('.kanban-cards').querySelectorAll('.kanban-card');
-                col.querySelector('.kanban-count').textContent = cards.length;
-            });
+        if (data.status !== 'ok') {
+            console.error('Kanban save error:', data);
+            // Recharger en cas d'erreur serveur
+            window.location.reload();
         }
     })
-    .catch(function(err) { console.error('Kanban error:', err); });
+    .catch(function(err) {
+        console.error('Kanban error:', err);
+        window.location.reload();
+    });
 }
 
 function kanbanDragOver(e) {
