@@ -46,11 +46,19 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 logger = logging.getLogger("ao_hunter.dashboard")
 
-# Chemins
-BASE_DIR = Path(__file__).parent.parent
+# Chemins - en local: ao_hunter/resultats/, sur Render: dossier dashboard/
+DASHBOARD_DIR = Path(__file__).parent
+BASE_DIR = DASHBOARD_DIR.parent
 RESULTATS_DIR = BASE_DIR / "resultats"
-AO_CACHE = RESULTATS_DIR / "ao_pertinents.json"
-NOTES_FILE = RESULTATS_DIR / "ao_notes.json"
+
+# Cherche d'abord dans resultats/ (local), sinon dans le dossier dashboard/ (Render)
+if (RESULTATS_DIR / "ao_pertinents.json").exists():
+    AO_CACHE = RESULTATS_DIR / "ao_pertinents.json"
+    NOTES_FILE = RESULTATS_DIR / "ao_notes.json"
+else:
+    AO_CACHE = DASHBOARD_DIR / "ao_pertinents.json"
+    NOTES_FILE = DASHBOARD_DIR / "ao_notes.json"
+
 CONFIG_PATH = BASE_DIR / "config.yaml"
 
 PER_PAGE = 20
