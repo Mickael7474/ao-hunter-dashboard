@@ -109,24 +109,35 @@ def sauvegarder_notes(notes: dict):
 
 
 DOSSIERS_INDEX = DASHBOARD_DIR / "dossiers_index.json"
+DOSSIERS_GENERES_DIR = DASHBOARD_DIR / "dossiers_generes"
+
+
+def _scan_dossiers_dir(base_dir: Path) -> list[dict]:
+    """Scanne un repertoire pour lister les dossiers generes."""
+    dossiers = []
+    if not base_dir.exists():
+        return dossiers
+    for d in sorted(base_dir.iterdir(), reverse=True):
+        if d.is_dir() and d.name not in ("__pycache__", "test_dc1_dc2"):
+            fichiers = [f.name for f in d.glob("*") if f.is_file()]
+            if fichiers:
+                dossiers.append({
+                    "nom": d.name,
+                    "chemin": str(d),
+                    "nb_fichiers": len(fichiers),
+                    "fichiers": fichiers,
+                    "date_creation": datetime.fromtimestamp(d.stat().st_ctime).strftime("%Y-%m-%d %H:%M"),
+                })
+    return dossiers
 
 
 def lister_dossiers() -> list[dict]:
-    # D'abord essayer le scan local (PC)
-    dossiers = []
-    if RESULTATS_DIR.exists():
-        for d in sorted(RESULTATS_DIR.iterdir(), reverse=True):
-            if d.is_dir() and d.name not in ("__pycache__", "test_dc1_dc2"):
-                fichiers = [f.name for f in d.glob("*") if f.is_file()]
-                if fichiers:
-                    dossiers.append({
-                        "nom": d.name,
-                        "chemin": str(d),
-                        "nb_fichiers": len(fichiers),
-                        "fichiers": fichiers,
-                        "date_creation": datetime.fromtimestamp(d.stat().st_ctime).strftime("%Y-%m-%d %H:%M"),
-                    })
-    # Fallback: index JSON (Render)
+    # D'abord local (PC)
+    dossiers = _scan_dossiers_dir(RESULTATS_DIR)
+    # Puis dossiers_generes/ (Render)
+    if not dossiers:
+        dossiers = _scan_dossiers_dir(DOSSIERS_GENERES_DIR)
+    # Fallback: index JSON
     if not dossiers and DOSSIERS_INDEX.exists():
         with open(DOSSIERS_INDEX, "r", encoding="utf-8") as f:
             dossiers = json.load(f)
@@ -364,23 +375,21 @@ def detail_ao(ao_id):
     if not ao:
         return redirect(url_for("liste_ao"))
 
-    # Dossier genere
+    # Dossier genere - chercher dans resultats/ et dossiers_generes/
     dossier_genere = None
     clean_id = ao_id.replace("BOAMP-", "").replace("PLACE-", "").replace("TED-", "").replace("MSEC-", "").replace("AWS-", "")
-    if RESULTATS_DIR.exists():
-        for d in RESULTATS_DIR.iterdir():
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        if not base.exists():
+            continue
+        for d in base.iterdir():
             if d.is_dir() and clean_id in d.name:
                 dossier_genere = {
                     "nom": d.name,
                     "fichiers": sorted([f.name for f in d.glob("*") if f.is_file()]),
                 }
                 break
-    # Fallback: check dossiers index
-    if not dossier_genere and DOSSIERS_INDEX.exists():
-        for d in json.loads(DOSSIERS_INDEX.read_text(encoding="utf-8")):
-            if clean_id in d.get("nom", ""):
-                dossier_genere = d
-                break
+        if dossier_genere:
+            break
 
     # Notes
     notes = charger_notes()
@@ -520,20 +529,22 @@ def review_dossier(nom):
 @app.route("/dossiers/<path:nom>/fichier/<path:fichier>")
 def servir_fichier(nom, fichier):
     """Sert un fichier du dossier pour le preview."""
-    # Chercher le dossier local
-    dossier_path = RESULTATS_DIR / nom
-    if not dossier_path.exists():
-        return "Fichier non disponible (dossier distant)", 404
-    fichier_path = dossier_path / fichier
-    if not fichier_path.exists() or not fichier_path.is_file():
-        return "Fichier non trouve", 404
-    # Securite : verifier que le chemin reste dans RESULTATS_DIR
-    try:
-        fichier_path.resolve().relative_to(RESULTATS_DIR.resolve())
-    except ValueError:
-        return "Acces refuse", 403
     from flask import send_file
-    return send_file(str(fichier_path), as_attachment=False)
+    # Chercher dans les deux emplacements possibles
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        dossier_path = base / nom
+        if not dossier_path.exists():
+            continue
+        fichier_path = dossier_path / fichier
+        if not fichier_path.exists() or not fichier_path.is_file():
+            continue
+        # Securite : verifier que le chemin reste dans le base dir
+        try:
+            fichier_path.resolve().relative_to(base.resolve())
+        except ValueError:
+            return "Acces refuse", 403
+        return send_file(str(fichier_path), as_attachment=False)
+    return "Fichier non trouve", 404
 
 
 @app.route("/export/csv")

@@ -1,0 +1,44 @@
+[
+  {
+    "nom": "Phase 1 - Lancement et diagnostic des besoins",
+    "debut_semaine": 1,
+    "fin_semaine": 2,
+    "livrables": "Compte-rendu de cadrage, analyse des besoins par métier, cartographie des profils agents"
+  },
+  {
+    "nom": "Phase 2 - Conception pédagogique personnalisée",
+    "debut_semaine": 2,
+    "fin_semaine": 5,
+    "livrables": "Programme de formation détaillé, supports adaptés par métier municipal, modules e-learning"
+  },
+  {
+    "nom": "Phase 3 - Formation pilote avec groupe référent",
+    "debut_semaine": 5,
+    "fin_semaine": 7,
+    "livrables": "Session pilote réalisée, retours d'expérience analysés, ajustements apportés"
+  },
+  {
+    "nom": "Phase 4 - Déploiement formation en présentiel",
+    "debut_semaine": 7,
+    "fin_semaine": 12,
+    "livrables": "10 sessions de formation réalisées (20 agents par session), attestations de formation"
+  },
+  {
+    "nom": "Phase 5 - Mise en place plateforme e-learning",
+    "debut_semaine": 10,
+    "fin_semaine": 13,
+    "livrables": "Plateforme accessible, ressources numériques disponibles, tutoriels vidéo"
+  },
+  {
+    "nom": "Phase 6 - Accompagnement et suivi post-formation",
+    "debut_semaine": 13,
+    "fin_semaine": 15,
+    "livrables": "Sessions de questions-réponses, support technique, évaluations des acquis"
+  },
+  {
+    "nom": "Phase 7 - Bilan final et recommandations",
+    "debut_semaine": 15,
+    "fin_semaine": 16,
+    "livrables": "Rapport final d'évaluation, recommandations pour pérennisation, bilan de satisfaction"
+  }
+]

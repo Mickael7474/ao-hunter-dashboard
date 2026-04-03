@@ -1,0 +1,50 @@
+[
+  {
+    "nom": "Phase 1 - Lancement et diagnostic des besoins",
+    "debut_semaine": 1,
+    "fin_semaine": 3,
+    "livrables": "Compte-rendu de cadrage, audit des besoins de formation, définition des profils apprenants"
+  },
+  {
+    "nom": "Phase 2 - Conception pédagogique Blockchain",
+    "debut_semaine": 3,
+    "fin_semaine": 6,
+    "livrables": "Programme détaillé blockchain, supports de formation, exercices pratiques"
+  },
+  {
+    "nom": "Phase 3 - Conception pédagogique Numérique Responsable",
+    "debut_semaine": 5,
+    "fin_semaine": 8,
+    "livrables": "Programme détaillé numérique responsable, supports de formation, cas d'usage"
+  },
+  {
+    "nom": "Phase 4 - Formation pilote et ajustements",
+    "debut_semaine": 8,
+    "fin_semaine": 10,
+    "livrables": "Sessions pilotes réalisées, supports ajustés, validation pédagogique"
+  },
+  {
+    "nom": "Phase 5 - Déploiement des formations",
+    "debut_semaine": 10,
+    "fin_semaine": 15,
+    "livrables": "Sessions de formation déployées, feuilles de présence, évaluations à chaud"
+  },
+  {
+    "nom": "Phase 6 - Mise en place e-learning",
+    "debut_semaine": 12,
+    "fin_semaine": 16,
+    "livrables": "Plateforme e-learning opérationnelle, ressources numériques accessibles"
+  },
+  {
+    "nom": "Phase 7 - Suivi et évaluation",
+    "debut_semaine": 15,
+    "fin_semaine": 18,
+    "livrables": "Questionnaires de satisfaction, évaluations à froid, analyse des résultats"
+  },
+  {
+    "nom": "Phase 8 - Bilan et recommandations",
+    "debut_semaine": 18,
+    "fin_semaine": 20,
+    "livrables": "Rapport final, bilan quantitatif et qualitatif, recommandations d'amélioration"
+  }
+]

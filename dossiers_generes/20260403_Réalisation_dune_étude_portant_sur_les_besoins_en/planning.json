@@ -1,0 +1,44 @@
+[
+  {
+    "nom": "Phase 1 - Lancement et cadrage de l'étude",
+    "debut_semaine": 1,
+    "fin_semaine": 2,
+    "livrables": "Note de cadrage, méthodologie détaillée, planning opérationnel"
+  },
+  {
+    "nom": "Phase 2 - Analyse documentaire et état de l'art",
+    "debut_semaine": 2,
+    "fin_semaine": 4,
+    "livrables": "Cartographie des solutions No/Low code, analyse comparative internationale"
+  },
+  {
+    "nom": "Phase 3 - Enquête quantitative entreprises",
+    "debut_semaine": 4,
+    "fin_semaine": 8,
+    "livrables": "Questionnaire en ligne, base de données constituée, premiers résultats"
+  },
+  {
+    "nom": "Phase 4 - Enquête qualitative terrain",
+    "debut_semaine": 7,
+    "fin_semaine": 11,
+    "livrables": "Guides d'entretien, entretiens réalisés, monographies d'entreprises"
+  },
+  {
+    "nom": "Phase 5 - Analyse des besoins en formation",
+    "debut_semaine": 10,
+    "fin_semaine": 13,
+    "livrables": "Cartographie des compétences, référentiel métiers, gaps de formation identifiés"
+  },
+  {
+    "nom": "Phase 6 - Synthèse et recommandations",
+    "debut_semaine": 13,
+    "fin_semaine": 15,
+    "livrables": "Rapport de synthèse, recommandations stratégiques, plan d'actions"
+  },
+  {
+    "nom": "Phase 7 - Restitution et transfert",
+    "debut_semaine": 15,
+    "fin_semaine": 16,
+    "livrables": "Présentation finale, rapport définitif, outils de pilotage"
+  }
+]

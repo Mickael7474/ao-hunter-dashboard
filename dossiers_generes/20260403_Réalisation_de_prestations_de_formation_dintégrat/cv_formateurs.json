@@ -1,0 +1,433 @@
+[
+  {
+    "nom": "Mickaël Bertolla",
+    "titre": "Formateur Expert IA Générative pour la Fonction Publique Territoriale - Président & Fondateur d'Almera",
+    "formation": [
+      "MSc Financial Markets & Investments - Skema Business School (Raleigh, USA) - 2022",
+      "Diplôme d'ingénieur, Systèmes Électroniques Embarqués - École des Mines de Saint-Étienne - 2021",
+      "CFA Investment Foundation - CFA Institute - 2021"
+    ],
+    "annees_experience": 4,
+    "experience": "Formateur IA depuis novembre 2022 avec une expertise reconnue auprès de 2000+ personnes et 50+ entreprises formées, incluant des institutions publiques. Fondateur d'Almera, il développe des formations spécialisées en IA générative adaptées aux besoins des agents territoriaux et cadres de la fonction publique. Son parcours exceptionnel inclut une sélection parmi 7000 candidats comme ex-trader junior chez Akuna Capital (Chicago) et une expérience en recherche quantitative chez Epsilon Asset Management (New York). Auteur du best-seller 'L'IA et la génération de texte' aux Éditions ENI (2025, en cours de réédition), il est reconnu comme Activateur France Num et membre Hub France IA et French Tech. Major de promotion en IA à l'École des Mines et en Produits Dérivés à Skema, il a également terminé Top 20 sur 700 participants à l'ETF Global Portfolio Challenge. Son expertise pédagogique s'étend aux grands groupes et institutions publiques, avec une approche pragmatique de l'intégration de l'IA dans les processus administratifs territoriaux.",
+    "specialites": [
+      "IA générative (texte et image)",
+      "Prompt engineering avancé",
+      "Microsoft Copilot",
+      "Chatbots et agents IA (Voiceflow, RAG)",
+      "Automatisation IA (n8n, Make, Zapier)",
+      "Stratégie et déploiement IA en entreprise",
+      "Formation grands groupes et institutions publiques"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (bilingue)",
+      "Anglais (bilingue - expérience professionnelle USA)",
+      "Russe (bilingue)"
+    ],
+    "publications": [
+      "L'IA et la génération de texte - Éditions ENI (2025, best-seller)"
+    ],
+    "references": [
+      {
+        "client": "Caisse des Dépôts",
+        "mission": "Formation IA pour institution publique financière",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "Action Logement",
+        "mission": "Formation IA pour organisme public du logement social",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Eiffage",
+        "mission": "Formation IA pour acteur majeur des travaux publics",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Orange",
+        "mission": "Formation IA pour service public des télécommunications",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "CCI",
+        "mission": "Formation IA pour établissement public économique territorial",
+        "periode": "2023-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Charles Lerminiaux",
+    "titre": "Consultant Data et IA - Expert Transformation Numérique des Collectivités (17 ans d'expérience)",
+    "formation": [
+      "Ingénieur - ISAE Supaéro - 2008",
+      "Master Spécialisé Management de l'Innovation Technologique - TBS Education - 2017",
+      "Certification CDMP Associate - DAMA International - 2025"
+    ],
+    "annees_experience": 17,
+    "experience": "Expert en transformation data et IA avec 17 ans d'expérience, Charles Lerminiaux accompagne les organisations publiques et privées dans leur modernisation numérique. Ex-Directeur conseil chez Aqsone (2022-2024), il a managé une équipe de consultants data et cadré plus de 200 cas d'usage IA pour COMEX et métiers. Son expérience includes le rôle de Product Manager solution IA générative chez Airbus pour la classification export-control et de consultant data chez Nexans en BI et data quality management (2020-2024). Il a développé et validé des feuilles de route IA auprès de CODIR chez Getinge et dirigé des projets IA chez Sopra Steria Cybersécurité (2018-2020) avec une équipe de 5 data scientists. Formateur expérimenté depuis 2020 auprès d'organisations comme Decathlon, DGA, Arianespace et TBS Education (~250 étudiants), il dirige actuellement l'Aqsone Academy certifiée Qualiopi. En 2025, il pilote la transformation data et IA chez CNPIAT, démontrant son expertise dans l'accompagnement des institutions publiques.",
+    "specialites": [
+      "Data science et gouvernance des données",
+      "IA générative appliquée",
+      "Cadrage de cas d'usage IA pour COMEX",
+      "Feuille de route IA et stratégie data",
+      "Automatisation (n8n, Make, Supabase)",
+      "Communication C-level et pédagogie"
+    ],
+    "certifications": [
+      "Certification CDMP Associate - DAMA International - 2025"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (avancé C1)",
+      "Espagnol (élémentaire A2)",
+      "Italien (élémentaire A2)"
+    ],
+    "references": [
+      {
+        "client": "DGA",
+        "mission": "Formation IA pour la Direction Générale de l'Armement",
+        "periode": "2020-2025"
+      },
+      {
+        "client": "CNPIAT",
+        "mission": "Transformation data et IA, chatbot sur documentation complexe",
+        "periode": "2025"
+      },
+      {
+        "client": "Airbus",
+        "mission": "Product Manager solution IA générative et BI prédictive",
+        "periode": "2008-2025"
+      },
+      {
+        "client": "TBS Education",
+        "mission": "Formation IA pour établissement d'enseignement supérieur (~250 étudiants)",
+        "periode": "2020-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Guillaume Lanz",
+    "titre": "Consultant IA et Formateur Spécialisé Fonction Publique - CEO Transition IA",
+    "formation": [
+      "MBA Manager Produits et Marketing - MBA ESG Paris (RNCP Niveau 7) - 2022-2024",
+      "Generative AI Fundamentals - Google - 2024",
+      "Les principes fondamentaux du marketing numérique - Google - 2022"
+    ],
+    "annees_experience": 3,
+    "experience": "CEO de Transition IA basé à Paris depuis septembre 2023, Guillaume Lanz s'est spécialisé dans l'accompagnement des organisations publiques et privées vers l'IA. Il a formé plus de 1500 professionnels et accompagné plus de 50 entreprises dans leur transformation digitale. Reconnu comme spécialiste Microsoft Copilot avec plus de 20 ateliers réalisés, il intervient régulièrement chez Oreegami où il a formé plus de 300 professionnels à travers 30+ formations et participe aux jurys d'évaluation. Conférencier reconnu lors d'événements majeurs tels que BPI France (BIG 2024, 2025), AI Summit, Le Village by CA, DFCG et Women Circle Club, il partage son expertise auprès des décideurs publics et privés. Sa présence digitale exceptionnelle (Top 6% LinkedIn Monde, 21K+ abonnés, 2.5M+ impressions en 1 an) témoigne de son influence dans l'écosystème IA français. Il a réalisé plus de 20 projets de consulting IA incluant des prompt systèmes, agents Microsoft Copilot et assistants IA personnalisés.",
+    "specialites": [
+      "IA générative",
+      "Microsoft Copilot (spécialiste, 20+ ateliers)",
+      "Prompting avancé",
+      "LinkedIn avec l'IA",
+      "Transformation IA en entreprise",
+      "Conférences IA"
+    ],
+    "certifications": [
+      "Generative AI Fundamentals - Google - 2024",
+      "Les principes fondamentaux du marketing numérique - Google - 2022"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (professionnel)"
+    ],
+    "references": [
+      {
+        "client": "Comité Européen TotalEnergies",
+        "mission": "Formation IA pour instance de gouvernance européenne",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Jazz Pharmaceuticals",
+        "mission": "Transformation IA dans le secteur de la santé publique",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Oreegami",
+        "mission": "Intervenant IA et membre du jury (300+ professionnels formés)",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "Eurofins",
+        "mission": "Copilot au service des commerciaux dans l'analyse publique",
+        "periode": "2024"
+      }
+    ]
+  },
+  {
+    "nom": "Romy Ozier-Lafontaine",
+    "titre": "Formatrice Experte IA et Inclusion Numérique pour la Fonction Publique Territoriale",
+    "formation": [
+      "Développeur Intégrateur Web - 3W Academy - 2018",
+      "Développeuse Web Junior - OpenClassrooms - 2017-2018",
+      "Webdesign & Webdéveloppement - Institut F2I - 2008-2009",
+      "Formations complémentaires : UX Design, IA Générative, Accessibilité, No-Code (2020-2024)",
+      "Jury habilité PIX - depuis 2024"
+    ],
+    "annees_experience": 18,
+    "experience": "Fondatrice et intervenante chez Digital Ladies depuis 2018, Romy Ozier-Lafontaine s'est spécialisée dans la formation IA générative et l'inclusion numérique avec plus de 250 personnes formées et un taux de satisfaction supérieur à 90%. Son expertise couvre la formation en IA générative, SEO, accessibilité et WordPress, avec une approche pédagogique adaptée aux enjeux du service public territorial. Elle conçoit des parcours de formation hybrides pour écoles, CFA et organismes publics, démontrant sa capacité à répondre aux besoins spécifiques des collectivités. Consultante formation entrepreneuriat et numérique chez GIDEF depuis 2024, elle accompagne les porteurs de projets dans leur transformation digitale. Son expérience au CFP GPS Grigny / Konexus (2020-2024) en formation emploi et inclusion numérique inclut la création d'ateliers CV, LinkedIn et acculturation IA pour la recherche d'emploi, particulièrement pertinente pour les missions d'insertion des collectivités. Développeuse frontend freelance depuis 2008 et ancienne technicienne niveau 2 chez Free/Centrapel, elle combine expertise technique et pédagogique pour la modernisation des services publics territoriaux.",
+    "specialites": [
+      "IA générative et prompt engineering",
+      "SEO et marketing digital",
+      "Développement front-end (HTML5, CSS3, JavaScript, PHP)",
+      "WordPress, Webflow et CMS",
+      "UX Design et accessibilité numérique (RGAA)",
+      "Ingénierie pédagogique et formation de formateurs",
+      "Acculturation numérique et inclusion"
+    ],
+    "certifications": [
+      "Jury habilité PIX - depuis 2024"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (B2)"
+    ],
+    "references": [
+      {
+        "client": "Digital Ladies",
+        "mission": "Fondatrice - Formations IA et inclusion numérique (250+ personnes)",
+        "periode": "2018-2025"
+      },
+      {
+        "client": "GIDEF",
+        "mission": "Consultante formation entrepreneuriat et numérique public",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "CFP GPS Grigny / Konexus",
+        "mission": "Formatrice emploi et inclusion numérique territoriale",
+        "periode": "2020-2024"
+      },
+      {
+        "client": "Écoles, CFA, organismes publics",
+        "mission": "Conception de parcours hybrides IA et numérique pour le secteur public",
+        "periode": "2020-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Yann Cabon",
+    "titre": "Formateur Expert IA et Conduite du Changement Organisationnel",
+    "formation": [
+      "Master Ressources Humaines et Relations Sociales - Ecofac Business School, Rennes - 2020-2022",
+      "Licence Professionnelle Management des Équipes Commerciales - UCO Guingamp - 2015-2016"
+    ],
+    "annees_experience": 2,
+    "experience": "Formateur expert en outils IA depuis 2024, Yann Cabon se spécialise dans l'intégration de l'intelligence artificielle dans les processus de travail et la conduite du changement organisationnel, compétences essentielles pour la modernisation des services publics territoriaux. Son expertise couvre la création d'images et vidéos IA appliquées aux besoins de communication des collectivités. En tant que freelance IA et créations graphiques (2022-2024), il a développé un média d'actualités IA sur Instagram et réalisé du consulting IA en entreprise, avec une production remarquable de plus de 900 contenus générés et 4000+ ventes sur banques d'images. Son expérience comme alternant RH Formation chez SNCF Voyageurs à Rennes (2020-2022) lui a permis de maîtriser la planification de formations, la recherche de prestataires, la formation des managers et la gestion de projet de digitalisation des attestations. Il maîtrise de nombreux outils IA couvrant le texte, l'image, la vidéo, la voix et l'automatisation, particulièrement adaptés aux enjeux de transformation digitale des collectivités territoriales.",
+    "specialites": [
+      "IA générative (texte, image, vidéo)",
+      "Création de contenu IA",
+      "Intégration IA dans les processus RH",
+      "Conduite du changement IA en entreprise",
+      "Automatisation (Make)"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)"
+    ],
+    "references": [
+      {
+        "client": "SNCF Voyageurs",
+        "mission": "Alternant RH Formation - planification formations et digitalisation pour service public",
+        "periode": "2020-2022"
+      }
+    ]
+  },
+  {
+    "nom": "Stéphanie Rodrigues",
+    "titre": "Consultante IA et Formatrice - Spécialiste Transformation Digitale des Organisations Publiques",
+    "formation": [
+      "Diplôme d'ingénieur, Biotechnology - Sup'Biotech (2016-2021)",
+      "MBA spécialisé Business et Management - Institut Supérieur de Gestion (2020-2021)",
+      "TOEIC 880/990"
+    ],
+    "annees_experience": 5,
+    "experience": "Consultante IA et formatrice spécialisée dans l'intégration concrète de l'intelligence artificielle au sein des organisations publiques et privées, Stéphanie Rodrigues occupe depuis 2025 le poste de Responsable Transformation & Formation IA chez The Twenty Six. Elle pilote des missions complètes incluant l'audit de maturité IA, la cartographie des processus, la détection des opportunités d'automatisation et la conception de stratégies IA sur-mesure adaptées aux contraintes du secteur public. Son expertise s'étend à la formation des comités de direction et équipes opérationnelles, ainsi qu'à l'implémentation concrète d'automatisations, agents IA et outils collaboratifs. En freelance depuis 2024, elle cadre des cas d'usage, réalise des analyses de valeur et des audits SI/Data, produisant des livrables structurants comme les schémas directeurs IA, business cases et roadmaps stratégiques. Son parcours diversifié inclut la gestion d'un budget Erasmus+ de 666 400€ chez Sup'Biotech, la coordination retail de 320 magasins chez Sephora, le développement marketing NOVÉAL chez L'Oréal et le trade marketing international chez Alès Groupe. Cette expérience multi-sectorielle lui confère une vision globale particulièrement adaptée aux enjeux de modernisation des services publics territoriaux.",
+    "specialites": [
+      "Acculturation et démystification IA",
+      "Automatisation IA (n8n, Zapier, agents IA)",
+      "Audit et conseil IA stratégique",
+      "IA et management",
+      "Accompagnement au changement",
+      "Formation présentiel et distanciel"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (courant professionnel)",
+      "Portugais (courant professionnel)",
+      "Espagnol (courant professionnel)"
+    ],
+    "references": [
+      {
+        "client": "The Twenty Six",
+        "mission": "Responsable Transformation & Formation IA - audit et stratégie pour organisations",
+        "periode": "2025-2026"
+      },
+      {
+        "client": "Sup'Biotech",
+        "mission": "Responsable Communication et Projets Européens - gestion budget public 666 400€",
+        "periode": "2022-2024"
+      },
+      {
+        "client": "Sephora",
+        "mission": "Coordination Retail Marketing - déploiement stratégique multi-sites",
+        "periode": "2021-2022"
+      },
+      {
+        "client": "L'Oréal (NOVÉAL)",
+        "mission": "Développement Marketing - stratégie digitale et événements collaborateurs",
+        "periode": "2020-2021"
+      }
+    ]
+  },
+  {
+    "nom": "Rémy René-Corail",
+    "titre": "Formateur IA Générative et Stratégie Marketing Digital pour Collectivités",
+    "formation": [
+      "Chef de projet Digital - Digital School Paris - 2018-2019",
+      "Certification Inbound Marketing - HubSpot"
+    ],
+    "annees_experience": 7,
+    "experience": "Formateur IA générative depuis 2024, Rémy René-Corail se spécialise dans l'acculturation à l'intelligence artificielle, la création de contenu visuel assistée par IA et les outils de productivité IA, compétences particulièrement adaptées aux besoins de communication des collectivités territoriales. Son expérience comme CRM & CMS Manager chez Groupe AtHome (2023) inclut la gestion des sites WordPress du groupe, les campagnes emailing B2B/B2C et les tunnels de vente HubSpot, expertise directement transposable à la digitalisation des services publics. En tant que Responsable Marketing et Communication chez Groupe Fitec (2019-2023), il a piloté la stratégie marketing multicanal, conçu des campagnes emailing, organisé des salons et webinars, supervisé des campagnes publicitaires LinkedIn et Meta, géré le budget marketing et coordonné l'équipe marketing. Cette expérience complète en gestion de projet et communication digitale lui permet d'accompagner efficacement les cadres territoriaux dans leur transformation numérique. Reconnu Top Voice LinkedIn, il maîtrise les enjeux de communication institutionnelle moderne.",
+    "specialites": [
+      "Acculturation IA générative",
+      "Création visuelle assistée par IA",
+      "Outils IA de productivité",
+      "Stratégie marketing digital",
+      "CRM et marketing automation (HubSpot)"
+    ],
+    "certifications": [
+      "Certification Inbound Marketing - HubSpot"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais"
+    ],
+    "references": [
+      {
+        "client": "Groupe AtHome",
+        "mission": "CRM & CMS Manager - digitalisation et automatisation marketing",
+        "periode": "2023"
+      },
+      {
+        "client": "Groupe Fitec",
+        "mission": "Responsable Marketing et Communication multicanal",
+        "periode": "2019-2023"
+      }
+    ]
+  },
+  {
+    "nom": "Joe Cabot",
+    "titre": "Formateur Indépendant IA et Digitalisation - Spécialiste No Code pour Collectivités",
+    "formation": [
+      "Formation informatique No Code et IA - No Code Maker - 2023",
+      "Formation comptabilité et commercialisation - Chambre des métiers - 2008",
+      "Baccalauréat Littéraire - Lycée Lalande - 2004"
+    ],
+    "annees_experience": 2,
+    "experience": "Formateur indépendant spécialisé en Logiciel et Digitalisation depuis octobre 2023, Joe Cabot développe des formations pratiques en création de sites internet no code, Notion, utilisation de l'IA pour la création de contenu et découverte de l'impression 3D, compétences particulièrement adaptées à la modernisation des services publics territoriaux. Son expérience d'Assistant d'éducation en Lycée et collège à Bourg-en-Bresse (2016-2024) lui confère une solide expertise pédagogique et une connaissance approfondie du secteur public éducatif. En tant que Responsable Développement Durable du Lycée Lalande, il a conduit la labellisation Établissement en Démarche de Développement Durable, assuré le référencement Eco Délégués et optimisé ainsi que digitalisé les méthodes de travail, démontrant sa capacité à mener des projets de transformation organisationnelle. Il maîtrise les outils Google, les solutions no code et les technologies émergentes comme l'impression 3D, offrant aux collectivités une approche innovante de la digitalisation de leurs services.",
+    "specialites": [
+      "IA générative et outils numériques",
+      "Création de sites internet no code (Softr, Dorik, Systeme.io)",
+      "Impression 3D (Tinkercad)",
+      "Automatisation (Make, Zapier)",
+      "Outils collaboratifs (Google Workspace, Notion, Airtable)",
+      "Développement durable et RSE"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)"
+    ],
+    "references": [
+      {
+        "client": "Lycée Lalande",
+        "mission": "Responsable Développement Durable - labellisation E3D et digitalisation établissement public",
+        "periode": "2016-2024"
+      }
+    ]
+  },
+  {
+    "nom": "Nathan Daviet",
+    "titre": "Expert Marketing Digital et IA Appliquée à la Communication Territoriale",
+    "formation": [
+      "Bachelor Marketing Digital & Communication (spé. Management de la Performance) - CREA Omnes Education - 2017-2020",
+      "Diplôme de Cambridge B1 - EF English Live - 2017",
+      "Baccalauréat Scientifique mention AB - 2017"
+    ],
+    "annees_experience": 8,
+    "experience": "Manager Marketing Digital & Performance chez BuxumLunic (2020-2024), Nathan Daviet a développé une expertise complète en SEO approfondi, campagnes SEA et réseaux sociaux, stratégies marketing et communication, gestion de projets et relation client, ainsi qu'en conformité RGPD/Cookies/Analytics, compétences essentielles pour la communication institutionnelle des collectivités territoriales. Freelance Marketing & Web Designer depuis 2017, il maîtrise la création de sites WordPress, le référencement SEO/SEA, le consulting et la formation, ainsi que les stratégies marketing et communication digitale adaptées aux enjeux du secteur public. Son expérience comme Junior Marketing Digital chez Eeproperty (2020) inclut la refonte de site WordPress, l'optimisation SEO, la mise en place de plans de tracking et la création de personas marketing. Sa formation initiale chez Digital Turn en Web Design & Community Management (2017-2018) complète son profil polyvalent. Il applique désormais l'IA aux stratégies marketing et communication, offrant aux cadres territoriaux des outils modernes pour améliorer leur visibilité et leur engagement citoyen.",
+    "specialites": [
+      "Marketing digital et SEO/SEA",
+      "IA appliquée au marketing et à la communication",
+      "Web design WordPress et UX",
+      "RGPD et conformité données (Axeptio)",
+      "Réseaux sociaux et campagnes publicitaires (Meta, LinkedIn, YouTube, TikTok)",
+      "Analytics (Google Analytics, Search Console, Tag Manager, Data Studio)"
+    ],
+    "certifications": [
+      "Diplôme de Cambridge B1 - EF English Live - 2017"
+    ],
+    "langues": [
+      "Français (natif)",
+      "Anglais (B2)",
+      "Allemand (A2)"
+    ],
+    "references": [
+      {
+        "client": "BuxumLunic",
+        "mission": "Manager Marketing Digital & Performance - stratégies multicanales et conformité",
+        "periode": "2020-2024"
+      },
+      {
+        "client": "Eeproperty",
+        "mission": "Junior Marketing Digital - refonte site et optimisation SEO",
+        "periode": "2020"
+      },
+      {
+        "client": "Digital Turn",
+        "mission": "Web Designer & Community Management digital",
+        "periode": "2017-2018"
+      }
+    ]
+  },
+  {
+    "nom": "Arthur Arrial",
+    "titre": "Créateur de Solutions IA et Automatisation pour la Modernisation des Services Publics",
+    "formation": [
+      "Sup de Pub Lyon - 2ème année Communication/Marketing - en cours",
+      "Baccalauréat filière générale mention AB - Lycée Berthollet Annecy - 2020-2023"
+    ],
+    "annees_experience": 2,
+    "experience": "Stagiaire chez Almera en 2024, Arthur Arrial s'est spécialisé dans la création de solutions IA pratiques avec la réalisation du site internet almera.one, la prise en main des IA génératives, la formation pour des professionnels et l'automatisation de projets, compétences directement applicables à la modernisation des services publics territoriaux. Formateur pour l'école Oreegami et pour particuliers avec 40 heures de formation dispensées en 2024, il démontre ses capacités pédagogiques adaptées aux besoins des cadres territoriaux. Sa maîtrise de la création de chatbots IA et de sites internet offre aux collectivités des solutions concrètes d'amélioration de l'accueil citoyen et de la dématérialisation des services. Co-fondateur de Caliting (2022-2023), il a géré des projets web, créé des contenus visuels et optimisé les réseaux sociaux, développant une vision globale de la communication digitale. Il maîtrise les IA génératives texte/image/vidéo/voix, l'automatisation, la Suite Adobe, Figma et Webflow, constituant un profil technique complet pour accompagner la transformation numérique des administrations territoriales.",
+    "specialites": [
+      "Chatbots et agents IA",
+      "Automatisation IA",
+      "Création de sites internet (Webflow, Framer)",
+      "IA générative (texte, image, vidéo, voix)",
+      "Suite Adobe et création visuelle"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (intermédiaire)"
+    ],
+    "references": [
+      {
+        "client": "Almera",
+        "mission": "Stagiaire - développement solutions IA et formations professionnelles",
+        "periode": "2024"
+      },
+      {
+        "client": "Oreegami",
+        "mission": "Formateur IA pour professionnels (40h de formation)",
+        "periode": "2024"
+      },
+      {
+        "client": "Caliting",
+        "mission": "Co-fondateur - gestion projets web et communication digitale",
+        "periode": "2022-2023"
+      }
+    ]
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "id": "DEMO-001",
+  "titre": "Formation à l'Intelligence Artificielle pour les agents de la Mairie de Lyon",
+  "source": "DEMO",
+  "acheteur": "Mairie de Lyon - Direction des Ressources Humaines",
+  "date_publication": "2026-04-02",
+  "date_limite": "2026-05-15",
+  "description": "La Mairie de Lyon souhaite former 200 agents municipaux aux outils d'Intelligence Artificielle générative (ChatGPT, Copilot, etc.) dans le cadre de sa stratégie de transformation numérique. La formation devra couvrir les usages professionnels de l'IA, les enjeux éthiques, et proposer des ateliers pratiques adaptés aux différents métiers de la collectivité. Critères de notation : Qualité technique (40%), Prix (30%), Méthodologie pédagogique (20%), Développement durable (10%).",
+  "url": "https://example.com/ao-demo",
+  "budget_estime": 45000,
+  "region": "Auvergne-Rhone-Alpes",
+  "code_cpv": "80533100",
+  "type_marche": "Services",
+  "type_procedure": "",
+  "pieces_dossier": [],
+  "score_pertinence": 0.92,
+  "statut": "nouveau"
+}

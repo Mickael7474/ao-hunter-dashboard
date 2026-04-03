@@ -1,0 +1,50 @@
+[
+  {
+    "nom": "Phase 1 - Lancement et diagnostic",
+    "debut_semaine": 1,
+    "fin_semaine": 3,
+    "livrables": "Compte-rendu de cadrage, audit des besoins de formation, cartographie des profils A et B"
+  },
+  {
+    "nom": "Phase 2 - Conception pédagogique",
+    "debut_semaine": 3,
+    "fin_semaine": 6,
+    "livrables": "Programme de formation personnalisé, supports pédagogiques, guide animateur"
+  },
+  {
+    "nom": "Phase 3 - Formation des formateurs",
+    "debut_semaine": 6,
+    "fin_semaine": 8,
+    "livrables": "Formateurs certifiés, kit de déploiement, procédures qualité"
+  },
+  {
+    "nom": "Phase 4 - Formation pilote",
+    "debut_semaine": 8,
+    "fin_semaine": 10,
+    "livrables": "Sessions pilotes réalisées, retours d'expérience, ajustements validés"
+  },
+  {
+    "nom": "Phase 5 - Déploiement formation présentielle",
+    "debut_semaine": 10,
+    "fin_semaine": 15,
+    "livrables": "Sessions de formation dispensées, feuilles d'émargement, évaluations à chaud"
+  },
+  {
+    "nom": "Phase 6 - Plateforme e-learning et ressources",
+    "debut_semaine": 12,
+    "fin_semaine": 16,
+    "livrables": "Plateforme opérationnelle, contenus digitaux, accès stagiaires"
+  },
+  {
+    "nom": "Phase 7 - Suivi et évaluation",
+    "debut_semaine": 15,
+    "fin_semaine": 18,
+    "livrables": "Évaluations à froid, questionnaires satisfaction, indicateurs de performance"
+  },
+  {
+    "nom": "Phase 8 - Bilan et transfert",
+    "debut_semaine": 18,
+    "fin_semaine": 20,
+    "livrables": "Rapport final, bilan pédagogique, recommandations d'amélioration"
+  }
+]

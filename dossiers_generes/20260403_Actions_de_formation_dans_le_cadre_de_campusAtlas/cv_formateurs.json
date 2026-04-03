@@ -1,0 +1,430 @@
+[
+  {
+    "nom": "Mickaël Bertolla",
+    "titre": "Expert IA générative et Blockchain - Formateur principal secteur Atlas",
+    "formation": [
+      "MSc Financial Markets & Investments - Skema Business School (Raleigh, USA) - 2022",
+      "Diplôme d'ingénieur, Systèmes Électroniques Embarqués - École des Mines de Saint-Étienne - 2021",
+      "CFA Investment Foundation - CFA Institute - 2021"
+    ],
+    "annees_experience": 4,
+    "experience": "Président et fondateur d'Almera, Mickaël Bertolla cumule une expertise unique en intelligence artificielle et marchés financiers, particulièrement adaptée aux enjeux du secteur Atlas. Fort de son expérience de trader junior chez Akuna Capital à Chicago et de sa formation quantitative chez Epsilon Asset Management à New York, il maîtrise parfaitement les technologies émergentes comme la blockchain et l'IA générative. Depuis novembre 2022, il a formé plus de 2000 personnes et accompagné plus de 50 entreprises dans leur transformation numérique. Auteur du best-seller \"L'IA et la génération de texte\" aux Éditions ENI, il est reconnu comme Activateur France Num et membre du Hub France IA. Son approche pédagogique combine excellence académique (major de promotion en IA à l'École des Mines) et expérience terrain, idéale pour les formations spécialisées du campus Atlas. Sa maîtrise trilingue lui permet d'intervenir auprès de publics internationaux et sa connaissance des enjeux financiers et technologiques en fait un formateur de référence pour les secteurs de l'assurance, de la banque et des services financiers.",
+    "specialites": [
+      "IA générative (texte et image)",
+      "Prompt engineering avancé",
+      "Microsoft Copilot",
+      "Chatbots et agents IA (Voiceflow, RAG)",
+      "Automatisation IA (n8n, Make, Zapier)",
+      "Stratégie et déploiement IA en entreprise",
+      "Formation grands groupes et institutions publiques"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (bilingue)",
+      "Anglais (bilingue - expérience professionnelle USA)",
+      "Russe (bilingue)"
+    ],
+    "publications": [
+      "L'IA et la génération de texte - Éditions ENI (2025, best-seller)"
+    ],
+    "references": [
+      {
+        "client": "Caisse des Dépôts",
+        "mission": "Formation IA pour institution financière publique",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "Orange",
+        "mission": "Formation IA pour transformation numérique",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "Action Logement",
+        "mission": "Formation IA secteur immobilier et services",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Carrefour",
+        "mission": "Formation IA pour grande distribution",
+        "periode": "2023-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Charles Lerminiaux",
+    "titre": "Expert Data Science et IA - Spécialiste transformation numérique responsable",
+    "formation": [
+      "Ingénieur - ISAE Supaéro - 2008",
+      "Master Spécialisé Management de l'Innovation Technologique - TBS Education - 2017",
+      "Certification CDMP Associate - DAMA International - 2025"
+    ],
+    "annees_experience": 17,
+    "experience": "Consultant senior avec 17 ans d'expérience dans la transformation data et IA, Charles Lerminiaux apporte une expertise technique et managériale rare aux formations du campus Atlas. Ex-Directeur conseil chez Aqsone, il a managé des équipes de consultants data et cadré plus de 200 cas d'usage IA pour des COMEX et équipes métiers. Son passage chez Airbus comme Product Manager solution IA générative et ses missions chez des leaders industriels comme Nexans et Getinge démontrent sa maîtrise des enjeux de transformation numérique responsable. Fondateur de DataScore et directeur de l'Aqsone Academy certifiée Qualiopi, il combine excellence pédagogique et expertise opérationnelle. Depuis 2020, il forme régulièrement des professionnels chez Decathlon, Telespazio, la DGA et Arianespace, ainsi que plus de 250 étudiants à TBS Education. Sa capacité à communiquer avec les dirigeants (C-level) et à traduire les enjeux techniques en valeur business en fait un formateur de référence pour les problématiques blockchain et numérique responsable du secteur Atlas.",
+    "specialites": [
+      "Data science et gouvernance des données",
+      "IA générative appliquée",
+      "Cadrage de cas d'usage IA pour COMEX",
+      "Feuille de route IA et stratégie data",
+      "Automatisation (n8n, Make, Supabase)",
+      "Communication C-level et pédagogie"
+    ],
+    "certifications": [
+      "Certification CDMP Associate - DAMA International - 2025"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (avancé C1)",
+      "Espagnol (élémentaire A2)",
+      "Italien (élémentaire A2)"
+    ],
+    "references": [
+      {
+        "client": "CNPIAT",
+        "mission": "Transformation data et IA, développement chatbot spécialisé",
+        "periode": "2025"
+      },
+      {
+        "client": "Getinge",
+        "mission": "Feuille de route IA validée CODIR avec formation équipes",
+        "periode": "2024"
+      },
+      {
+        "client": "Decathlon",
+        "mission": "Formation IA et accompagnement transformation",
+        "periode": "2020-2025"
+      },
+      {
+        "client": "DGA",
+        "mission": "Formation IA secteur défense",
+        "periode": "2020-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Guillaume Lanz",
+    "titre": "CEO Transition IA - Expert Microsoft Copilot et transformation numérique",
+    "formation": [
+      "MBA Manager Produits et Marketing - MBA ESG Paris (RNCP Niveau 7) - 2022-2024",
+      "Generative AI Fundamentals - Google - 2024",
+      "Les principes fondamentaux du marketing numérique - Google - 2022"
+    ],
+    "annees_experience": 3,
+    "experience": "CEO de Transition IA et expert reconnu en transformation numérique, Guillaume Lanz apporte une vision stratégique et opérationnelle des enjeux IA pour le secteur Atlas. Depuis septembre 2023, il a formé plus de 1500 professionnels et accompagné plus de 50 entreprises dans leur transition numérique. Spécialiste Microsoft Copilot avec plus de 20 ateliers réalisés, il maîtrise parfaitement les outils de productivité IA essentiels aux métiers de l'assurance et des services financiers. Intervenant IA chez Oreegami, il a formé plus de 300 professionnels et réalisé plus de 30 formations, démontrant sa capacité d'adaptation à différents publics. Conférencier reconnu lors d'événements majeurs comme le BIG de BPI France, l'AI Summit et les rencontres du Village by CA, il possède une expertise particulière des enjeux de transformation numérique responsable. Son influence sur LinkedIn (Top 6% mondial, 21K+ abonnés, 2.5M+ impressions) témoigne de sa capacité à vulgariser les enjeux IA complexes pour les professionnels du secteur Atlas.",
+    "specialites": [
+      "IA générative",
+      "Microsoft Copilot (spécialiste, 20+ ateliers)",
+      "Prompting avancé",
+      "LinkedIn avec l'IA",
+      "Transformation IA en entreprise",
+      "Conférences IA"
+    ],
+    "certifications": [
+      "Generative AI Fundamentals - Google - 2024",
+      "Les principes fondamentaux du marketing numérique - Google - 2022"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (professionnel)"
+    ],
+    "references": [
+      {
+        "client": "Jazz Pharmaceuticals",
+        "mission": "Transformation IA secteur santé et services",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Comité Européen TotalEnergies",
+        "mission": "Formation IA pour transition énergétique",
+        "periode": "2023-2025"
+      },
+      {
+        "client": "Edelman",
+        "mission": "Formation IA pour agence EMEA de l'année 2024",
+        "periode": "2024"
+      },
+      {
+        "client": "Eurofins",
+        "mission": "Copilot au service des équipes commerciales",
+        "periode": "2024"
+      }
+    ]
+  },
+  {
+    "nom": "Romy Ozier-Lafontaine",
+    "titre": "Formatrice experte numérique responsable et inclusion IA",
+    "formation": [
+      "Développeur Intégrateur Web - 3W Academy - 2018",
+      "Développeuse Web Junior - OpenClassrooms - 2017-2018",
+      "Webdesign & Webdéveloppement - Institut F2I - 2008-2009",
+      "Formations complémentaires : UX Design, IA Générative, Accessibilité, No-Code (2020-2024)",
+      "Jury habilité PIX - depuis 2024"
+    ],
+    "annees_experience": 18,
+    "experience": "Fondatrice de Digital Ladies et experte reconnue en numérique responsable, Romy Ozier-Lafontaine apporte une vision inclusive et éthique des technologies IA parfaitement alignée avec les valeurs du campus Atlas. Avec 18 ans d'expérience et plus de 250 personnes formées (taux de satisfaction supérieur à 90%), elle maîtrise l'ensemble des enjeux de transformation numérique responsable. Spécialisée dans l'IA générative, l'accessibilité numérique (RGAA) et l'inclusion, elle conçoit des parcours de formation hybrides pour écoles, CFA et organismes publics. Consultante formation chez GIDEF et formatrice emploi au CFP GPS Grigny, elle développe des approches pédagogiques innovantes pour l'acculturation IA et la recherche d'emploi. Jury habilitée PIX depuis 2024, elle possède une expertise technique solide en développement front-end et UX Design. Son expérience en ingénierie pédagogique et formation de formateurs en fait une ressource précieuse pour développer des programmes de formation numérique responsable adaptés aux spécificités du secteur Atlas, notamment sur les enjeux d'éthique IA et d'inclusion numérique.",
+    "specialites": [
+      "IA générative et prompt engineering",
+      "SEO et marketing digital",
+      "Développement front-end (HTML5, CSS3, JavaScript, PHP)",
+      "WordPress, Webflow et CMS",
+      "UX Design et accessibilité numérique (RGAA)",
+      "Ingénierie pédagogique et formation de formateurs",
+      "Acculturation numérique et inclusion"
+    ],
+    "certifications": [
+      "Jury habilité PIX - depuis 2024"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (B2)"
+    ],
+    "references": [
+      {
+        "client": "Digital Ladies",
+        "mission": "Fondatrice - Formations IA, numérique responsable et inclusion (250+ personnes)",
+        "periode": "2018-2025"
+      },
+      {
+        "client": "GIDEF",
+        "mission": "Consultante formation entrepreneuriat et numérique responsable",
+        "periode": "2024-2025"
+      },
+      {
+        "client": "CFP GPS Grigny / Konexus",
+        "mission": "Formatrice emploi et inclusion numérique avec IA",
+        "periode": "2020-2024"
+      },
+      {
+        "client": "Écoles, CFA, organismes publics",
+        "mission": "Conception parcours hybrides IA et numérique responsable",
+        "periode": "2020-2025"
+      }
+    ]
+  },
+  {
+    "nom": "Yann Cabon",
+    "titre": "Formateur Expert IA et conduite du changement numérique",
+    "formation": [
+      "Master Ressources Humaines et Relations Sociales - Ecofac Business School, Rennes - 2020-2022",
+      "Licence Professionnelle Management des Équipes Commerciales - UCO Guingamp - 2015-2016"
+    ],
+    "annees_experience": 2,
+    "experience": "Expert en intégration de l'IA dans les processus organisationnels, Yann Cabon combine une solide formation en ressources humaines avec une expertise technique en intelligence artificielle, profil idéal pour les enjeux de transformation du secteur Atlas. Formateur spécialisé en outils IA depuis 2024, il maîtrise l'ensemble de la chaîne de création de contenu IA (texte, image, vidéo, voix) et l'automatisation des processus. Son expérience en freelance IA lui a permis de créer un média d'actualités IA sur Instagram et de vendre plus de 4000 créations sur les banques d'images, démontrant sa capacité à produire du contenu IA de qualité professionnelle. Son passage comme alternant RH Formation chez SNCF Voyageurs lui a donné une compréhension approfondie des enjeux de formation en entreprise et de conduite du changement organisationnel. Cette double expertise RH et IA technique en fait un formateur particulièrement adapté pour accompagner les transformations numériques responsables du secteur Atlas, avec un focus sur l'acceptation et l'intégration humaine des technologies IA.",
+    "specialites": [
+      "IA générative (texte, image, vidéo)",
+      "Création de contenu IA",
+      "Intégration IA dans les processus RH",
+      "Conduite du changement IA en entreprise",
+      "Automatisation (Make)"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)"
+    ],
+    "references": [
+      {
+        "client": "SNCF Voyageurs",
+        "mission": "Alternant RH Formation - digitalisation et formation managériale",
+        "periode": "2020-2022"
+      }
+    ]
+  },
+  {
+    "nom": "Stéphanie Rodrigues",
+    "titre": "Consultante IA stratégique et transformation numérique responsable",
+    "formation": [
+      "Diplôme d'ingénieur, Biotechnology - Sup'Biotech (2016-2021)",
+      "MBA spécialisé Business et Management - Institut Supérieur de Gestion (2020-2021)",
+      "TOEIC 880/990"
+    ],
+    "annees_experience": 5,
+    "experience": "Consultante IA et formatrice experte en transformation numérique, Stéphanie Rodrigues apporte une approche stratégique et opérationnelle de l'intelligence artificielle parfaitement adaptée aux enjeux du campus Atlas. Responsable Transformation & Formation IA chez The Twenty Six depuis 2025, elle pilote des missions complètes d'intégration IA : audits de maturité, cartographie des processus, détection d'opportunités d'automatisation et conception de stratégies sur-mesure. Son expertise en formation de comités de direction et en implémentation concrète (automatisations, agents IA, outils collaboratifs) répond aux besoins spécifiques du secteur Atlas. En freelance depuis 2024, elle réalise des missions de conseil IA stratégique avec production de livrables structurants (schémas directeurs IA, business cases, roadmaps). Son parcours dans des entreprises internationales comme L'Oréal, Sephora et Alès Groupe, combiné à son expérience en gestion de budgets européens importants chez Sup'Biotech, lui confère une vision globale des enjeux de transformation numérique responsable. Sa maîtrise de quatre langues et son approche pédagogique structurée en font une formatrice de référence pour l'accompagnement au changement IA.",
+    "specialites": [
+      "Acculturation et démystification IA",
+      "Automatisation IA (n8n, Zapier, agents IA)",
+      "Audit et conseil IA stratégique",
+      "IA et management",
+      "Accompagnement au changement",
+      "Formation présentiel et distanciel"
+    ],
+    "certifications": [
+      "TOEIC 880/990"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (courant professionnel)",
+      "Portugais (courant professionnel)",
+      "Espagnol (courant professionnel)"
+    ],
+    "references": [
+      {
+        "client": "The Twenty Six",
+        "mission": "Responsable Transformation IA - audit, stratégie, formation CODIR",
+        "periode": "2025-2026"
+      },
+      {
+        "client": "Sup'Biotech",
+        "mission": "Responsable Projets Européens - gestion budget Erasmus+ 666 400€",
+        "periode": "2022-2024"
+      },
+      {
+        "client": "L'Oréal (NOVÉAL)",
+        "mission": "Développement stratégie digitale et transformation numérique",
+        "periode": "2020-2021"
+      },
+      {
+        "client": "Sephora",
+        "mission": "Coordination transformation digitale retail - 320 magasins",
+        "periode": "2021-2022"
+      }
+    ]
+  },
+  {
+    "nom": "Rémy René-Corail",
+    "titre": "Formateur IA générative et marketing digital responsable",
+    "formation": [
+      "Chef de projet Digital - Digital School Paris - 2018-2019",
+      "Certification Inbound Marketing - HubSpot"
+    ],
+    "annees_experience": 7,
+    "experience": "Expert en IA générative et marketing digital, Rémy René-Corail apporte une vision stratégique de la transformation numérique adaptée aux enjeux du secteur Atlas. Formateur IA générative depuis 2024, il se spécialise dans l'acculturation IA, la création de contenu visuel assisté et les outils de productivité IA pour les entreprises. Son expérience comme Responsable Marketing chez Groupe Fitec lui a permis de piloter des stratégies marketing multicanal complexes, de gérer des budgets marketing et de superviser des équipes dans un contexte de transformation digitale. CRM & CMS Manager chez Groupe AtHome, il maîtrise parfaitement les outils d'automatisation marketing (HubSpot) et la gestion de sites WordPress, compétences essentielles pour la digitalisation responsable. Reconnu Top Voice LinkedIn, il possède une expertise particulière en communication digitale et en vulgarisation des enjeux technologiques. Cette combinaison d'expertise technique IA et de vision marketing stratégique en fait un formateur idéal pour accompagner les professionnels du secteur Atlas dans leur transformation numérique responsable, avec un focus sur l'éthique et la performance.",
+    "specialites": [
+      "Acculturation IA générative",
+      "Création visuelle assistée par IA",
+      "Outils IA de productivité",
+      "Stratégie marketing digital",
+      "CRM et marketing automation (HubSpot)"
+    ],
+    "certifications": [
+      "Certification Inbound Marketing - HubSpot"
+    ],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais"
+    ],
+    "references": [
+      {
+        "client": "Groupe AtHome",
+        "mission": "CRM & CMS Manager - transformation digitale et automation",
+        "periode": "2023"
+      },
+      {
+        "client": "Groupe Fitec",
+        "mission": "Responsable Marketing - stratégie multicanal et transformation",
+        "periode": "2019-2023"
+      }
+    ]
+  },
+  {
+    "nom": "Joe Cabot",
+    "titre": "Formateur numérique responsable et développement durable",
+    "formation": [
+      "Formation informatique No Code et IA - No Code Maker - 2023",
+      "Formation comptabilité et commercialisation - Chambre des métiers - 2008",
+      "Baccalauréat Littéraire - Lycée Lalande - 2004"
+    ],
+    "annees_experience": 2,
+    "experience": "Formateur spécialisé en numérique responsable et développement durable, Joe Cabot apporte une expertise unique en solutions no-code et IA éthique parfaitement alignée avec les valeurs du campus Atlas. Formateur indépendant depuis octobre 2023, il accompagne les professionnels dans la découverte et l'utilisation responsable de l'IA pour la création de contenu et la digitalisation des processus. Son expérience de Responsable Développement Durable au Lycée Lalande lui a permis de conduire la labellisation Établissement en Démarche de Développement Durable et d'optimiser les méthodes de travail par la digitalisation. Cette double expertise développement durable et outils numériques en fait un formateur idéal pour les enjeux de numérique responsable du secteur Atlas. Il maîtrise parfaitement les outils no-code (Softr, Dorik, Systeme.io) et les solutions d'automatisation éthique, permettant aux organisations d'adopter l'IA de manière responsable. Son approche pédagogique inclusive et sa sensibilité aux enjeux environnementaux répondent parfaitement aux besoins de formation en numérique responsable des professionnels de l'assurance et des services financiers.",
+    "specialites": [
+      "IA générative et outils numériques",
+      "Création de sites internet no code (Softr, Dorik, Systeme.io)",
+      "Impression 3D (Tinkercad)",
+      "Automatisation (Make, Zapier)",
+      "Outils collaboratifs (Google Workspace, Notion, Airtable)",
+      "Développement durable et RSE"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)"
+    ],
+    "references": [
+      {
+        "client": "Lycée Lalande",
+        "mission": "Responsable Développement Durable - labellisation E3D et digitalisation",
+        "periode": "2016-2024"
+      }
+    ]
+  },
+  {
+    "nom": "Nathan Daviet",
+    "titre": "Expert Marketing Digital IA et communication numérique responsable",
+    "formation": [
+      "Bachelor Marketing Digital & Communication (spé. Management de la Performance) - CREA Omnes Education - 2017-2020",
+      "Diplôme de Cambridge B1 - EF English Live - 2017",
+      "Baccalauréat Scientifique mention AB - 2017"
+    ],
+    "annees_experience": 8,
+    "experience": "Expert marketing digital avec 8 ans d'expérience, Nathan Daviet apporte une vision complète de la transformation numérique et de l'IA appliquée au marketing, parfaitement adaptée aux besoins du campus Atlas. Manager Marketing Digital & Performance chez BuxumLunic, il a développé une expertise approfondie en SEO, campagnes SEA et réseaux sociaux, ainsi qu'une maîtrise avancée des enjeux RGPD et analytics essentiels au secteur Atlas. Freelance Marketing & Web Designer depuis 2017, il accompagne les entreprises dans leur transformation digitale responsable avec une approche centrée sur la performance et la conformité. Sa spécialisation en IA appliquée au marketing et à la communication lui permet de former les professionnels aux nouveaux outils tout en respectant les principes du numérique responsable. Expert WordPress et UX Design, il conçoit des solutions digitales performantes et accessibles. Sa maîtrise des outils d'analyse (Google Analytics, Search Console, Tag Manager) et sa connaissance des campagnes publicitaires multi-plateformes (Meta, LinkedIn, YouTube, TikTok) en font un formateur de référence pour la digitalisation éthique du secteur Atlas.",
+    "specialites": [
+      "Marketing digital et SEO/SEA",
+      "IA appliquée au marketing et à la communication",
+      "Web design WordPress et UX",
+      "RGPD et conformité données (Axeptio)",
+      "Réseaux sociaux et campagnes publicitaires (Meta, LinkedIn, YouTube, TikTok)",
+      "Analytics (Google Analytics, Search Console, Tag Manager, Data Studio)"
+    ],
+    "certifications": [
+      "Diplôme de Cambridge B1 - EF English Live - 2017"
+    ],
+    "langues": [
+      "Français (natif)",
+      "Anglais (B2)",
+      "Allemand (A2)"
+    ],
+    "references": [
+      {
+        "client": "BuxumLunic",
+        "mission": "Manager Marketing Digital & Performance - transformation numérique",
+        "periode": "2020-2024"
+      },
+      {
+        "client": "Eeproperty",
+        "mission": "Junior Marketing Digital - SEO et stratégie data",
+        "periode": "2020"
+      },
+      {
+        "client": "Digital Turn",
+        "mission": "Web Designer & Community Management - création digitale",
+        "periode": "2017-2018"
+      }
+    ]
+  },
+  {
+    "nom": "Arthur Arrial",
+    "titre": "Créateur de solutions IA et automatisation numérique",
+    "formation": [
+      "Sup de Pub Lyon - 2ème année Communication/Marketing - en cours",
+      "Baccalauréat filière générale mention AB - Lycée Berthollet Annecy - 2020-2023"
+    ],
+    "annees_experience": 2,
+    "experience": "Jeune expert en solutions IA et automatisation, Arthur Arrial apporte une vision innovante et pratique des technologies émergentes adaptée aux enjeux du campus Atlas. Stagiaire chez Almera en 2024, il a participé à la création du site almera.one et développé ses compétences en formation IA pour professionnels, acquérant une expérience précieuse en pédagogie des technologies avancées. Formateur pour l'école Oreegami et auprès de particuliers, il a dispensé 40 heures de formation en 2024, démontrant sa capacité d'adaptation à différents publics. Spécialiste de la création de chatbots IA et de sites internet, il maîtrise parfaitement les outils no-code essentiels à la transformation numérique (Webflow, Framer). Co-fondateur de Caliting, il a développé une expertise en gestion de projets web et optimisation des réseaux sociaux. Sa maîtrise de l'ensemble de la chaîne IA générative (texte, image, vidéo, voix) et des outils de création visuelle (Suite Adobe, Figma) en fait un formateur polyvalent pour accompagner les professionnels du secteur Atlas dans leur découverte et adoption des technologies IA émergentes, avec un focus sur l'innovation et la créativité.",
+    "specialites": [
+      "Chatbots et agents IA",
+      "Automatisation IA",
+      "Création de sites internet (Webflow, Framer)",
+      "IA générative (texte, image, vidéo, voix)",
+      "Suite Adobe et création visuelle"
+    ],
+    "certifications": [],
+    "langues": [
+      "Français (langue maternelle)",
+      "Anglais (intermédiaire)"
+    ],
+    "references": [
+      {
+        "client": "Almera",
+        "mission": "Stagiaire - développement web et formation IA professionnelle",
+        "periode": "2024"
+      },
+      {
+        "client": "Oreegami",
+        "mission": "Formateur IA - 40h de formation dispensées",
+        "periode": "2024"
+      },
+      {
+        "client": "Caliting",
+        "mission": "Co-fondateur - projets web et stratégie digitale",
+        "periode": "2022-2023"
+      }
+    ]
+  }
+]

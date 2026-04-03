@@ -1,0 +1,28 @@
+{
+  "id": "BOAMP-26_26318",
+  "titre": "Réalisation de prestations de formation d'intégration des cadres de catégories A et B de la Fonction Publique Territoriale pour la Délégation Hauts-de-France du Cnfpt",
+  "source": "BOAMP",
+  "acheteur": "Cnfpt - Délégation Hauts de France",
+  "date_publication": "2026-03-13",
+  "date_limite": "2026-04-20T12:00:00+00:00",
+  "description": "Chaque lot est un accord-cadre multi attributaire conclu sans seuil minimum et avec un seuil maximum, s'exécutant par émission successive de bons de commande.\nLa durée des marchés est de deux ans à compter de leur date de notification. Chaque marché pourra être reconduit une fois maximum pour une nouvelle période de deux ans",
+  "url": "https://www.boamp.fr/pages/avis/?q=idweb:26-26318",
+  "budget_estime": null,
+  "region": [
+    "59"
+  ],
+  "code_cpv": [
+    "410"
+  ],
+  "type_marche": "Avis de marché",
+  "type_procedure": "Procédure Ouverte",
+  "pieces_dossier": [],
+  "score_pertinence": 0.805,
+  "statut": "nouveau",
+  "duree_mois": 48,
+  "lieu_execution": "15 rue de Bavay 59000 - LILLE CEDEX",
+  "contact_nom": "Service Achats et Marché",
+  "contact_email": "",
+  "url_profil_acheteur": "",
+  "criteres_attribution": "Valeur technique : 40%\nPerformances en matière de développement durable : 5%\nPrix : 55%"
+}

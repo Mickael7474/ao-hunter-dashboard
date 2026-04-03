@@ -1,0 +1,50 @@
+[
+  {
+    "nom": "Phase 1 - Lancement et diagnostic des besoins",
+    "debut_semaine": 1,
+    "fin_semaine": 2,
+    "livrables": "Compte-rendu de cadrage, audit des besoins par service, grille d'évaluation initiale"
+  },
+  {
+    "nom": "Phase 2 - Conception pédagogique personnalisée",
+    "debut_semaine": 3,
+    "fin_semaine": 5,
+    "livrables": "Programme détaillé, supports de formation adaptés, modules e-learning, guide pratique IA"
+  },
+  {
+    "nom": "Phase 3 - Formation pilote avec groupe référent",
+    "debut_semaine": 6,
+    "fin_semaine": 7,
+    "livrables": "Formation de 20 référents, retours d'expérience, ajustements pédagogiques"
+  },
+  {
+    "nom": "Phase 4 - Déploiement formation en présentiel",
+    "debut_semaine": 8,
+    "fin_semaine": 12,
+    "livrables": "10 sessions de formation (20 agents par session), attestations de formation"
+  },
+  {
+    "nom": "Phase 5 - Plateforme e-learning et ressources",
+    "debut_semaine": 6,
+    "fin_semaine": 14,
+    "livrables": "Accès plateforme digitale, ressources complémentaires, tutoriels vidéo"
+  },
+  {
+    "nom": "Phase 6 - Accompagnement et suivi individuel",
+    "debut_semaine": 13,
+    "fin_semaine": 15,
+    "livrables": "Sessions de coaching, support technique, évaluation des acquis"
+  },
+  {
+    "nom": "Phase 7 - Évaluation et bilan final",
+    "debut_semaine": 16,
+    "fin_semaine": 17,
+    "livrables": "Questionnaires de satisfaction, rapport d'évaluation, recommandations d'amélioration"
+  },
+  {
+    "nom": "Phase 8 - Transfert de compétences et clôture",
+    "debut_semaine": 18,
+    "fin_semaine": 18,
+    "livrables": "Restitution finale, plan d'actions post-formation, documentation complète"
+  }
+]
