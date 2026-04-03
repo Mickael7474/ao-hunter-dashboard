@@ -366,14 +366,21 @@ def detail_ao(ao_id):
 
     # Dossier genere
     dossier_genere = None
-    clean_id = ao_id.replace("BOAMP-", "").replace("PLACE-", "").replace("TED-", "")
-    for d in RESULTATS_DIR.iterdir():
-        if d.is_dir() and clean_id in d.name:
-            dossier_genere = {
-                "nom": d.name,
-                "fichiers": sorted([f.name for f in d.glob("*") if f.is_file()]),
-            }
-            break
+    clean_id = ao_id.replace("BOAMP-", "").replace("PLACE-", "").replace("TED-", "").replace("MSEC-", "").replace("AWS-", "")
+    if RESULTATS_DIR.exists():
+        for d in RESULTATS_DIR.iterdir():
+            if d.is_dir() and clean_id in d.name:
+                dossier_genere = {
+                    "nom": d.name,
+                    "fichiers": sorted([f.name for f in d.glob("*") if f.is_file()]),
+                }
+                break
+    # Fallback: check dossiers index
+    if not dossier_genere and DOSSIERS_INDEX.exists():
+        for d in json.loads(DOSSIERS_INDEX.read_text(encoding="utf-8")):
+            if clean_id in d.get("nom", ""):
+                dossier_genere = d
+                break
 
     # Notes
     notes = charger_notes()
