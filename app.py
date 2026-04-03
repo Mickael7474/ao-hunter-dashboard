@@ -224,6 +224,37 @@ def _ao_urgents(appels: list[dict], max_days=7) -> list[dict]:
     return urgents
 
 
+STATUTS_KANBAN = ["nouveau", "analyse", "candidature", "soumis", "gagne", "perdu", "ignore"]
+
+PRESTATIONS_KEYWORDS = {
+    "Formation": ["formation", "formateur", "pedagogie", "stagiaire", "apprenant",
+                  "competences", "certification", "qualiopi", "cpf", "opco",
+                  "apprentissage", "enseignement", "e-learning", "module",
+                  "programme pedagogique", "parcours de formation"],
+    "Consulting / AMO": ["conseil", "consulting", "accompagnement", "audit",
+                         "assistance a maitrise", "amo", "diagnostic", "expertise",
+                         "preconisation", "etude", "strategie", "transformation",
+                         "conduite du changement", "schema directeur"],
+    "Developpement": ["developpement", "logiciel", "application", "site web",
+                      "plateforme", "api", "integration", "maintenance applicative",
+                      "tma", "devops", "cloud", "hebergement", "infrastructure",
+                      "systeme d'information", "numerique", "digital"],
+}
+
+
+def detecter_prestations(ao: dict) -> list[dict]:
+    """Detecte les types de prestations pertinentes pour un AO."""
+    texte = f"{ao.get('titre', '')} {ao.get('description', '')}".lower()
+    resultats = []
+    for presta, mots in PRESTATIONS_KEYWORDS.items():
+        matches = [m for m in mots if m in texte]
+        if matches:
+            score = min(100, len(matches) * 25)
+            resultats.append({"type": presta, "score": score, "mots_cles": matches[:5]})
+    resultats.sort(key=lambda x: x["score"], reverse=True)
+    return resultats
+
+
 # --- Pages ---
 
 @app.route("/")
@@ -286,6 +317,38 @@ def liste_ao():
     )
 
 
+@app.route("/kanban")
+def kanban():
+    appels = charger_ao()
+    colonnes = {}
+    for s in STATUTS_KANBAN:
+        colonnes[s] = sorted(
+            [a for a in appels if a.get("statut", "nouveau") == s],
+            key=lambda a: a.get("score_pertinence") or 0, reverse=True
+        )[:50]  # max 50 par colonne
+    # Stats conversion
+    total_soumis = len([a for a in appels if a.get("statut") in ("soumis", "gagne", "perdu")])
+    gagnes = len([a for a in appels if a.get("statut") == "gagne"])
+    taux_conversion = (gagnes / total_soumis * 100) if total_soumis > 0 else 0
+    return render_template("kanban.html", colonnes=colonnes, statuts=STATUTS_KANBAN,
+                           taux_conversion=taux_conversion, total_soumis=total_soumis,
+                           gagnes=gagnes)
+
+
+@app.route("/ao/<path:ao_id>/statut-ajax", methods=["POST"])
+def changer_statut_ajax(ao_id):
+    """Change le statut via AJAX (pour le drag & drop Kanban)."""
+    appels = charger_ao()
+    data = request.get_json()
+    nouveau_statut = data.get("statut", "nouveau")
+    for ao in appels:
+        if ao.get("id") == ao_id:
+            ao["statut"] = nouveau_statut
+            sauvegarder_ao(appels)
+            return jsonify({"status": "ok", "id": ao_id, "statut": nouveau_statut})
+    return jsonify({"error": "AO non trouve"}), 404
+
+
 @app.route("/ao/<path:ao_id>")
 def detail_ao(ao_id):
     appels = charger_ao()
@@ -308,7 +371,9 @@ def detail_ao(ao_id):
     notes = charger_notes()
     note = notes.get(ao_id, "")
 
-    return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note)
+    prestations = detecter_prestations(ao)
+    return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
+                           prestations=prestations)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])

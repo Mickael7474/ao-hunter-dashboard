@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Kanban{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Kanban - Pipeline AO</h1>
+    <div style="display:flex; gap:1.5rem; align-items:center;">
+        {% if total_soumis > 0 %}
+        <span class="stat-inline">
+            <strong>{{ gagnes }}</strong>/{{ total_soumis }} gagnes
+            <span class="score {% if taux_conversion >= 30 %}score-high{% elif taux_conversion >= 15 %}score-mid{% else %}score-low{% endif %}" style="margin-left:0.5rem;">
+                {{ "%.0f"|format(taux_conversion) }}% conversion
+            </span>
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="kanban-board">
+    {% for statut in statuts %}
+    <div class="kanban-col" data-statut="{{ statut }}">
+        <div class="kanban-col-header kanban-header-{{ statut }}">
+            <span>{{ statut | capitalize }}</span>
+            <span class="kanban-count">{{ colonnes[statut] | length }}</span>
+        </div>
+        <div class="kanban-cards" data-statut="{{ statut }}"
+             ondrop="kanbanDrop(event)" ondragover="event.preventDefault()" ondragenter="this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')">
+            {% for ao in colonnes[statut] %}
+            <div class="kanban-card" draggable="true" data-id="{{ ao.id }}"
+                 ondragstart="kanbanDragStart(event)">
+                <div class="kanban-card-score">
+                    {% set score_pct = (ao.score_pertinence * 100) | int %}
+                    <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
+                        {{ score_pct }}%
+                    </span>
+                    <span class="badge badge-{{ ao.source | lower }}">{{ ao.source }}</span>
+                </div>
+                <a href="{{ url_for('detail_ao', ao_id=ao.id) }}" class="kanban-card-title">
+                    {{ ao.titre[:60] }}
+                </a>
+                <div class="kanban-card-meta">
+                    {% if ao.acheteur %}
+                    <span>{{ (ao.acheteur or '')[:30] }}</span>
+                    {% endif %}
+                    {% if ao.date_limite %}
+                    <span class="deadline deadline-{% if ao.date_limite.split('T')[0] < now.strftime('%Y-%m-%d') %}expired{% elif ao.date_limite.split('T')[0] <= (now + timedelta(days=3)).strftime('%Y-%m-%d') %}urgent{% else %}ok{% endif %}">
+                        {{ ao.date_limite.split('T')[0] }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if not colonnes[statut] %}
+            <div class="kanban-empty">Aucun AO</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function kanbanDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.id);
+    e.target.classList.add('dragging');
+}
+
+function kanbanDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const aoId = e.dataTransfer.getData('text/plain');
+    const newStatut = e.currentTarget.dataset.statut;
+    const card = document.querySelector('.kanban-card[data-id="' + aoId + '"]');
+    if (card) card.classList.remove('dragging');
+
+    fetch('/ao/' + encodeURIComponent(aoId) + '/statut-ajax', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({statut: newStatut})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Move card to new column
+            if (card) {
+                e.currentTarget.appendChild(card);
+                // Remove empty message if present
+                const empty = e.currentTarget.querySelector('.kanban-empty');
+                if (empty) empty.remove();
+            }
+            // Update counts
+            document.querySelectorAll('.kanban-col').forEach(col => {
+                const cards = col.querySelector('.kanban-cards').querySelectorAll('.kanban-card');
+                col.querySelector('.kanban-count').textContent = cards.length;
+            });
+        }
+    });
+}
+
+document.addEventListener('dragend', function(e) {
+    if (e.target.classList) e.target.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+});
+</script>
+{% endblock %}

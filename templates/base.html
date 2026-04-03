@@ -15,6 +15,7 @@
         <div class="nav-links">
             <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('liste_ao') }}" class="{% if request.endpoint == 'liste_ao' %}active{% endif %}">Appels d'offres</a>
+            <a href="{{ url_for('kanban') }}" class="{% if request.endpoint == 'kanban' %}active{% endif %}">Kanban</a>
             <a href="{{ url_for('liste_dossiers') }}" class="{% if request.endpoint == 'liste_dossiers' %}active{% endif %}">Dossiers</a>
         </div>
         <div class="nav-actions">

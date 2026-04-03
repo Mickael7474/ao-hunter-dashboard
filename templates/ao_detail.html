@@ -66,7 +66,7 @@
         <form class="statut-form" method="post" action="{{ url_for('changer_statut', ao_id=ao.id) }}">
             <label style="font-size:0.85rem; font-weight:500;">Statut :</label>
             <select name="statut" onchange="this.form.submit()">
-                {% for s in ['nouveau', 'analyse', 'candidature', 'ignore'] %}
+                {% for s in ['nouveau', 'analyse', 'candidature', 'soumis', 'gagne', 'perdu', 'ignore'] %}
                 <option value="{{ s }}" {% if ao.statut == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
@@ -97,6 +97,24 @@
     </div>
     <div id="genMessages" class="gen-log"></div>
 </div>
+
+<!-- Prestations detectees -->
+{% if prestations %}
+<div class="card">
+    <div class="card-header">
+        <h2>Prestations detectees</h2>
+    </div>
+    <div class="presta-list">
+        {% for p in prestations %}
+        <div class="presta-item">
+            <div class="presta-type">{{ p.type }}</div>
+            <div class="presta-bar"><div class="presta-bar-fill" style="width:{{ p.score }}%;"></div></div>
+            <div class="presta-keywords">{{ p.mots_cles | join(', ') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Notes -->
 <div class="card">

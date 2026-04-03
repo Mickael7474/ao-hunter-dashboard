@@ -77,7 +77,7 @@
             </thead>
             <tbody>
                 {% for ao in appels %}
-                <tr>
+                <tr class="clickable-row" onclick="window.location='{{ url_for('detail_ao', ao_id=ao.id) }}'">
                     <td>
                         {% set score_pct = (ao.score_pertinence * 100) | int %}
                         <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
