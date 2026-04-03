@@ -53,6 +53,7 @@ def init_scheduler():
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.interval import IntervalTrigger
+        from apscheduler.triggers.cron import CronTrigger
 
         _scheduler = BackgroundScheduler(daemon=True)
         _scheduler.add_job(
@@ -63,8 +64,15 @@ def init_scheduler():
             replace_existing=True,
             next_run_time=datetime.now() + timedelta(minutes=2),  # premiere exec 2min apres boot
         )
+        _scheduler.add_job(
+            func=_rapport_hebdo_auto,
+            trigger=CronTrigger(day_of_week="mon", hour=8),
+            id="rapport_hebdo",
+            name="Rapport hebdomadaire lundi 8h",
+            replace_existing=True,
+        )
         _scheduler.start()
-        logger.info("Scheduler veille auto demarre (toutes les 8h)")
+        logger.info("Scheduler veille auto + rapport hebdo demarre")
     except ImportError:
         logger.warning("APScheduler non installe - veille auto desactivee")
     except Exception as e:
@@ -152,6 +160,22 @@ def _veille_auto():
             logger.info(f"Pipeline auto: aucun dossier genere ({pipeline_result.get('details', [])})")
     except Exception as e:
         logger.error(f"Erreur pipeline auto: {e}")
+
+
+def _rapport_hebdo_auto():
+    """Fonction executee par le scheduler chaque lundi a 8h."""
+    try:
+        from rapport_hebdo import rapport_et_envoi
+        result = rapport_et_envoi()
+        if result.get("brouillon_cree"):
+            logger.info(f"Rapport hebdo: brouillon cree ({result['rapport'].get('nb_nouveaux_ao', 0)} nouveaux AO)")
+        elif result.get("doublon"):
+            logger.info("Rapport hebdo: anti-doublon, deja genere cette semaine")
+        else:
+            logger.warning(f"Rapport hebdo: brouillon non cree ({result.get('erreur', 'inconnu')})")
+    except Exception as e:
+        logger.error(f"Erreur rapport hebdo auto: {e}")
+
 
 logger = logging.getLogger("ao_hunter.dashboard")
 
@@ -775,6 +799,20 @@ def changer_statut_ajax(ao_id):
         if ao.get("id") == ao_id:
             ao["statut"] = nouveau_statut
             sauvegarder_ao(appels)
+            # Memoire adaptative : indexer le memoire si AO gagne
+            if nouveau_statut == "gagne":
+                try:
+                    from memoire_adaptative import sauvegarder_memoire_gagnant
+                    sauvegarder_memoire_gagnant(ao)
+                except Exception as e:
+                    logger.warning(f"Memoire adaptative: erreur sauvegarde pour {ao_id}: {e}")
+            # Recalibrer le scoring predictif si gagne ou perdu
+            if nouveau_statut in ("gagne", "perdu"):
+                try:
+                    from scoring_predictif import calibrer_auto
+                    calibrer_auto()
+                except Exception as e:
+                    logger.warning(f"Scoring predictif: erreur calibration pour {ao_id}: {e}")
             return jsonify({"status": "ok", "id": ao_id, "statut": nouveau_statut})
     return jsonify({"error": "AO non trouve"}), 404
 
@@ -880,6 +918,27 @@ def detail_ao(ao_id):
     except Exception as e:
         logger.warning(f"Erreur groupement pour {ao_id}: {e}")
 
+    # Analyse semantique DCE (si deja lancee)
+    analyse_dce_complete = None
+    try:
+        clean_id_dce = ao_id.replace("BOAMP-", "").replace("PLACE-", "").replace("TED-", "").replace("MSEC-", "").replace("AWS-", "").replace("/", "_")
+        fichier_analyse = DOSSIERS_GENERES_DIR / f"DCE_{clean_id_dce}" / "analyse_dce_complete.json"
+        if not fichier_analyse.exists():
+            fichier_analyse = DOSSIERS_GENERES_DIR / f"DCE_{ao_id.replace('/', '_')}" / "analyse_dce_complete.json"
+        if fichier_analyse.exists():
+            with open(fichier_analyse, "r", encoding="utf-8") as f:
+                analyse_dce_complete = json.load(f)
+    except Exception as e:
+        logger.warning(f"Erreur chargement analyse DCE pour {ao_id}: {e}")
+
+    # Prediction de victoire (scoring predictif)
+    prediction_data = None
+    try:
+        from scoring_predictif import predire_victoire
+        prediction_data = predire_victoire(ao)
+    except Exception as e:
+        logger.warning(f"Erreur scoring predictif pour {ao_id}: {e}")
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
                            prestations=prestations, go_nogo=go_nogo,
                            type_presta=type_presta, modele=modele,
@@ -889,18 +948,36 @@ def detail_ao(ao_id):
                            ao_similaires=ao_similaires,
                            post_mortem=post_mortem_data,
                            signaux_faibles=signaux_faibles_data,
-                           groupement=groupement_eval)
+                           groupement=groupement_eval,
+                           analyse_dce_complete=analyse_dce_complete,
+                           prediction=prediction_data)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])
 def changer_statut(ao_id):
     appels = charger_ao()
     nouveau_statut = request.form.get("statut", "nouveau")
+    ao_trouve = None
     for ao in appels:
         if ao.get("id") == ao_id:
             ao["statut"] = nouveau_statut
+            ao_trouve = ao
             break
     sauvegarder_ao(appels)
+    # Memoire adaptative : indexer le memoire si AO gagne
+    if nouveau_statut == "gagne" and ao_trouve:
+        try:
+            from memoire_adaptative import sauvegarder_memoire_gagnant
+            sauvegarder_memoire_gagnant(ao_trouve)
+        except Exception as e:
+            logger.warning(f"Memoire adaptative: erreur sauvegarde pour {ao_id}: {e}")
+    # Recalibrer le scoring predictif si gagne ou perdu
+    if nouveau_statut in ("gagne", "perdu"):
+        try:
+            from scoring_predictif import calibrer_auto
+            calibrer_auto()
+        except Exception as e:
+            logger.warning(f"Scoring predictif: erreur calibration pour {ao_id}: {e}")
     return redirect(url_for("detail_ao", ao_id=ao_id))
 
 
@@ -1257,6 +1334,46 @@ def api_ao_update(ao_id):
 def api_generer(ao_id):
     """POST /api/ao/<id>/generer - Lance la generation du dossier."""
     return generer_dossier(ao_id)
+
+
+@app.route("/api/ao/<path:ao_id>/analyser-dce", methods=["POST"])
+def api_analyser_dce(ao_id):
+    """POST /api/ao/<id>/analyser-dce - Analyse semantique complete du DCE."""
+    appels = charger_ao()
+    ao_dict = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao_dict:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    # Trouver le dossier DCE
+    clean_id = ao_id.replace("BOAMP-", "").replace("PLACE-", "").replace("TED-", "").replace("MSEC-", "").replace("AWS-", "").replace("/", "_")
+    dossier_dce = DOSSIERS_GENERES_DIR / f"DCE_{clean_id}"
+
+    if not dossier_dce.exists():
+        # Essayer aussi avec l'ID brut
+        dossier_dce = DOSSIERS_GENERES_DIR / f"DCE_{ao_id.replace('/', '_')}"
+    if not dossier_dce.exists():
+        return jsonify({"error": "DCE non telecharge. Telechargez d'abord le DCE."}), 400
+
+    def _analyser_bg():
+        try:
+            socketio.emit("veille_log", {"msg": "Analyse semantique du DCE en cours..."})
+            from analyse_semantique_dce import analyser_dce_complet_ia
+            resultat = analyser_dce_complet_ia(dossier_dce, ao_dict)
+            if "erreur" in resultat:
+                socketio.emit("veille_log", {"msg": f"Erreur analyse DCE: {resultat['erreur']}"})
+                socketio.emit("analyse_dce_complete", {"success": False, "erreur": resultat["erreur"]})
+            else:
+                score = resultat.get("score_adequation", 0)
+                socketio.emit("veille_log", {"msg": f"Analyse DCE terminee - Score: {score}/100"})
+                socketio.emit("analyse_dce_complete", {"success": True, "score": score})
+        except Exception as e:
+            logger.error(f"Erreur analyse semantique DCE: {e}")
+            socketio.emit("veille_log", {"msg": f"Erreur analyse DCE: {e}"})
+            socketio.emit("analyse_dce_complete", {"success": False, "erreur": str(e)})
+
+    thread = threading.Thread(target=_analyser_bg, daemon=True)
+    thread.start()
+    return jsonify({"status": "started"})
 
 
 @app.route("/api/stats")
@@ -1739,11 +1856,154 @@ def api_objectifs_post():
     return jsonify({"status": "ok", "objectifs": result})
 
 
+@app.route("/api/memoires-gagnants")
+def api_memoires_gagnants():
+    """Liste des memoires techniques indexes (modeles gagnants)."""
+    try:
+        from memoire_adaptative import _charger_index
+        index = _charger_index()
+        return jsonify(index)
+    except Exception as e:
+        logger.error(f"Erreur chargement memoires gagnants: {e}")
+        return jsonify([])
+
+
+# --- Scoring predictif API ---
+
+@app.route("/api/scoring/stats")
+def api_scoring_stats():
+    """GET /api/scoring/stats - Stats du modele de scoring predictif."""
+    try:
+        from scoring_predictif import stats_modele
+        return jsonify(stats_modele())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/scoring/prediction/<path:ao_id>")
+def api_scoring_prediction(ao_id):
+    """GET /api/scoring/prediction/<ao_id> - Prediction pour un AO."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+    try:
+        from scoring_predictif import predire_victoire
+        return jsonify(predire_victoire(ao))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # --- WebSocket ---
 
 @socketio.on("connect")
 def on_connect():
     logger.info("Client WebSocket connecte")
+
+
+# --- Rapport hebdomadaire ---
+
+@app.route("/api/rapport-hebdo", methods=["POST"])
+def api_rapport_hebdo_forcer():
+    """POST /api/rapport-hebdo - Forcer la generation manuelle du rapport hebdomadaire."""
+    try:
+        from rapport_hebdo import rapport_et_envoi
+        result = rapport_et_envoi()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+@app.route("/api/rapport-hebdo/dernier")
+def api_rapport_hebdo_dernier():
+    """GET /api/rapport-hebdo/dernier - Retourner le dernier rapport hebdomadaire."""
+    try:
+        from rapport_hebdo import _charger_rapports
+        rapports = _charger_rapports()
+        if not rapports:
+            return jsonify({"erreur": "Aucun rapport disponible"}), 404
+        return jsonify(rapports[-1])
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+# --- Sync endpoints ---
+
+_app_start_time = datetime.now()
+
+
+@app.route("/api/sync/status")
+def api_sync_status():
+    """GET /api/sync/status - Etat de synchronisation et sante du dashboard."""
+    appels = charger_ao()
+    uptime_seconds = (datetime.now() - _app_start_time).total_seconds()
+
+    # Derniere synchro (depuis le fichier meta si present)
+    derniere_synchro = None
+    meta_file = DASHBOARD_DIR / ".sync_meta.json"
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            derniere_synchro = meta.get("dernier_pull")
+        except Exception:
+            pass
+
+    return jsonify({
+        "derniere_synchro": derniere_synchro,
+        "nb_ao": len(appels),
+        "version": "AO Hunter Dashboard v2",
+        "uptime": round(uptime_seconds),
+        "uptime_humain": f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m",
+        "environnement": "render" if os.environ.get("RENDER") else "local",
+    })
+
+
+@app.route("/api/sync/pull", methods=["POST"])
+def api_sync_pull():
+    """POST /api/sync/pull - Force un rechargement des donnees depuis les fichiers."""
+    try:
+        # Recharger les fichiers de donnees (utile apres un push externe)
+        appels = charger_ao()
+        concurrence_file = DASHBOARD_DIR / "concurrence.json"
+        historique_file = DASHBOARD_DIR / "historique_veille.json"
+
+        nb_concurrence = 0
+        if concurrence_file.exists():
+            try:
+                data = json.loads(concurrence_file.read_text(encoding="utf-8"))
+                nb_concurrence = len(data) if isinstance(data, list) else 0
+            except Exception:
+                pass
+
+        nb_historique = 0
+        if historique_file.exists():
+            try:
+                data = json.loads(historique_file.read_text(encoding="utf-8"))
+                nb_historique = len(data) if isinstance(data, list) else 0
+            except Exception:
+                pass
+
+        # Mettre a jour le timestamp de synchro
+        meta_file = DASHBOARD_DIR / ".sync_meta.json"
+        meta = {}
+        if meta_file.exists():
+            try:
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        meta["dernier_pull"] = datetime.now().isoformat()
+        meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        return jsonify({
+            "status": "ok",
+            "nb_ao": len(appels),
+            "nb_concurrence": nb_concurrence,
+            "nb_historique": nb_historique,
+            "timestamp": meta["dernier_pull"],
+        })
+    except Exception as e:
+        logger.error(f"Erreur sync pull: {e}")
+        return jsonify({"status": "error", "erreur": str(e)}), 500
 
 
 # Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)

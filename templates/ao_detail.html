@@ -174,6 +174,11 @@
             Telecharger DCE
         </button>
 
+        <!-- Analyser DCE -->
+        <button id="btnAnalyserDCE" class="btn btn-sm btn-outline" onclick="lancerAnalyseDCE('{{ ao.id }}')" style="border-color:#8b5cf6; color:#8b5cf6;">
+            Analyser le DCE
+        </button>
+
         <!-- Generer dossier -->
         {% if not dossier %}
         <button id="btnGenerer" class="btn btn-sm btn-primary" onclick="lancerGeneration('{{ ao.id }}')">
@@ -273,6 +278,167 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Analyse semantique DCE -->
+{% if analyse_dce_complete and not analyse_dce_complete.erreur %}
+<div class="card" id="sectionAnalyseDCE">
+    <div class="card-header">
+        <h2>Analyse semantique du DCE</h2>
+        <span class="badge" style="padding:6px 16px; font-size:1.1rem; font-weight:700; color:white;
+            {% if analyse_dce_complete.score_adequation >= 70 %}background:#16a34a;
+            {% elif analyse_dce_complete.score_adequation >= 40 %}background:#f59e0b;
+            {% else %}background:#dc2626;{% endif %}">
+            {{ analyse_dce_complete.score_adequation }}/100
+        </span>
+    </div>
+
+    <!-- Jauge -->
+    <div style="margin-bottom:1.5rem;">
+        <div style="background:var(--meta-bg); border-radius:8px; height:24px; overflow:hidden;">
+            <div style="height:100%; border-radius:8px; transition:width 0.5s;
+                width:{{ analyse_dce_complete.score_adequation }}%;
+                {% if analyse_dce_complete.score_adequation >= 70 %}background:linear-gradient(90deg, #16a34a, #22c55e);
+                {% elif analyse_dce_complete.score_adequation >= 40 %}background:linear-gradient(90deg, #f59e0b, #fbbf24);
+                {% else %}background:linear-gradient(90deg, #dc2626, #ef4444);{% endif %}">
+            </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-light); margin-top:4px;">
+            <span>0 - Inadequat</span><span>50 - Partiel</span><span>100 - Parfait</span>
+        </div>
+    </div>
+
+    <!-- Resume rapide -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+        {% set admin_ok = analyse_dce_complete.exigences_administratives | selectattr('almera_conforme') | list | length %}
+        {% set admin_total = analyse_dce_complete.exigences_administratives | length %}
+        {% set tech_ok = analyse_dce_complete.exigences_techniques | selectattr('almera_conforme') | list | length %}
+        {% set tech_total = analyse_dce_complete.exigences_techniques | length %}
+        {% set pieces_ok = analyse_dce_complete.pieces_demandees | selectattr('disponible_almera') | list | length %}
+        {% set pieces_total = analyse_dce_complete.pieces_demandees | length %}
+        <div style="text-align:center; padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Exigences admin</div>
+            <div style="font-size:1.3rem; font-weight:700; {% if admin_ok == admin_total %}color:var(--success);{% elif admin_ok > 0 %}color:#f59e0b;{% else %}color:#dc2626;{% endif %}">{{ admin_ok }}/{{ admin_total }}</div>
+        </div>
+        <div style="text-align:center; padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Exigences techniques</div>
+            <div style="font-size:1.3rem; font-weight:700; {% if tech_ok == tech_total %}color:var(--success);{% elif tech_ok > 0 %}color:#f59e0b;{% else %}color:#dc2626;{% endif %}">{{ tech_ok }}/{{ tech_total }}</div>
+        </div>
+        <div style="text-align:center; padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">
+            <div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">Pieces disponibles</div>
+            <div style="font-size:1.3rem; font-weight:700; {% if pieces_ok == pieces_total %}color:var(--success);{% elif pieces_ok > 0 %}color:#f59e0b;{% else %}color:#dc2626;{% endif %}">{{ pieces_ok }}/{{ pieces_total }}</div>
+        </div>
+    </div>
+
+    <!-- Criteres de notation -->
+    {% if analyse_dce_complete.criteres_notation %}
+    <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Criteres de notation</h3>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            {% for c in analyse_dce_complete.criteres_notation %}
+            <div style="padding:0.5rem 0.75rem; background:var(--meta-bg); border-radius:var(--radius); border-left:3px solid var(--primary);">
+                <div style="font-size:0.8rem; font-weight:600;">{{ c.critere }}</div>
+                <div style="font-size:1.1rem; font-weight:700; color:var(--primary);">{{ c.poids_pct }}%</div>
+                {% if c.sous_criteres %}
+                <div style="font-size:0.7rem; color:var(--text-light);">{{ c.sous_criteres | join(', ') }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tableau de conformite -->
+    <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Conformite des exigences</h3>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <thead>
+                    <tr style="background:var(--meta-bg);">
+                        <th style="padding:6px 8px; text-align:left;">Categorie</th>
+                        <th style="padding:6px 8px; text-align:left;">Exigence</th>
+                        <th style="padding:6px 8px; text-align:center;">Oblig.</th>
+                        <th style="padding:6px 8px; text-align:center;">Conforme</th>
+                        <th style="padding:6px 8px; text-align:left;">Commentaire</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in analyse_dce_complete.exigences_administratives %}
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:6px 8px; color:var(--text-light);">Admin</td>
+                        <td style="padding:6px 8px;">{{ e.exigence }}</td>
+                        <td style="padding:6px 8px; text-align:center;">{% if e.obligatoire %}Oui{% else %}-{% endif %}</td>
+                        <td style="padding:6px 8px; text-align:center; font-size:1rem;">{% if e.almera_conforme %}&#10003;{% else %}&#10007;{% endif %}</td>
+                        <td style="padding:6px 8px; font-size:0.75rem; color:var(--text-light);">{{ e.commentaire }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% for e in analyse_dce_complete.exigences_techniques %}
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:6px 8px; color:var(--text-light);">Technique</td>
+                        <td style="padding:6px 8px;">{{ e.exigence }}</td>
+                        <td style="padding:6px 8px; text-align:center;">{% if e.obligatoire %}Oui{% else %}-{% endif %}</td>
+                        <td style="padding:6px 8px; text-align:center; font-size:1rem;">{% if e.almera_conforme %}&#10003;{% else %}&#10007;{% endif %}</td>
+                        <td style="padding:6px 8px; font-size:0.75rem; color:var(--text-light);">{{ e.commentaire }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% for p in analyse_dce_complete.pieces_demandees %}
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:6px 8px; color:var(--text-light);">Piece</td>
+                        <td style="padding:6px 8px;">{{ p.piece }}</td>
+                        <td style="padding:6px 8px; text-align:center;">{% if p.obligatoire %}Oui{% else %}-{% endif %}</td>
+                        <td style="padding:6px 8px; text-align:center; font-size:1rem;">{% if p.disponible_almera %}&#10003;{% else %}&#10007;{% endif %}</td>
+                        <td style="padding:6px 8px;"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Points d'attention -->
+    {% if analyse_dce_complete.points_attention %}
+    <div style="margin-bottom:1rem; padding:0.75rem; background:rgba(220,38,38,0.07); border-radius:var(--radius); border-left:3px solid #dc2626;">
+        <strong style="color:#dc2626; font-size:0.85rem;">Points d'attention</strong>
+        <ul style="margin:0.5rem 0 0 1rem; font-size:0.8rem;">
+            {% for p in analyse_dce_complete.points_attention %}
+            <li style="color:#dc2626; margin-bottom:0.25rem;">{{ p }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Avantages Almera -->
+    {% if analyse_dce_complete.avantages_almera %}
+    <div style="padding:0.75rem; background:rgba(22,163,74,0.07); border-radius:var(--radius); border-left:3px solid #16a34a;">
+        <strong style="color:#16a34a; font-size:0.85rem;">Avantages Almera</strong>
+        <ul style="margin:0.5rem 0 0 1rem; font-size:0.8rem;">
+            {% for a in analyse_dce_complete.avantages_almera %}
+            <li style="color:#16a34a; margin-bottom:0.25rem;">{{ a }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Contraintes calendrier -->
+    {% if analyse_dce_complete.contraintes_calendrier %}
+    <div style="margin-top:1rem;">
+        <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Contraintes calendrier</h3>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            {% for c in analyse_dce_complete.contraintes_calendrier %}
+            <div style="padding:0.4rem 0.6rem; background:var(--meta-bg); border-radius:var(--radius); font-size:0.8rem;">
+                <span style="font-weight:600;">{{ c.contrainte }}</span>
+                {% if c.date %}<span style="color:var(--text-light);"> - {{ c.date }}</span>{% endif %}
+                {% if c.commentaire %}<br><span style="font-size:0.7rem; color:var(--text-light);">{{ c.commentaire }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:1rem; font-size:0.7rem; color:var(--text-light);">
+        Analyse generee le {{ analyse_dce_complete.timestamp[:16] | replace('T', ' a ') }}
+    </div>
+</div>
+{% endif %}
+
 <!-- Estimation marche -->
 {% if estimation %}
 <div class="card">
@@ -367,6 +533,87 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
         </ul>
     </details>
     {% endif %}
+</div>
+{% endif %}
+
+<!-- Prediction de victoire -->
+{% if prediction %}
+<div class="card">
+    <div class="card-header">
+        <h2>Prediction de victoire</h2>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <span class="badge" style="padding:4px 12px; font-size:0.75rem; font-weight:600;
+                {% if prediction.confiance == 'haute' %}background:#dcfce7; color:#166534;
+                {% elif prediction.confiance == 'moyenne' %}background:#fef3c7; color:#92400e;
+                {% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+                Confiance {{ prediction.confiance }}
+            </span>
+            {% if prediction.nb_donnees > 0 %}
+            <span style="font-size:0.7rem; color:var(--text-light);">{{ prediction.nb_donnees }} AO en base</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:200px 1fr; gap:2rem; align-items:start;">
+        <!-- Jauge circulaire -->
+        <div style="text-align:center;">
+            <div style="position:relative; width:140px; height:140px; margin:0 auto;">
+                <svg viewBox="0 0 36 36" style="width:140px; height:140px; transform:rotate(-90deg);">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="{% if prediction.probabilite_victoire_pct >= 70 %}#16a34a{% elif prediction.probabilite_victoire_pct >= 40 %}#f59e0b{% else %}#dc2626{% endif %}"
+                        stroke-width="3"
+                        stroke-dasharray="{{ prediction.probabilite_victoire_pct }}, 100"
+                        stroke-linecap="round"/>
+                </svg>
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;">
+                    <div style="font-size:2rem; font-weight:800; line-height:1;
+                        {% if prediction.probabilite_victoire_pct >= 70 %}color:#16a34a;
+                        {% elif prediction.probabilite_victoire_pct >= 40 %}color:#f59e0b;
+                        {% else %}color:#dc2626;{% endif %}">
+                        {{ prediction.probabilite_victoire_pct }}%
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-light); margin-top:2px;">probabilite</div>
+                </div>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-light); margin-top:0.75rem;">{{ prediction.comparaison }}</div>
+            {% if prediction.precision_modele > 0 %}
+            <div style="font-size:0.7rem; color:var(--text-light); margin-top:0.25rem;">Precision modele : {{ prediction.precision_modele }}%</div>
+            {% endif %}
+        </div>
+
+        <!-- Detail des features -->
+        <div>
+            <div style="font-size:0.85rem; font-weight:600; margin-bottom:0.75rem; color:var(--text);">Facteurs de prediction</div>
+            {% for feat_name, feat_data in prediction.features_detail.items() %}
+            <div style="margin-bottom:0.5rem;">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:2px;">
+                    <span style="color:var(--text);">
+                        {% if feat_name == 'score_pertinence' %}Score de pertinence
+                        {% elif feat_name == 'type_procedure' %}Type de procedure
+                        {% elif feat_name == 'source' %}Source de veille
+                        {% elif feat_name == 'budget_range' %}Fourchette budget
+                        {% elif feat_name == 'type_acheteur' %}Type d'acheteur
+                        {% elif feat_name == 'delai_reponse' %}Delai de reponse
+                        {% elif feat_name == 'nb_mots_cles_ia' %}Mots-cles IA
+                        {% elif feat_name == 'has_formation' %}Formation
+                        {% elif feat_name == 'has_conseil' %}Conseil
+                        {% else %}{{ feat_name }}{% endif %}
+                    </span>
+                    <span style="color:var(--text-light);">{{ (feat_data.contribution * 100) | round(1) }}%</span>
+                </div>
+                <div style="height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; width:{{ (feat_data.contribution * 100) | round(1) }}%; border-radius:3px; min-width:2px;
+                        {% if feat_data.valeur >= 0.7 %}background:#16a34a;
+                        {% elif feat_data.valeur >= 0.4 %}background:#f59e0b;
+                        {% else %}background:#dc2626;{% endif %}"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -879,6 +1126,27 @@ function lancerDCE(aoId) {
         });
 }
 
+function lancerAnalyseDCE(aoId) {
+    const btn = document.getElementById('btnAnalyserDCE');
+    btn.disabled = true;
+    btn.textContent = 'Analyse en cours...';
+    btn.style.background = '#8b5cf6';
+    btn.style.color = 'white';
+    document.getElementById('genLog').style.display = 'block';
+
+    fetch('/api/ao/' + encodeURIComponent(aoId) + '/analyser-dce', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                addGenLog('Erreur: ' + data.error);
+                btn.disabled = false;
+                btn.textContent = 'Analyser le DCE';
+                btn.style.background = '';
+                btn.style.color = '#8b5cf6';
+            }
+        });
+}
+
 function copierEmail() {
     const text = document.getElementById('emailTemplate').value;
     navigator.clipboard.writeText(text).then(() => {
@@ -929,6 +1197,19 @@ if (typeof io !== 'undefined') {
         } else {
             addGenLog('DCE: ' + (data.erreur || 'Aucun document trouve'));
             btn.disabled = false; btn.textContent = 'Telecharger DCE';
+        }
+    });
+    socket.on('analyse_dce_complete', function(data) {
+        const btn = document.getElementById('btnAnalyserDCE');
+        if (data.success) {
+            addGenLog('Analyse DCE terminee - Score: ' + data.score + '/100');
+            btn.textContent = 'Analyse OK';
+            btn.style.background = '#16a34a'; btn.style.color = 'white';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            addGenLog('Analyse DCE: ' + (data.erreur || 'Erreur inconnue'));
+            btn.disabled = false; btn.textContent = 'Analyser le DCE';
+            btn.style.background = ''; btn.style.color = '#8b5cf6';
         }
     });
     socket.on('generation_complete', function(data) {

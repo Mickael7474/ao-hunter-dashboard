@@ -307,6 +307,17 @@ Le volume de chaque section doit etre proportionnel a son poids dans la notation
         from personnalisation_acheteur import bloc_personnalisation_prompt
         perso_bloc = bloc_personnalisation_prompt(personnalisation)
 
+    # Feature : Memoire adaptative - injection des modeles gagnants similaires
+    adaptatif_bloc = ""
+    try:
+        from memoire_adaptative import trouver_modeles_similaires, generer_prompt_adaptatif
+        modeles = trouver_modeles_similaires(ao, n=3)
+        if modeles:
+            adaptatif_bloc = generer_prompt_adaptatif(ao, modeles)
+            logger.info(f"Memoire adaptative: {len(modeles)} modeles injectes (meilleur score: {modeles[0]['similarite']})")
+    except Exception as e:
+        logger.warning(f"Memoire adaptative: erreur recherche modeles: {e}")
+
     prompt = f"""Tu es un expert en reponse aux appels d'offres publics francais.
 Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
@@ -317,7 +328,7 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
 ## ENTREPRISE CANDIDATE
 {_bloc_infos_entreprise()}
-{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}
+{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}
 
 ## INSTRUCTIONS
 1. Redige un memoire technique COMPLET en francais (minimum 3000 mots)
