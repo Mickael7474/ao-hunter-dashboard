@@ -57,6 +57,48 @@
     </div>
 </div>
 
+<!-- Signaux faibles (marche fleche) -->
+{% if signaux_faibles and signaux_faibles.score_risque > 0 %}
+<div class="card" style="{% if signaux_faibles.score_risque >= 60 %}border-left:4px solid #dc2626; background:rgba(220,38,38,0.05);{% elif signaux_faibles.score_risque > 30 %}border-left:4px solid #f59e0b; background:rgba(245,158,11,0.05);{% else %}border-left:4px solid #3b82f6; background:rgba(59,130,246,0.03);{% endif %}">
+    <div class="card-header">
+        <h2>Signaux faibles</h2>
+        <span class="badge" style="padding:4px 14px; color:white; font-weight:600; font-size:0.85rem;
+            {% if signaux_faibles.score_risque >= 60 %}background:#dc2626;
+            {% elif signaux_faibles.score_risque > 30 %}background:#f59e0b;
+            {% else %}background:#3b82f6;{% endif %}">
+            Risque : {{ signaux_faibles.score_risque }}/100
+        </span>
+    </div>
+    {% if signaux_faibles.score_risque > 50 %}
+    <div style="padding:0.75rem 1rem; margin-bottom:0.75rem; border-radius:var(--radius); font-weight:600; font-size:0.9rem;
+        {% if signaux_faibles.score_risque >= 60 %}background:#fef2f2; color:#991b1b; border:1px solid #fecaca;
+        {% else %}background:#fffbeb; color:#92400e; border:1px solid #fed7aa;{% endif %}">
+        {{ signaux_faibles.recommandation }}
+    </div>
+    {% endif %}
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.75rem;">{{ signaux_faibles.explication }}</p>
+    {% if signaux_faibles.signaux %}
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+        {% for s in signaux_faibles.signaux %}
+        <span class="badge" style="background:{{ s.couleur }}22; color:{{ s.couleur }}; border:1px solid {{ s.couleur }}44; padding:4px 10px; font-size:0.75rem; font-weight:600;">
+            {{ s.label }} (+{{ s.poids }})
+        </span>
+        {% endfor %}
+    </div>
+    {% if signaux_faibles.signaux | length > 0 %}
+    <details style="margin-top:0.75rem;">
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Details des signaux</summary>
+        <ul style="font-size:0.8rem; padding-left:1.2rem; margin-top:0.5rem; color:var(--text-light);">
+            {% for s in signaux_faibles.signaux %}
+            <li style="margin-bottom:4px;">{{ s.detail }}</li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Score acheteur -->
 {% if score_acheteur %}
 <div class="card">
@@ -141,6 +183,18 @@
 
         <!-- Email de candidature -->
         <button class="btn btn-sm btn-outline" onclick="copierEmail()">Copier email candidature</button>
+
+        <!-- Preparer soumission -->
+        {% if dossier %}
+        <button id="btnSoumission" class="btn btn-sm btn-outline" onclick="preparerSoumission('{{ ao.id }}')" style="border-color:#8b5cf6; color:#8b5cf6;">
+            Preparer soumission
+        </button>
+        {% endif %}
+
+        <!-- Generer questions -->
+        <button id="btnQuestions" class="btn btn-sm btn-outline" onclick="genererQuestions('{{ ao.id }}')" style="border-color:#f59e0b; color:#f59e0b;">
+            Generer questions
+        </button>
     </div>
 </div>
 
@@ -316,6 +370,72 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Groupement / Co-traitance -->
+{% if groupement and groupement.recommande %}
+<div class="card groupement-card">
+    <div class="card-header">
+        <h2>Groupement recommande</h2>
+        <span class="badge" style="padding:4px 12px; color:white; font-weight:600;
+            {% if groupement.score_besoin >= 60 %}background:#dc2626;
+            {% elif groupement.score_besoin >= 30 %}background:#f59e0b;
+            {% else %}background:#16a34a;{% endif %}">
+            Score : {{ groupement.score_besoin }}/100
+        </span>
+    </div>
+
+    <!-- Bandeau type montage -->
+    <div class="groupement-type-banner">
+        <span class="groupement-type-label">
+            {% if groupement.type_montage == 'groupement_conjoint' %}Groupement conjoint
+            {% elif groupement.type_montage == 'co-traitance' %}Co-traitance
+            {% elif groupement.type_montage == 'sous-traitance' %}Sous-traitance
+            {% else %}Non necessaire{% endif %}
+        </span>
+    </div>
+
+    <!-- Raisons -->
+    <div style="margin:0.75rem 0;">
+        <strong style="font-size:0.85rem;">Raisons :</strong>
+        <ul style="font-size:0.8rem; padding-left:1.2rem; margin-top:0.25rem; color:var(--text-light);">
+            {% for raison in groupement.raisons %}
+            <li style="margin-bottom:3px;">{{ raison }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Profil partenaire ideal -->
+    <div class="groupement-profil">
+        <strong style="font-size:0.85rem;">Profil partenaire ideal :</strong>
+        <p style="font-size:0.8rem; color:var(--text-light); margin-top:0.25rem;">{{ groupement.profil_partenaire_ideal }}</p>
+    </div>
+
+    <!-- Competences manquantes -->
+    {% if groupement.competences_manquantes %}
+    <details style="margin-top:0.75rem;">
+        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Competences manquantes detectees</summary>
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+            {% for comp in groupement.competences_manquantes %}
+            <span class="badge" style="background:#fef3c7; color:#92400e; padding:3px 10px; font-size:0.75rem;">{{ comp.domaine }}</span>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+
+    <!-- Bouton generer documents -->
+    <div style="margin-top:1rem; text-align:center;">
+        <button class="btn btn-sm btn-primary" onclick="genererGroupement('{{ ao.id }}')">
+            Generer les documents de groupement
+        </button>
+    </div>
+
+    <!-- Zone documents generes (hidden) -->
+    <div id="groupementDocs" style="display:none; margin-top:1rem;">
+        <div class="card-header"><h3 style="font-size:0.9rem;">Documents generes</h3></div>
+        <div id="groupementDocsContent" style="font-size:0.8rem;"></div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Lots detectes -->
 {% if ao.lots_detectes %}
 <div class="card">
@@ -355,6 +475,28 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
         <span id="genSpinner" class="spinner"></span>
     </div>
     <div id="genMessages" class="gen-log"></div>
+</div>
+
+<!-- Soumission (hidden by default) -->
+<div id="soumissionResult" class="card" style="display:none;">
+    <div class="card-header">
+        <h2>Preparation soumission</h2>
+        <span id="soumissionPlateforme" class="badge" style="background:#8b5cf6; color:white; padding:4px 12px;"></span>
+    </div>
+    <div id="soumissionContent">
+        <div id="soumissionLoading" style="text-align:center; padding:1rem; color:var(--text-light);">Preparation en cours...</div>
+    </div>
+</div>
+
+<!-- Questions acheteur (hidden by default) -->
+<div id="questionsResult" class="card" style="display:none;">
+    <div class="card-header">
+        <h2>Questions a l'acheteur</h2>
+        <span id="questionsCount" style="font-size:0.8rem; color:var(--text-light);"></span>
+    </div>
+    <div id="questionsContent">
+        <div id="questionsLoading" style="text-align:center; padding:1rem; color:var(--text-light);">Analyse en cours (Claude Haiku)...</div>
+    </div>
 </div>
 
 <!-- Prestations detectees -->
@@ -618,6 +760,72 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Post-mortem (AO perdu) -->
+{% if ao.statut == "perdu" and post_mortem %}
+<div class="card" style="border-left:4px solid #dc2626;">
+    <div class="card-header">
+        <h2>Analyse post-mortem</h2>
+        <span class="badge" style="padding:4px 14px; font-weight:600; font-size:0.85rem;
+            {% if post_mortem.score_competitivite >= 60 %}background:#dcfce7; color:#166534;
+            {% elif post_mortem.score_competitivite >= 30 %}background:#fef3c7; color:#92400e;
+            {% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+            Competitivite : {{ post_mortem.score_competitivite }}/100
+        </span>
+    </div>
+
+    {% if post_mortem.analyse_resume %}
+    <p style="font-size:0.9rem; color:var(--text); margin-bottom:1rem; font-style:italic;">{{ post_mortem.analyse_resume }}</p>
+    {% endif %}
+
+    {% if post_mortem.prix_ecart_pct is not none %}
+    <div style="display:inline-block; padding:0.5rem 1rem; margin-bottom:1rem; border-radius:var(--radius); background:var(--meta-bg); font-size:0.85rem;">
+        Ecart de prix : <strong style="{% if post_mortem.prix_ecart_pct > 0 %}color:#dc2626;{% else %}color:#16a34a;{% endif %}">
+            {{ "%+.1f"|format(post_mortem.prix_ecart_pct) }}%
+        </strong>
+        {% if post_mortem.prix_ecart_pct > 0 %}(notre prix plus eleve){% elif post_mortem.prix_ecart_pct < 0 %}(notre prix plus bas){% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Causes probables -->
+    {% if post_mortem.causes_probables %}
+    <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem; color:var(--text);">Causes probables de la defaite</h3>
+        <ol style="font-size:0.85rem; padding-left:1.5rem; margin:0; color:var(--text-light);">
+            {% for cause in post_mortem.causes_probables %}
+            <li style="margin-bottom:4px; {% if loop.index == 1 %}font-weight:600; color:var(--text);{% endif %}">{{ cause }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+        <!-- Lecons -->
+        {% if post_mortem.lecons %}
+        <div>
+            <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem; color:var(--text);">Lecons a retenir</h3>
+            <ul style="font-size:0.8rem; padding-left:1.2rem; margin:0;">
+                {% for lecon in post_mortem.lecons %}
+                <li style="margin-bottom:3px; color:var(--text-light);">{{ lecon }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Recommandations -->
+        {% if post_mortem.recommandations %}
+        <div>
+            <h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem; color:var(--text);">Recommandations</h3>
+            <ul style="font-size:0.8rem; padding-left:1.2rem; margin:0;">
+                {% for reco in post_mortem.recommandations %}
+                <li style="margin-bottom:3px; color:#2563eb;">{{ reco }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Dossier genere -->
 {% if dossier %}
 <div class="card">
@@ -735,6 +943,252 @@ if (typeof io !== 'undefined') {
             if (btn) { btn.textContent = 'Dossier genere'; btn.classList.remove('btn-primary'); btn.classList.add('btn-outline'); }
             setTimeout(() => location.reload(), 2000);
         }
+    });
+}
+
+function preparerSoumission(aoId) {
+    const btn = document.getElementById('btnSoumission');
+    btn.disabled = true;
+    btn.textContent = 'Preparation...';
+    document.getElementById('soumissionResult').style.display = 'block';
+    document.getElementById('soumissionLoading').style.display = 'block';
+
+    fetch('/api/ao/' + encodeURIComponent(aoId) + '/preparer-soumission', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('soumissionLoading').style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = 'Preparer soumission';
+
+            if (data.error && !data.plateforme) {
+                document.getElementById('soumissionContent').innerHTML = '<p style="color:#dc2626;">Erreur : ' + data.error + '</p>';
+                return;
+            }
+
+            const plat = document.getElementById('soumissionPlateforme');
+            plat.textContent = data.plateforme || 'Inconnue';
+
+            let html = '';
+
+            // Statut pret / pas pret
+            if (data.pret) {
+                html += '<div style="padding:0.75rem; background:#dcfce7; border-radius:var(--radius); margin-bottom:1rem; font-size:0.85rem; color:#166534; font-weight:600;">Dossier complet - pret pour soumission</div>';
+            } else if (data.pieces_manquantes && data.pieces_manquantes.length > 0) {
+                html += '<div style="padding:0.75rem; background:#fef3c7; border-radius:var(--radius); margin-bottom:1rem; font-size:0.85rem; color:#92400e;">';
+                html += '<strong>Pieces manquantes :</strong><ul style="margin:0.25rem 0 0 1rem; padding:0;">';
+                data.pieces_manquantes.forEach(function(p) { html += '<li>' + p + '</li>'; });
+                html += '</ul></div>';
+            }
+
+            // Enveloppes
+            if (data.enveloppes) {
+                html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">';
+
+                // Candidature
+                html += '<div style="padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">';
+                html += '<h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem; color:#8b5cf6;">Enveloppe Candidature</h3>';
+                if (data.enveloppes.candidature && data.enveloppes.candidature.length > 0) {
+                    html += '<ul style="font-size:0.8rem; padding-left:1.2rem; margin:0; color:var(--text-light);">';
+                    data.enveloppes.candidature.forEach(function(f) { html += '<li style="margin-bottom:2px;">' + f + '</li>'; });
+                    html += '</ul>';
+                } else {
+                    html += '<p style="font-size:0.8rem; color:var(--text-light); font-style:italic;">Aucun fichier</p>';
+                }
+                html += '</div>';
+
+                // Offre
+                html += '<div style="padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">';
+                html += '<h3 style="font-size:0.85rem; font-weight:700; margin-bottom:0.5rem; color:#2563eb;">Enveloppe Offre</h3>';
+                if (data.enveloppes.offre && data.enveloppes.offre.length > 0) {
+                    html += '<ul style="font-size:0.8rem; padding-left:1.2rem; margin:0; color:var(--text-light);">';
+                    data.enveloppes.offre.forEach(function(f) { html += '<li style="margin-bottom:2px;">' + f + '</li>'; });
+                    html += '</ul>';
+                } else {
+                    html += '<p style="font-size:0.8rem; color:var(--text-light); font-style:italic;">Aucun fichier</p>';
+                }
+                html += '</div>';
+
+                html += '</div>';
+            }
+
+            // Guide plateforme
+            if (data.checklist_etapes && data.checklist_etapes.length > 0) {
+                html += '<details style="margin-bottom:0.5rem;">';
+                html += '<summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--primary);">Guide de soumission (' + (data.plateforme || 'plateforme') + ')</summary>';
+                html += '<ol style="font-size:0.8rem; padding-left:1.5rem; margin-top:0.5rem; color:var(--text-light);">';
+                data.checklist_etapes.forEach(function(e) {
+                    // Retirer le numero si deja present dans le texte
+                    var txt = e.replace(/^\d+\.\s*/, '');
+                    html += '<li style="margin-bottom:4px;">' + txt + '</li>';
+                });
+                html += '</ol></details>';
+            }
+
+            // Lien depot
+            if (data.url_depot) {
+                html += '<div style="margin-top:0.75rem;">';
+                html += '<a href="' + data.url_depot + '" target="_blank" class="btn btn-sm btn-primary" style="background:#8b5cf6; border-color:#8b5cf6;">Acceder a la plateforme de depot</a>';
+                html += '</div>';
+            }
+
+            document.getElementById('soumissionContent').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('soumissionLoading').style.display = 'none';
+            document.getElementById('soumissionContent').innerHTML = '<p style="color:#dc2626;">Erreur : ' + err.message + '</p>';
+            btn.disabled = false;
+            btn.textContent = 'Preparer soumission';
+        });
+}
+
+function genererQuestions(aoId) {
+    const btn = document.getElementById('btnQuestions');
+    btn.disabled = true;
+    btn.textContent = 'Analyse en cours...';
+    document.getElementById('questionsResult').style.display = 'block';
+    document.getElementById('questionsLoading').style.display = 'block';
+
+    fetch('/api/ao/' + encodeURIComponent(aoId) + '/questions', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('questionsLoading').style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = 'Generer questions';
+
+            if (data.error) {
+                document.getElementById('questionsContent').innerHTML = '<p style="color:#dc2626;">Erreur : ' + data.error + '</p>';
+                return;
+            }
+
+            if (data.erreur) {
+                document.getElementById('questionsContent').innerHTML = '<p style="color:#dc2626;">Erreur : ' + data.erreur + '</p>';
+                return;
+            }
+
+            const questions = data.questions || [];
+            document.getElementById('questionsCount').textContent = questions.length + ' question(s) - ' + (data.nb_critiques || 0) + ' critique(s), ' + (data.nb_importantes || 0) + ' importante(s)';
+
+            if (questions.length === 0) {
+                document.getElementById('questionsContent').innerHTML = '<p style="font-size:0.85rem; color:var(--text-light);">Aucune question identifiee - le DCE semble suffisamment clair.</p>';
+                return;
+            }
+
+            var html = '';
+
+            // Deadline questions
+            if (data.deadline_questions) {
+                html += '<div style="padding:0.5rem 0.75rem; background:#fef3c7; border-radius:var(--radius); margin-bottom:1rem; font-size:0.8rem; color:#92400e;">';
+                html += 'Date limite recommandee pour poser les questions : <strong>' + data.deadline_questions + '</strong> (J-10 avant deadline)';
+                html += '</div>';
+            }
+
+            // Liste des questions
+            var impactColors = { 'critique': '#dc2626', 'important': '#f59e0b', 'utile': '#6b7280' };
+            var impactBg = { 'critique': '#fee2e2', 'important': '#fef3c7', 'utile': '#f3f4f6' };
+            var catIcons = { 'budget': 'EUR', 'technique': 'T', 'administratif': 'A', 'planning': 'P' };
+
+            questions.forEach(function(q, i) {
+                var color = impactColors[q.impact] || '#6b7280';
+                var bg = impactBg[q.impact] || '#f3f4f6';
+                html += '<div style="padding:0.75rem; margin-bottom:0.5rem; border-left:3px solid ' + color + '; background:' + bg + '; border-radius:0 var(--radius) var(--radius) 0;">';
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">';
+                html += '<span style="font-size:0.85rem; font-weight:600; color:var(--text);">' + (i + 1) + '. ' + q.question + '</span>';
+                html += '<div style="display:flex; gap:0.25rem;">';
+                html += '<span class="badge" style="background:' + color + '; color:white; padding:2px 8px; font-size:0.65rem;">' + q.impact + '</span>';
+                html += '<span class="badge" style="background:var(--meta-bg); color:var(--text); padding:2px 8px; font-size:0.65rem;">' + q.categorie + '</span>';
+                html += '</div></div>';
+                if (q.justification) {
+                    html += '<p style="font-size:0.8rem; color:var(--text-light); margin:0.25rem 0 0 0;">' + q.justification + '</p>';
+                }
+                html += '</div>';
+            });
+
+            // Bouton copier email
+            if (data.email_formate) {
+                html += '<div style="margin-top:1rem;">';
+                html += '<button class="btn btn-sm btn-outline" onclick="copierQuestionsEmail()" style="border-color:#f59e0b; color:#f59e0b;">Copier l\'email formate</button>';
+                html += '<textarea id="questionsEmailText" style="display:none;">' + data.email_formate.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>';
+                html += '</div>';
+            }
+
+            document.getElementById('questionsContent').innerHTML = html;
+        })
+        .catch(function(err) {
+            document.getElementById('questionsLoading').style.display = 'none';
+            document.getElementById('questionsContent').innerHTML = '<p style="color:#dc2626;">Erreur : ' + err.message + '</p>';
+            btn.disabled = false;
+            btn.textContent = 'Generer questions';
+        });
+}
+
+function genererGroupement(aoId) {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Generation en cours...';
+    fetch('/api/ao/' + aoId + '/groupement', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            btn.textContent = 'Erreur';
+            return;
+        }
+        btn.textContent = 'Documents generes';
+        btn.style.background = '#16a34a'; btn.style.color = 'white';
+        var docsDiv = document.getElementById('groupementDocs');
+        docsDiv.style.display = 'block';
+        var html = '<div style="display:flex; flex-direction:column; gap:0.75rem;">';
+        var docs = data.documents;
+        var labels = {'convention': 'Convention de groupement', 'dc1_groupement': 'DC1 Groupement', 'repartition': 'Repartition des prestations'};
+        for (var key in docs) {
+            html += '<details><summary style="cursor:pointer; font-weight:600; color:var(--primary); font-size:0.85rem;">' + (labels[key] || key) + '</summary>';
+            html += '<pre style="white-space:pre-wrap; font-size:0.75rem; background:var(--meta-bg); padding:0.75rem; border-radius:var(--radius); margin-top:0.25rem; max-height:300px; overflow-y:auto;">' + docs[key].replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+            html += '<button class="btn btn-sm btn-outline" style="margin-top:0.25rem;" onclick="copierDoc(this, \'' + key + '\')">Copier</button>';
+            html += '</details>';
+        }
+        if (data.suggestions_partenaires && data.suggestions_partenaires.length > 0) {
+            html += '<div style="margin-top:0.5rem;"><strong style="font-size:0.85rem;">Suggestions de partenaires :</strong><ul style="font-size:0.8rem; padding-left:1.2rem; margin-top:0.25rem; color:var(--text-light);">';
+            data.suggestions_partenaires.forEach(function(s) { html += '<li style="margin-bottom:3px;">' + s + '</li>'; });
+            html += '</ul></div>';
+        }
+        html += '</div>';
+        document.getElementById('groupementDocsContent').innerHTML = html;
+        // Store docs for copy
+        window._groupementDocs = docs;
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Reessayer';
+    });
+}
+
+function copierDoc(btn, key) {
+    if (window._groupementDocs && window._groupementDocs[key]) {
+        navigator.clipboard.writeText(window._groupementDocs[key]).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copie !';
+            btn.style.background = '#16a34a'; btn.style.color = 'white';
+            setTimeout(function() { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+        });
+    }
+}
+
+function copierQuestionsEmail() {
+    const text = document.getElementById('questionsEmailText').value;
+    navigator.clipboard.writeText(text).then(function() {
+        var btns = document.querySelectorAll('button');
+        btns.forEach(function(b) {
+            if (b.textContent.indexOf('Copier l') >= 0) {
+                var orig = b.textContent;
+                b.textContent = 'Copie !';
+                b.style.background = '#16a34a';
+                b.style.color = 'white';
+                setTimeout(function() { b.textContent = orig; b.style.background = ''; b.style.color = '#f59e0b'; }, 2000);
+            }
+        });
     });
 }
 </script>

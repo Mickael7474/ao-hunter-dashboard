@@ -1292,3 +1292,225 @@ tr:hover { background: var(--table-hover); }
     .fichier-actions { width: 100%; justify-content: flex-end; }
     .gonogo-grid { grid-template-columns: 1fr; }
 }
+
+/* --- Groupement / Co-traitance --- */
+.groupement-card {
+    border-left: 4px solid var(--warning);
+}
+.groupement-type-banner {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: var(--radius);
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+[data-theme="dark"] .groupement-type-banner {
+    background: #78350f33;
+    color: #fbbf24;
+}
+.groupement-profil {
+    background: var(--meta-bg);
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    margin-top: 0.5rem;
+}
+
+/* --- Objectifs CA --- */
+.objectif-jauge-container {
+    margin: 1rem 0;
+}
+.objectif-jauge {
+    position: relative;
+    height: 32px;
+    background: var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.objectif-jauge-fill {
+    height: 100%;
+    border-radius: 16px;
+    transition: width 0.6s ease;
+}
+.objectif-on-track {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+.objectif-off-track {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.objectif-jauge-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.objectif-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.objectif-kpi {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+    border-top: 3px solid var(--border);
+}
+.objectif-kpi-success { border-top-color: var(--success); }
+.objectif-kpi-primary { border-top-color: var(--primary); }
+.objectif-kpi-warning { border-top-color: var(--warning); }
+.objectif-kpi-danger { border-top-color: var(--danger); }
+.objectif-kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.objectif-kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.objectif-kpi-detail {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+.objectif-pipeline-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 0;
+}
+.objectif-pipeline-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--meta-bg);
+    border-radius: var(--radius);
+    min-width: 120px;
+}
+.objectif-pipeline-arrow {
+    background: none;
+    min-width: auto;
+    padding: 0;
+}
+.objectif-pipeline-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+.objectif-pipeline-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+.objectif-alerte {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+.objectif-alerte-success {
+    background: #f0fdf4;
+    color: #166534;
+    border-left: 3px solid #16a34a;
+}
+.objectif-alerte-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 3px solid #f59e0b;
+}
+.objectif-alerte-info {
+    background: #eff6ff;
+    color: #1e40af;
+    border-left: 3px solid #2563eb;
+}
+[data-theme="dark"] .objectif-alerte-success { background: #14532d33; color: #86efac; }
+[data-theme="dark"] .objectif-alerte-warning { background: #78350f33; color: #fbbf24; }
+[data-theme="dark"] .objectif-alerte-info { background: #1e3a5f33; color: #93c5fd; }
+
+.objectif-timeline {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 150px;
+    padding: 0 0.5rem;
+}
+.objectif-mois-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+.objectif-mois-bars {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+}
+.objectif-mois-bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height 0.4s ease;
+}
+.objectif-mois-bar-gagne {
+    background: var(--success);
+}
+.objectif-mois-bar-objectif {
+    background: var(--border);
+}
+.objectif-mois-label {
+    font-size: 0.65rem;
+    color: var(--text-light);
+    margin-top: 4px;
+    font-weight: 500;
+}
+.objectif-mois-actuel {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.objectif-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.objectif-modal-content {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+}
+.objectif-modal-content h3 {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .objectif-kpis { grid-template-columns: repeat(2, 1fr); }
+    .objectif-pipeline-grid { flex-direction: column; }
+    .objectif-pipeline-arrow { transform: rotate(90deg); }
+    .objectif-timeline { height: 100px; }
+}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Objectifs CA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Objectifs CA</h1>
+    <p style="color:var(--text-light); margin-top:0.25rem;">Suivi de progression et recommandations pipeline</p>
+</div>
+
+<!-- Jauge de progression annuelle -->
+<div class="card">
+    <div class="card-header">
+        <h2>Progression annuelle</h2>
+        <span style="font-size:0.85rem; color:var(--text-light);">
+            {% if objectifs.objectif_annuel %}
+                Objectif : {{ "{:,.0f}".format(objectifs.objectif_annuel) }} EUR
+            {% else %}
+                Aucun objectif defini
+            {% endif %}
+        </span>
+    </div>
+    {% if objectifs.objectif_annuel %}
+    <div class="objectif-jauge-container">
+        <div class="objectif-jauge">
+            <div class="objectif-jauge-fill {% if prog.on_track %}objectif-on-track{% else %}objectif-off-track{% endif %}"
+                 style="width:{{ [prog.progression_pct, 100] | min }}%;"></div>
+            <span class="objectif-jauge-label">{{ prog.progression_pct }}%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-light); margin-top:4px;">
+            <span>0 EUR</span>
+            <span>{{ "{:,.0f}".format(objectifs.objectif_annuel) }} EUR</span>
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:2rem;">
+        <p style="color:var(--text-light); margin-bottom:1rem;">Definissez un objectif annuel pour commencer le suivi.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('objectifModal').style.display='flex'">Definir un objectif</button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 4 cards KPI -->
+{% if objectifs.objectif_annuel %}
+<div class="objectif-kpis">
+    <div class="objectif-kpi objectif-kpi-success">
+        <div class="objectif-kpi-value">{{ "{:,.0f}".format(prog.ca_gagne) }} EUR</div>
+        <div class="objectif-kpi-label">CA gagne</div>
+        <div class="objectif-kpi-detail">{{ prog.nb_gagnes }} marche(s) gagne(s)</div>
+    </div>
+    <div class="objectif-kpi objectif-kpi-primary">
+        <div class="objectif-kpi-value">{{ "{:,.0f}".format(prog.ca_pipeline) }} EUR</div>
+        <div class="objectif-kpi-label">CA pipeline</div>
+        <div class="objectif-kpi-detail">AO soumis x {{ prog.taux_conversion }}% conversion</div>
+    </div>
+    <div class="objectif-kpi {% if prog.on_track %}objectif-kpi-success{% else %}objectif-kpi-warning{% endif %}">
+        <div class="objectif-kpi-value">{{ "{:,.0f}".format(prog.projection_annuelle) }} EUR</div>
+        <div class="objectif-kpi-label">Projection annuelle</div>
+        <div class="objectif-kpi-detail">Extrapolation lineaire</div>
+    </div>
+    <div class="objectif-kpi {% if prog.gap >= 0 %}objectif-kpi-success{% else %}objectif-kpi-danger{% endif %}">
+        <div class="objectif-kpi-value">{{ "{:+,.0f}".format(prog.gap) }} EUR</div>
+        <div class="objectif-kpi-label">Ecart / objectif</div>
+        <div class="objectif-kpi-detail">
+            {% if prog.on_track %}En avance{% else %}En retard{% endif %}
+            - {{ prog.mois_restants }} mois restants
+        </div>
+    </div>
+</div>
+
+<!-- Objectif mensuel restant -->
+<div class="card" style="text-align:center; padding:1.5rem;">
+    <div style="font-size:0.85rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">Objectif mensuel restant</div>
+    <div style="font-size:2rem; font-weight:700; color:var(--primary); margin:0.5rem 0;">{{ "{:,.0f}".format(prog.objectif_mensuel_restant) }} EUR / mois</div>
+    <div style="font-size:0.8rem; color:var(--text-light);">Pour combler l'ecart sur {{ prog.mois_restants }} mois</div>
+</div>
+
+<!-- Recommandations pipeline -->
+<div class="card">
+    <div class="card-header">
+        <h2>Recommandations pipeline</h2>
+    </div>
+    <div class="objectif-pipeline-grid">
+        <div class="objectif-pipeline-item">
+            <div class="objectif-pipeline-value">{{ recommandation.ao_a_detecter }}</div>
+            <div class="objectif-pipeline-label">AO a detecter / mois</div>
+        </div>
+        <div class="objectif-pipeline-item objectif-pipeline-arrow">
+            <span style="font-size:1.5rem; color:var(--text-light);">&#8594;</span>
+        </div>
+        <div class="objectif-pipeline-item">
+            <div class="objectif-pipeline-value">{{ recommandation.ao_a_analyser }}</div>
+            <div class="objectif-pipeline-label">AO a analyser / mois</div>
+        </div>
+        <div class="objectif-pipeline-item objectif-pipeline-arrow">
+            <span style="font-size:1.5rem; color:var(--text-light);">&#8594;</span>
+        </div>
+        <div class="objectif-pipeline-item">
+            <div class="objectif-pipeline-value">{{ recommandation.ao_a_soumettre }}</div>
+            <div class="objectif-pipeline-label">AO a soumettre / mois</div>
+        </div>
+    </div>
+    <p style="font-size:0.8rem; color:var(--text-light); margin-top:1rem; text-align:center;">
+        {{ recommandation.details }}
+    </p>
+</div>
+
+<!-- Alertes -->
+<div class="card">
+    <div class="card-header">
+        <h2>Alertes</h2>
+    </div>
+    {% for alerte in alertes %}
+    <div class="objectif-alerte {% if 'Felicitations' in alerte %}objectif-alerte-success{% elif 'bonne voie' in alerte %}objectif-alerte-success{% elif 'insuffisant' in alerte or 'baisse' in alerte or 'inferieure' in alerte %}objectif-alerte-warning{% else %}objectif-alerte-info{% endif %}">
+        {{ alerte }}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Timeline mensuelle -->
+<div class="card">
+    <div class="card-header">
+        <h2>Timeline mensuelle</h2>
+        <span style="font-size:0.85rem; color:var(--text-light);">CA gagne vs objectif par mois</span>
+    </div>
+    <div class="objectif-timeline">
+        {% set max_val = [objectifs.objectif_mensuel] %}
+        {% for s in stats_par_mois %}
+            {% if s.ca_gagne > max_val[0] %}
+                {% set _ = max_val.pop() %}
+                {% set _ = max_val.append(s.ca_gagne) %}
+            {% endif %}
+        {% endfor %}
+        {% for s in stats_par_mois %}
+        <div class="objectif-mois-col">
+            <div class="objectif-mois-bars">
+                {% if max_val[0] > 0 %}
+                <div class="objectif-mois-bar objectif-mois-bar-gagne"
+                     style="height:{{ (s.ca_gagne / max_val[0] * 100) | int }}%;"
+                     title="Gagne: {{ '{:,.0f}'.format(s.ca_gagne) }} EUR">
+                </div>
+                <div class="objectif-mois-bar objectif-mois-bar-objectif"
+                     style="height:{{ (s.objectif / max_val[0] * 100) | int }}%;"
+                     title="Objectif: {{ '{:,.0f}'.format(s.objectif) }} EUR">
+                </div>
+                {% endif %}
+            </div>
+            <div class="objectif-mois-label {% if s.mois == mois_actuel %}objectif-mois-actuel{% endif %}">{{ s.label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="display:flex; gap:1.5rem; justify-content:center; margin-top:0.75rem; font-size:0.75rem;">
+        <span><span style="display:inline-block; width:12px; height:12px; background:var(--success); border-radius:2px; vertical-align:middle;"></span> CA gagne</span>
+        <span><span style="display:inline-block; width:12px; height:12px; background:var(--border); border-radius:2px; vertical-align:middle;"></span> Objectif mensuel</span>
+    </div>
+</div>
+
+<!-- Bouton modifier objectif -->
+<div style="text-align:center; margin:1.5rem 0;">
+    <button class="btn btn-outline" onclick="document.getElementById('objectifModal').style.display='flex'">
+        {% if objectifs.objectif_annuel %}Modifier l'objectif{% else %}Definir un objectif{% endif %}
+    </button>
+</div>
+{% endif %}
+
+<!-- Modal objectif -->
+<div id="objectifModal" class="objectif-modal" style="display:none;">
+    <div class="objectif-modal-content">
+        <h3>Definir l'objectif annuel</h3>
+        <form id="objectifForm" onsubmit="sauverObjectif(event)">
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Objectif annuel (EUR)</label>
+                <input type="number" id="objectifAnnuel" value="{{ objectifs.objectif_annuel or 200000 }}" min="1000" step="1000"
+                       style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text); font-size:1rem;">
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Marge cible (%)</label>
+                <input type="number" id="margeCible" value="{{ objectifs.marge_cible_pct or 30 }}" min="0" max="100" step="5"
+                       style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--input-bg); color:var(--text); font-size:1rem;">
+            </div>
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('objectifModal').style.display='none'">Annuler</button>
+                <button type="submit" class="btn btn-primary">Sauvegarder</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function sauverObjectif(e) {
+    e.preventDefault();
+    const annuel = document.getElementById('objectifAnnuel').value;
+    const marge = document.getElementById('margeCible').value;
+    fetch('/api/objectifs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({objectif_annuel: parseFloat(annuel), marge_cible_pct: parseFloat(marge)})
+    }).then(r => r.json()).then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}CRM Acheteurs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>CRM Acheteurs ({{ acheteurs|length }})</h1>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        {% if a_relancer %}
+        <span class="badge" style="background:var(--danger); color:white;">{{ a_relancer|length }} a relancer</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Barre de recherche -->
+<div style="margin-bottom:0.75rem;">
+    <input type="text" id="crmSearch" placeholder="Rechercher un acheteur (nom, type, region)..." class="live-search-input">
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="table-wrapper">
+        <table id="crmTable">
+            <thead>
+                <tr>
+                    <th>Score</th>
+                    <th>Acheteur</th>
+                    <th>Type</th>
+                    <th>AO</th>
+                    <th>Contacts</th>
+                    <th>Dernier contact</th>
+                    <th>Region</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in acheteurs %}
+                <tr class="clickable-row" onclick="window.location='{{ url_for('crm_fiche_view', nom=a._cle) }}'">
+                    <td>
+                        <span class="score {% if a.score_relation >= 60 %}score-high{% elif a.score_relation >= 30 %}score-mid{% else %}score-low{% endif %}">
+                            {{ a.score_relation }}
+                        </span>
+                    </td>
+                    <td class="table-title">
+                        <a href="{{ url_for('crm_fiche_view', nom=a._cle) }}">{{ a.nom[:50] }}</a>
+                    </td>
+                    <td style="font-size:0.8rem;">
+                        <span class="badge">{{ a.type }}</span>
+                    </td>
+                    <td style="text-align:center;">{{ a.nb_ao }}</td>
+                    <td style="text-align:center;">{{ a.nb_contacts }}</td>
+                    <td style="font-size:0.8rem;">
+                        {% if a.date_dernier_contact %}
+                            {{ a.date_dernier_contact }}
+                        {% else %}
+                            <em style="color:var(--text-muted);">Jamais</em>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem;">{{ a.adresse[:20] if a.adresse else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not acheteurs %}
+    <div class="empty">
+        <p>Aucun acheteur enregistre pour le moment</p>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Les fiches acheteurs se remplissent automatiquement lors de la veille</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const search = document.getElementById('crmSearch');
+    if (search) {
+        search.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#crmTable tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

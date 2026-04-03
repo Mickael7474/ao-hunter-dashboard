@@ -643,6 +643,16 @@ def lancer_veille() -> dict:
         ("M-Securises", rechercher_marches_securises),
         ("AWS-Achat", rechercher_aws_defense),
     ]
+
+    # TED multilangue (EN/DE/ES)
+    try:
+        from ted_multilangue import veille_ted_multilangue
+        ted_ml = veille_ted_multilangue()
+        if ted_ml:
+            sources.append(("TED-ML", lambda: ted_ml))
+            logger.info(f"TED multilangue: {len(ted_ml)} AO ajoutes")
+    except Exception as e:
+        logger.warning(f"Erreur TED multilangue: {e}")
     for nom, func in sources:
         try:
             aos = func()

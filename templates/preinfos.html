@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Pre-informations{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Pre-informations ({{ preinfos|length }})</h1>
+    <div style="display:flex; gap:0.5rem;">
+        <span class="btn btn-sm btn-outline" style="cursor:default;">Anticiper les AO 2-6 mois avant publication</span>
+    </div>
+</div>
+
+<!-- Live search -->
+<div style="margin-bottom:0.75rem;">
+    <input type="text" id="liveSearch" placeholder="Recherche rapide dans la page..." class="live-search-input">
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="table-wrapper">
+        <table id="preinfosTable">
+            <thead>
+                <tr>
+                    <th>Score</th>
+                    <th>Source</th>
+                    <th>Titre</th>
+                    <th>Acheteur</th>
+                    <th>Date publication</th>
+                    <th>AO estime</th>
+                    <th>Region</th>
+                    <th>Actions recommandees</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in preinfos %}
+                <tr>
+                    <td>
+                        {% set score_pct = (p.score_pertinence * 100) | int %}
+                        <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
+                            {{ score_pct }}%
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ p.source | lower }}">{{ p.source }}</span>
+                    </td>
+                    <td class="table-title">
+                        {% if p.url %}
+                            <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.titre[:80] }}</a>
+                        {% else %}
+                            {{ p.titre[:80] }}
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        {{ (p.acheteur|as_str)[:40] }}
+                    </td>
+                    <td style="font-size:0.8rem;">
+                        {{ p.date_publication.split('T')[0] if p.date_publication else '-' }}
+                    </td>
+                    <td>
+                        {% if p.date_estimee_publication_ao %}
+                            {% set today = now.strftime('%Y-%m-%d') %}
+                            <span class="deadline
+                                {%- if p.date_estimee_publication_ao < today %} deadline-expired
+                                {%- elif p.date_estimee_publication_ao <= (now + timedelta(days=30)).strftime('%Y-%m-%d') %} deadline-urgent
+                                {%- elif p.date_estimee_publication_ao <= (now + timedelta(days=90)).strftime('%Y-%m-%d') %} deadline-soon
+                                {%- else %} deadline-ok{% endif %}">
+                                {{ p.date_estimee_publication_ao }}
+                            </span>
+                        {% else %}
+                            <span class="deadline deadline-ok">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem;">{{ (p.region|as_str)[:20] }}</td>
+                    <td style="font-size:0.75rem; max-width:250px;">
+                        {% if p.actions %}
+                        <ul style="margin:0; padding-left:1rem; list-style:disc;">
+                            {% for action in p.actions[:3] %}
+                            <li>{{ action[:80] }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <em style="color:var(--text-muted);">-</em>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not preinfos %}
+    <div class="empty">
+        <p>Aucune pre-information detectee pour le moment</p>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Les pre-informations seront collectees lors de la prochaine veille automatique</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const search = document.getElementById('liveSearch');
+    if (search) {
+        search.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#preinfosTable tbody tr').forEach(function(row) {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

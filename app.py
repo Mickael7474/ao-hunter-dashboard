@@ -112,6 +112,35 @@ def _veille_auto():
     except Exception as e:
         logger.error(f"Erreur veille concurrence: {e}")
 
+    # Benchmark prix (collecte attributions pour stats marche)
+    try:
+        from benchmark_prix import collecter_attributions
+        attribs = collecter_attributions(nb_pages=3)
+        logger.info(f"Benchmark prix: {len(attribs)} attributions en base")
+    except Exception as e:
+        logger.error(f"Erreur benchmark prix: {e}")
+
+    # Veille pre-informations (anticiper les AO 2-6 mois avant)
+    try:
+        from veille_preinformation import veille_preinfo
+        preinfos = veille_preinfo()
+        logger.info(f"Veille pre-info: {len(preinfos)} pre-informations")
+    except Exception as e:
+        logger.error(f"Erreur veille pre-info: {e}")
+
+    # Auto-enrichissement CRM acheteurs
+    try:
+        from crm_acheteurs import enrichir_acheteur
+        appels_crm = charger_ao()
+        for ao in appels_crm:
+            try:
+                enrichir_acheteur(ao)
+            except Exception:
+                pass
+        logger.info(f"CRM: enrichissement de {len(appels_crm)} AO")
+    except Exception as e:
+        logger.error(f"Erreur enrichissement CRM: {e}")
+
     # Pipeline full-auto : Go/No-Go -> generation dossier -> brouillon Gmail
     try:
         from pipeline_auto import lancer_pipeline
@@ -487,9 +516,22 @@ def liste_ao():
     sources = sorted(set(a.get("source", "") for a in appels))
     statuts = sorted(set(a.get("statut", "") for a in appels))
 
+    # Pre-calculer estimations pour la page courante
+    estimations = {}
+    try:
+        from estimation_marche import estimer_marche
+        for ao in page_appels:
+            try:
+                estimations[ao.get("id")] = estimer_marche(ao)
+            except Exception:
+                pass
+    except ImportError:
+        pass
+
     return render_template(
         "ao_liste.html",
         appels=page_appels,
+        estimations=estimations,
         total=len(appels),
         total_filtre=len(filtre),
         sources=sources,
@@ -667,6 +709,30 @@ def roi():
     return render_template("roi.html", **stats)
 
 
+@app.route("/brouillons")
+def page_brouillons():
+    """Page listant les brouillons Gmail (pipeline auto)."""
+    filtre_ao = request.args.get("ao_hunter", "1") == "1"
+    try:
+        from brouillons_gmail import lister_brouillons
+        brouillons = lister_brouillons(max_results=50, filtre_ao_hunter=filtre_ao)
+    except Exception as e:
+        logger.error(f"Erreur lecture brouillons: {e}")
+        brouillons = []
+    return render_template("brouillons.html", brouillons=brouillons, filtre_ao=filtre_ao)
+
+
+@app.route("/api/brouillons")
+def api_brouillons():
+    """GET /api/brouillons - Liste des brouillons Gmail en JSON."""
+    filtre_ao = request.args.get("ao_hunter", "0") == "1"
+    try:
+        from brouillons_gmail import lister_brouillons
+        return jsonify(lister_brouillons(max_results=50, filtre_ao_hunter=filtre_ao))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/kanban")
 def kanban():
     appels = charger_ao()
@@ -681,9 +747,22 @@ def kanban():
     gagnes = len([a for a in appels if a.get("statut") == "gagne"])
     taux_conversion = (gagnes / total_soumis * 100) if total_soumis > 0 else 0
     sources = sorted(set(a.get("source", "") for a in appels if a.get("source")))
+
+    # Pre-calculer estimations pour le kanban
+    estimations_kanban = {}
+    try:
+        from estimation_marche import estimer_marche
+        for ao in appels:
+            try:
+                estimations_kanban[ao.get("id")] = estimer_marche(ao)
+            except Exception:
+                pass
+    except ImportError:
+        pass
+
     return render_template("kanban.html", colonnes=colonnes, statuts=STATUTS_KANBAN,
                            taux_conversion=taux_conversion, total_soumis=total_soumis,
-                           gagnes=gagnes, sources=sources)
+                           gagnes=gagnes, sources=sources, estimations=estimations_kanban)
 
 
 @app.route("/ao/<path:ao_id>/statut-ajax", methods=["POST"])
@@ -776,13 +855,41 @@ def detail_ao(ao_id):
         except Exception:
             ao_similaires = []
 
+    # Post-mortem (si perdu)
+    post_mortem_data = None
+    if ao.get("statut") == "perdu":
+        try:
+            from post_mortem import analyser_defaite
+            post_mortem_data = analyser_defaite(ao)
+        except Exception as e:
+            logger.warning(f"Erreur post-mortem pour {ao_id}: {e}")
+
+    # Signaux faibles (marche fleche)
+    signaux_faibles_data = None
+    try:
+        from signaux_faibles import detecter_signaux
+        signaux_faibles_data = detecter_signaux(ao)
+    except Exception as e:
+        logger.warning(f"Erreur signaux faibles pour {ao_id}: {e}")
+
+    # Groupement / co-traitance
+    groupement_eval = None
+    try:
+        from groupement import evaluer_besoin_groupement
+        groupement_eval = evaluer_besoin_groupement(ao)
+    except Exception as e:
+        logger.warning(f"Erreur groupement pour {ao_id}: {e}")
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
                            prestations=prestations, go_nogo=go_nogo,
                            type_presta=type_presta, modele=modele,
                            checklist=checklist, checklist_etat=checklist_etat,
                            commentaires=commentaires, estimation=estimation,
                            score_acheteur=score_acheteur_data,
-                           ao_similaires=ao_similaires)
+                           ao_similaires=ao_similaires,
+                           post_mortem=post_mortem_data,
+                           signaux_faibles=signaux_faibles_data,
+                           groupement=groupement_eval)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])
@@ -1373,6 +1480,263 @@ def api_prix_enregistrer():
         resultat=data.get("resultat"),
     )
     return jsonify({"status": "ok", "entree": entree})
+
+
+# --- API Post-mortem ---
+
+@app.route("/api/post-mortem/stats")
+def api_post_mortem_stats():
+    """GET /api/post-mortem/stats - Statistiques agregees des AO perdus."""
+    from post_mortem import stats_post_mortem
+    return jsonify(stats_post_mortem())
+
+
+# --- API Benchmark Prix ---
+
+@app.route("/api/benchmark")
+def api_benchmark():
+    """GET /api/benchmark - Stats benchmark prix du marche."""
+    from benchmark_prix import analyser_benchmark
+    type_prestation = request.args.get("type", "formation")
+    return jsonify(analyser_benchmark(type_prestation=type_prestation))
+
+
+@app.route("/api/benchmark/position")
+def api_benchmark_position():
+    """GET /api/benchmark/position?prix=15000&type=formation - Positionnement prix."""
+    from benchmark_prix import positionner_prix
+    prix = request.args.get("prix")
+    type_prestation = request.args.get("type", "formation")
+    if not prix:
+        return jsonify({"error": "parametre 'prix' requis"}), 400
+    try:
+        prix = float(prix)
+    except (ValueError, TypeError):
+        return jsonify({"error": "prix doit etre un nombre"}), 400
+    return jsonify(positionner_prix(notre_prix=prix, type_prestation=type_prestation))
+
+
+# --- API Soumission ---
+
+@app.route("/api/ao/<path:ao_id>/preparer-soumission", methods=["POST"])
+def api_preparer_soumission(ao_id):
+    """POST /api/ao/<id>/preparer-soumission - Prepare le dossier pour soumission."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    try:
+        from soumission_helper import preparer_soumission
+        result = preparer_soumission(ao)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Erreur preparation soumission: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ao/<path:ao_id>/guide-soumission")
+def api_guide_soumission(ao_id):
+    """GET /api/ao/<id>/guide-soumission - Guide de soumission pour la plateforme."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    try:
+        from soumission_helper import identifier_plateforme, generer_guide_soumission
+        plateforme = identifier_plateforme(ao)
+        guide = generer_guide_soumission(plateforme["id"])
+        return jsonify({
+            "plateforme": plateforme["nom"],
+            "plateforme_id": plateforme["id"],
+            "url_depot": plateforme["url_depot"],
+            "etapes": guide,
+        })
+    except Exception as e:
+        logger.error(f"Erreur guide soumission: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# --- API Questions acheteur ---
+
+@app.route("/api/ao/<path:ao_id>/questions", methods=["POST"])
+def api_generer_questions(ao_id):
+    """POST /api/ao/<id>/questions - Genere des questions a poser a l'acheteur."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    try:
+        from questions_acheteur import generer_questions, formater_questions_email
+        result = generer_questions(ao)
+
+        # Ajouter l'email formate si des questions ont ete generees
+        if result.get("questions"):
+            result["email_formate"] = formater_questions_email(result["questions"], ao)
+
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Erreur generation questions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Pre-informations ---
+
+@app.route("/preinfos")
+def preinfos_view():
+    """Page listant les pre-informations detectees."""
+    from veille_preinformation import preinfos_actives, recommander_actions
+    preinfos = preinfos_actives()
+    for p in preinfos:
+        p["actions"] = recommander_actions(p)
+    return render_template("preinfos.html", preinfos=preinfos)
+
+
+@app.route("/api/preinfos")
+def api_preinfos():
+    """GET /api/preinfos - JSON des pre-infos actives."""
+    from veille_preinformation import preinfos_actives, recommander_actions
+    preinfos = preinfos_actives()
+    for p in preinfos:
+        p["actions"] = recommander_actions(p)
+    return jsonify({"total": len(preinfos), "preinfos": preinfos})
+
+
+# --- CRM Acheteurs ---
+
+@app.route("/crm")
+def crm_view():
+    """Page CRM avec la liste des acheteurs."""
+    from crm_acheteurs import lister_tous_acheteurs, acheteurs_a_relancer
+    acheteurs = lister_tous_acheteurs()
+    relancer = acheteurs_a_relancer()
+    return render_template("crm.html", acheteurs=acheteurs, a_relancer=relancer)
+
+
+@app.route("/crm/<path:nom>")
+def crm_fiche_view(nom):
+    """Fiche detaillee d'un acheteur."""
+    from crm_acheteurs import get_fiche
+    fiche = get_fiche(nom)
+    if not fiche:
+        return redirect(url_for("crm_view"))
+    return render_template("crm_fiche.html", fiche=fiche, cle=nom)
+
+
+@app.route("/crm/<path:nom>/note", methods=["POST"])
+def crm_ajouter_note(nom):
+    """Ajouter une note a un acheteur."""
+    from crm_acheteurs import ajouter_note
+    note = request.form.get("note", "").strip()
+    if note:
+        ajouter_note(nom, note)
+    return redirect(url_for("crm_fiche_view", nom=nom))
+
+
+@app.route("/crm/<path:nom>/contact", methods=["POST"])
+def crm_ajouter_contact(nom):
+    """Ajouter un contact a un acheteur."""
+    from crm_acheteurs import ajouter_contact
+    contact_info = {
+        "nom": request.form.get("nom", "").strip(),
+        "email": request.form.get("email", "").strip(),
+        "telephone": request.form.get("telephone", "").strip(),
+        "fonction": request.form.get("fonction", "").strip(),
+    }
+    if contact_info["nom"] or contact_info["email"]:
+        ajouter_contact(nom, contact_info)
+    return redirect(url_for("crm_fiche_view", nom=nom))
+
+
+@app.route("/api/crm")
+def api_crm():
+    """GET /api/crm - JSON de tous les acheteurs."""
+    from crm_acheteurs import lister_tous_acheteurs, acheteurs_a_relancer, top_acheteurs_actifs
+    return jsonify({
+        "acheteurs": lister_tous_acheteurs(),
+        "a_relancer": acheteurs_a_relancer(),
+        "top_actifs": top_acheteurs_actifs(20),
+    })
+
+
+# --- API Groupement ---
+
+@app.route("/api/ao/<path:ao_id>/groupement", methods=["POST"])
+def api_groupement(ao_id):
+    """POST /api/ao/<id>/groupement - Genere les documents de groupement."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    try:
+        from groupement import generer_documents_groupement, suggestions_partenaires
+        data = request.get_json(force=True) if request.is_json else {}
+        partenaire_info = data.get("partenaire") if data else None
+        documents = generer_documents_groupement(ao, partenaire_info=partenaire_info)
+        suggestions = suggestions_partenaires(ao)
+        return jsonify({
+            "status": "ok",
+            "documents": documents,
+            "suggestions_partenaires": suggestions,
+        })
+    except Exception as e:
+        logger.error(f"Erreur generation groupement: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Objectifs CA ---
+
+@app.route("/objectifs")
+def objectifs_view():
+    """Page objectifs CA avec progression et recommandations."""
+    from objectifs_ca import progression as calc_progression, recommander_pipeline, alertes_objectif
+    from datetime import date as _date
+
+    prog = calc_progression()
+    recommandation = recommander_pipeline()
+    alertes = alertes_objectif()
+
+    return render_template("objectifs.html",
+                           prog=prog,
+                           objectifs=prog["objectifs"],
+                           recommandation=recommandation,
+                           alertes=alertes,
+                           stats_par_mois=prog["stats_par_mois"],
+                           mois_actuel=_date.today().month)
+
+
+@app.route("/api/objectifs")
+def api_objectifs_get():
+    """GET /api/objectifs - Donnees objectifs CA."""
+    from objectifs_ca import progression as calc_progression, recommander_pipeline, alertes_objectif
+    prog = calc_progression()
+    recommandation = recommander_pipeline()
+    alertes = alertes_objectif()
+    return jsonify({
+        "progression": prog,
+        "recommandation": recommandation,
+        "alertes": alertes,
+    })
+
+
+@app.route("/api/objectifs", methods=["POST"])
+def api_objectifs_post():
+    """POST /api/objectifs - Definir l'objectif annuel."""
+    from objectifs_ca import definir_objectif
+    data = request.get_json(force=True)
+    annuel = data.get("objectif_annuel")
+    if not annuel:
+        return jsonify({"error": "objectif_annuel requis"}), 400
+    try:
+        annuel = float(annuel)
+    except (ValueError, TypeError):
+        return jsonify({"error": "objectif_annuel doit etre un nombre"}), 400
+    marge = data.get("marge_cible_pct", 30)
+    result = definir_objectif(annuel, marge_cible_pct=float(marge))
+    return jsonify({"status": "ok", "objectifs": result})
 
 
 # --- WebSocket ---

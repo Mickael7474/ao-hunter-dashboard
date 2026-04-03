@@ -16,8 +16,12 @@
             <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('liste_ao') }}" class="{% if request.endpoint == 'liste_ao' %}active{% endif %}">Appels d'offres</a>
             <a href="{{ url_for('kanban') }}" class="{% if request.endpoint == 'kanban' %}active{% endif %}">Kanban</a>
+            <a href="{{ url_for('preinfos_view') }}" class="{% if request.endpoint == 'preinfos_view' %}active{% endif %}">Pre-infos</a>
             <a href="{{ url_for('liste_dossiers') }}" class="{% if request.endpoint == 'liste_dossiers' %}active{% endif %}">Dossiers</a>
+            <a href="{{ url_for('page_brouillons') }}" class="{% if request.endpoint == 'page_brouillons' %}active{% endif %}">Brouillons</a>
             <a href="{{ url_for('roi') }}" class="{% if request.endpoint == 'roi' %}active{% endif %}">ROI</a>
+            <a href="{{ url_for('objectifs_view') }}" class="{% if request.endpoint == 'objectifs_view' %}active{% endif %}">Objectifs</a>
+            <a href="{{ url_for('crm_view') }}" class="{% if request.endpoint == 'crm_view' %}active{% endif %}">CRM</a>
         </div>
         <div class="nav-actions">
             <button id="darkModeToggle" class="btn-icon" title="Mode sombre">

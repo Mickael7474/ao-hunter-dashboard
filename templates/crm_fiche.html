@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ fiche.nom }} - CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ fiche.nom }}</h1>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        <span class="badge">{{ fiche.type }}</span>
+        <span class="score {% if fiche.score_relation >= 60 %}score-high{% elif fiche.score_relation >= 30 %}score-mid{% else %}score-low{% endif %}">
+            Relation : {{ fiche.score_relation }}/100
+        </span>
+        <a href="{{ url_for('crm_view') }}" class="btn btn-sm btn-outline">Retour CRM</a>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+    <!-- Infos generales -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0;">Informations</h3>
+        <p><strong>Type :</strong> {{ fiche.type }}</p>
+        <p><strong>Adresse :</strong> {{ fiche.adresse or 'Non renseignee' }}</p>
+        <p><strong>Dernier contact :</strong> {{ fiche.date_dernier_contact or 'Jamais' }}</p>
+        <p><strong>Fiche creee le :</strong> {{ fiche.date_creation or '-' }}</p>
+        {% if fiche.tags %}
+        <p><strong>Tags :</strong>
+            {% for tag in fiche.tags %}
+            <span class="badge">{{ tag }}</span>
+            {% endfor %}
+        </p>
+        {% endif %}
+        {% if fiche.prochaine_action %}
+        <p><strong>Prochaine action :</strong> {{ fiche.prochaine_action }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Contacts -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0;">Contacts ({{ fiche.contacts|length }})</h3>
+        {% if fiche.contacts %}
+        <table style="width:100%; font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Telephone</th>
+                    <th>Fonction</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in fiche.contacts %}
+                <tr>
+                    <td>{{ c.nom or '-' }}</td>
+                    <td>{% if c.email %}<a href="mailto:{{ c.email }}">{{ c.email }}</a>{% else %}-{% endif %}</td>
+                    <td>{{ c.telephone or '-' }}</td>
+                    <td>{{ c.fonction or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted);">Aucun contact enregistre</p>
+        {% endif %}
+
+        <!-- Formulaire ajout contact -->
+        <form method="post" action="{{ url_for('crm_ajouter_contact', nom=cle) }}" style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <input type="text" name="nom" placeholder="Nom" style="flex:1; min-width:100px;">
+            <input type="email" name="email" placeholder="Email" style="flex:1; min-width:150px;">
+            <input type="text" name="telephone" placeholder="Telephone" style="flex:1; min-width:100px;">
+            <input type="text" name="fonction" placeholder="Fonction" style="flex:1; min-width:100px;">
+            <button type="submit" class="btn btn-primary btn-sm">Ajouter</button>
+        </form>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+    <!-- Historique AO -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0;">Historique AO ({{ fiche.historique_ao|length }})</h3>
+        {% if fiche.historique_ao %}
+        <div class="table-wrapper">
+            <table style="width:100%; font-size:0.85rem;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Titre</th>
+                        <th>Statut</th>
+                        <th>Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in fiche.historique_ao|sort(attribute='date', reverse=True) %}
+                    <tr>
+                        <td>{{ h.date.split('T')[0] if h.date else '-' }}</td>
+                        <td>
+                            {% if h.ao_id %}
+                            <a href="{{ url_for('detail_ao', ao_id=h.ao_id) }}">{{ h.titre[:60] }}</a>
+                            {% else %}
+                            {{ h.titre[:60] }}
+                            {% endif %}
+                        </td>
+                        <td><span class="statut statut-{{ h.statut }}">{{ h.statut }}</span></td>
+                        <td>{{ h.montant|default('-', true) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted);">Aucun AO dans l'historique</p>
+        {% endif %}
+    </div>
+
+    <!-- Notes -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0;">Notes</h3>
+        {% if fiche.notes %}
+        <pre style="white-space:pre-wrap; font-size:0.85rem; background:var(--bg-secondary); padding:0.75rem; border-radius:6px; max-height:300px; overflow-y:auto;">{{ fiche.notes }}</pre>
+        {% else %}
+        <p style="color:var(--text-muted);">Aucune note</p>
+        {% endif %}
+
+        <!-- Formulaire ajout note -->
+        <form method="post" action="{{ url_for('crm_ajouter_note', nom=cle) }}" style="margin-top:1rem;">
+            <textarea name="note" placeholder="Ajouter une note..." rows="3" style="width:100%; resize:vertical;"></textarea>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.5rem;">Ajouter la note</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

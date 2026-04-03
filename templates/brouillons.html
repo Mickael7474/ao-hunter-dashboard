@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Brouillons Gmail{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Brouillons Gmail</h1>
+    <div style="display:flex; gap:1rem; align-items:center;">
+        <span style="font-size:0.85rem; color:var(--text-light);">{{ brouillons | length }} brouillon(s)</span>
+        <label style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem;">
+            <input type="checkbox" id="filtreAOH" onchange="filtrerBrouillons()" {% if filtre_ao %}checked{% endif %}>
+            AO Hunter uniquement
+        </label>
+        <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" class="btn btn-sm btn-outline">
+            Ouvrir Gmail
+        </a>
+    </div>
+</div>
+
+{% if not brouillons %}
+<div class="card" style="text-align:center; padding:3rem;">
+    <p style="font-size:1.1rem; color:var(--text-light);">Aucun brouillon trouve</p>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-top:0.5rem;">
+        Les brouillons sont crees automatiquement par le pipeline pour chaque dossier genere.
+    </p>
+</div>
+{% else %}
+<div class="card" style="padding:0;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+                <th style="padding:10px 12px; width:40px;"></th>
+                <th style="padding:10px 12px;">Sujet</th>
+                <th style="padding:10px 12px; width:200px;">Destinataire</th>
+                <th style="padding:10px 12px; width:140px;">Date</th>
+                <th style="padding:10px 12px; width:100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in brouillons %}
+            <tr class="brouillon-row {% if b.ao_hunter %}brouillon-aoh{% endif %}"
+                data-aoh="{{ b.ao_hunter | int }}"
+                style="border-bottom:1px solid var(--border); transition:background 0.15s;"
+                onmouseover="this.style.background='var(--table-hover)'"
+                onmouseout="this.style.background=''">
+                <td style="padding:8px 12px; text-align:center;">
+                    {% if b.ao_hunter %}
+                    <span title="Cree par AO Hunter" style="font-size:1.1rem;">&#129302;</span>
+                    {% else %}
+                    <span style="font-size:1.1rem; opacity:0.3;">&#9993;</span>
+                    {% endif %}
+                </td>
+                <td style="padding:8px 12px;">
+                    <div style="font-weight:600; margin-bottom:2px;">{{ b.sujet or '(Sans sujet)' }}</div>
+                    {% if b.apercu %}
+                    <div style="font-size:0.75rem; color:var(--text-light); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:500px;">
+                        {{ b.apercu }}
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="padding:8px 12px; color:var(--text-light);">{{ b.destinataire or '-' }}</td>
+                <td style="padding:8px 12px; color:var(--text-light);">{{ b.date }}</td>
+                <td style="padding:8px 12px;">
+                    <a href="{{ b.gmail_url }}" target="_blank" class="btn btn-sm btn-outline" style="font-size:0.7rem; padding:3px 8px;">
+                        Ouvrir
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:1rem; background:rgba(37,99,235,0.05); border:1px solid rgba(37,99,235,0.2);">
+    <p style="font-size:0.85rem; color:var(--text-light); margin:0;">
+        <strong>Rappel :</strong> Les brouillons sont crees automatiquement par le pipeline.
+        <strong>Aucun email n'est envoye sans votre validation.</strong>
+        Ouvrez le brouillon dans Gmail, relisez, adaptez si necessaire, puis envoyez manuellement.
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filtrerBrouillons() {
+    var aohOnly = document.getElementById('filtreAOH').checked;
+    document.querySelectorAll('.brouillon-row').forEach(function(row) {
+        if (aohOnly && row.dataset.aoh === '0') {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+        }
+    });
+}
+// Appliquer le filtre initial
+document.addEventListener('DOMContentLoaded', filtrerBrouillons);
+</script>
+{% endblock %}
