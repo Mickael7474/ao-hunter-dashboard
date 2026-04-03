@@ -44,6 +44,48 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "ao-hunter-2026")
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+# --- Scheduler pour veille automatique (Render) ---
+_scheduler = None
+
+def init_scheduler():
+    """Initialise APScheduler pour la veille automatique toutes les 8h."""
+    global _scheduler
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.interval import IntervalTrigger
+
+        _scheduler = BackgroundScheduler(daemon=True)
+        _scheduler.add_job(
+            func=_veille_auto,
+            trigger=IntervalTrigger(hours=8),
+            id="veille_auto",
+            name="Veille automatique BOAMP+TED",
+            replace_existing=True,
+            next_run_time=datetime.now() + timedelta(minutes=2),  # premiere exec 2min apres boot
+        )
+        _scheduler.start()
+        logger.info("Scheduler veille auto demarre (toutes les 8h)")
+    except ImportError:
+        logger.warning("APScheduler non installe - veille auto desactivee")
+    except Exception as e:
+        logger.error(f"Erreur init scheduler: {e}")
+
+
+def _veille_auto():
+    """Fonction executee par le scheduler."""
+    try:
+        from veille_render import lancer_veille
+        result = lancer_veille()
+        logger.info(f"Veille auto terminee: {result}")
+        # Notifier les clients WebSocket connectes
+        socketio.emit("veille_complete", {
+            "nouveaux": result["nouveaux"],
+            "total": result["total"],
+            "auto": True,
+        })
+    except Exception as e:
+        logger.error(f"Erreur veille auto: {e}")
+
 logger = logging.getLogger("ao_hunter.dashboard")
 
 # Chemins - en local: ao_hunter/resultats/, sur Render: dossier dashboard/
@@ -678,32 +720,42 @@ def api_urgents():
 
 @app.route("/api/veille", methods=["POST"])
 def api_lancer_veille():
-    """POST /api/veille - Lance une veille en arriere-plan."""
+    """POST /api/veille - Lance une veille en arriere-plan.
+    Sur Render: utilise veille_render (BOAMP+TED lightweight).
+    En local: utilise le module complet veille+filtre."""
     def _veille_bg():
         try:
-            config = charger_config()
-            from veille import Veilleur
-            from filtre import FiltreAO
-
             socketio.emit("veille_log", {"msg": "Recherche en cours..."})
-            veilleur = Veilleur(config)
-            tous_ao = veilleur.lancer_recherche()
-            socketio.emit("veille_log", {"msg": f"{len(tous_ao)} AO bruts trouves"})
 
-            filtre = FiltreAO(config)
-            pertinents = filtre.filtrer(tous_ao)
-            socketio.emit("veille_log", {"msg": f"{len(pertinents)} AO pertinents"})
+            # Sur Render ou si modules complets non dispo: veille legere
+            try:
+                config = charger_config()
+                from veille import Veilleur
+                from filtre import FiltreAO
+                # Mode local complet
+                veilleur = Veilleur(config)
+                tous_ao = veilleur.lancer_recherche()
+                socketio.emit("veille_log", {"msg": f"{len(tous_ao)} AO bruts trouves"})
 
-            # Sauvegarder
-            existants = charger_ao()
-            ids_existants = {ao["id"] for ao in existants}
-            nouveaux = 0
-            for ao in pertinents:
-                d = ao.to_dict()
-                if d["id"] not in ids_existants:
-                    existants.append(d)
-                    nouveaux += 1
-            sauvegarder_ao(existants)
+                filtre = FiltreAO(config)
+                pertinents = filtre.filtrer(tous_ao)
+                socketio.emit("veille_log", {"msg": f"{len(pertinents)} AO pertinents"})
+
+                existants = charger_ao()
+                ids_existants = {ao["id"] for ao in existants}
+                nouveaux = 0
+                for ao in pertinents:
+                    d = ao.to_dict()
+                    if d["id"] not in ids_existants:
+                        existants.append(d)
+                        nouveaux += 1
+                sauvegarder_ao(existants)
+            except ImportError:
+                # Mode Render: veille legere
+                from veille_render import lancer_veille
+                result = lancer_veille()
+                nouveaux = result["nouveaux"]
+                existants = charger_ao()
 
             socketio.emit("veille_log", {"msg": f"Termine: {nouveaux} nouveaux AO ajoutes"})
             socketio.emit("veille_complete", {"nouveaux": nouveaux, "total": len(existants)})
@@ -716,11 +768,27 @@ def api_lancer_veille():
     return jsonify({"status": "started"})
 
 
+@app.route("/api/veille/status")
+def api_veille_status():
+    """GET /api/veille/status - Statut du scheduler et derniere veille."""
+    status = {"scheduler_actif": _scheduler is not None and _scheduler.running}
+    if _scheduler and _scheduler.running:
+        job = _scheduler.get_job("veille_auto")
+        if job:
+            status["prochaine_execution"] = str(job.next_run_time)
+    return jsonify(status)
+
+
 # --- WebSocket ---
 
 @socketio.on("connect")
 def on_connect():
     logger.info("Client WebSocket connecte")
+
+
+# Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)
+if os.environ.get("RENDER"):
+    init_scheduler()
 
 
 if __name__ == "__main__":
