@@ -452,10 +452,81 @@ def generer_dossier(ao_id):
     return jsonify({"status": "started", "ao_id": ao_id})
 
 
+REVIEWS_FILE = DASHBOARD_DIR / "reviews.json"
+
+
+def charger_reviews() -> dict:
+    if not REVIEWS_FILE.exists():
+        return {}
+    with open(REVIEWS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def sauvegarder_reviews(reviews: dict):
+    REVIEWS_FILE.write_text(json.dumps(reviews, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 @app.route("/dossiers")
 def liste_dossiers():
     dossiers = lister_dossiers()
+    reviews = charger_reviews()
+    # Enrichir avec le statut de review
+    for d in dossiers:
+        d["review"] = reviews.get(d["nom"], {})
     return render_template("dossiers.html", dossiers=dossiers)
+
+
+@app.route("/dossiers/<path:nom>")
+def detail_dossier(nom):
+    """Affiche les fichiers d'un dossier avec preview."""
+    dossiers = lister_dossiers()
+    dossier = next((d for d in dossiers if d["nom"] == nom), None)
+    if not dossier:
+        return redirect(url_for("liste_dossiers"))
+    reviews = charger_reviews()
+    review = reviews.get(nom, {"statut": "en_attente", "commentaires": []})
+    return render_template("dossier_detail.html", dossier=dossier, review=review)
+
+
+@app.route("/dossiers/<path:nom>/review", methods=["POST"])
+def review_dossier(nom):
+    """Ajoute un commentaire de relecture."""
+    reviews = charger_reviews()
+    if nom not in reviews:
+        reviews[nom] = {"statut": "en_attente", "commentaires": []}
+    data = request.form
+    commentaire = data.get("commentaire", "").strip()
+    auteur = data.get("auteur", "Anonyme").strip()
+    statut = data.get("statut", "")
+    if commentaire:
+        reviews[nom]["commentaires"].append({
+            "auteur": auteur,
+            "texte": commentaire,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        })
+    if statut:
+        reviews[nom]["statut"] = statut
+    sauvegarder_reviews(reviews)
+    return redirect(url_for("detail_dossier", nom=nom))
+
+
+@app.route("/dossiers/<path:nom>/fichier/<path:fichier>")
+def servir_fichier(nom, fichier):
+    """Sert un fichier du dossier pour le preview."""
+    # Chercher le dossier local
+    dossier_path = RESULTATS_DIR / nom
+    if not dossier_path.exists():
+        return "Fichier non disponible (dossier distant)", 404
+    fichier_path = dossier_path / fichier
+    if not fichier_path.exists() or not fichier_path.is_file():
+        return "Fichier non trouve", 404
+    # Securite : verifier que le chemin reste dans RESULTATS_DIR
+    try:
+        fichier_path.resolve().relative_to(RESULTATS_DIR.resolve())
+    except ValueError:
+        return "Acces refuse", 403
+    from flask import send_file
+    return send_file(str(fichier_path), as_attachment=False)
 
 
 @app.route("/export/csv")

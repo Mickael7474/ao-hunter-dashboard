@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Dossier - {{ dossier.nom }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('liste_dossiers') }}" class="btn btn-sm btn-outline" style="margin-bottom:0.5rem;">&larr; Retour</a>
+        <h1>{{ dossier.nom }}</h1>
+        <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}</p>
+    </div>
+    <div>
+        {% if review.statut == 'valide' %}
+            <span class="statut statut-gagne" style="font-size:1rem; padding:6px 16px;">Valide</span>
+        {% elif review.statut == 'a_corriger' %}
+            <span class="statut statut-analyse" style="font-size:1rem; padding:6px 16px;">A corriger</span>
+        {% else %}
+            <span class="statut statut-nouveau" style="font-size:1rem; padding:6px 16px;">En attente de relecture</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Fichiers du dossier -->
+<div class="card">
+    <div class="card-header">
+        <h2>Fichiers</h2>
+    </div>
+    <div class="fichiers-grid">
+        {% for f in dossier.fichiers | sort %}
+        {% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
+        <div class="fichier-item">
+            <div class="fichier-icon">
+                {% if ext == 'docx' or ext == 'doc' %}
+                    <span style="color:#2563eb;">DOC</span>
+                {% elif ext == 'pdf' %}
+                    <span style="color:#dc2626;">PDF</span>
+                {% elif ext == 'xlsx' or ext == 'xls' %}
+                    <span style="color:#16a34a;">XLS</span>
+                {% elif ext == 'txt' %}
+                    <span style="color:#64748b;">TXT</span>
+                {% else %}
+                    <span style="color:#64748b;">{{ ext | upper or '?' }}</span>
+                {% endif %}
+            </div>
+            <div class="fichier-info">
+                <span class="fichier-nom">{{ f }}</span>
+            </div>
+            <div class="fichier-actions">
+                <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" target="_blank" class="btn btn-sm btn-outline">
+                    Ouvrir
+                </a>
+                <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" download class="btn btn-sm btn-outline">
+                    Telecharger
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Preview (pour les .txt) -->
+{% for f in dossier.fichiers | sort %}
+{% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
+{% if ext == 'txt' %}
+<div class="card">
+    <div class="card-header">
+        <h2>{{ f }}</h2>
+        <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" target="_blank" class="btn btn-sm btn-outline">Ouvrir</a>
+    </div>
+    <iframe src="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" class="preview-frame" style="height:300px;"></iframe>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Relecture collaborative -->
+<div class="card">
+    <div class="card-header">
+        <h2>Relecture collaborative</h2>
+    </div>
+
+    <!-- Commentaires existants -->
+    {% if review.commentaires %}
+    <div class="review-comments">
+        {% for c in review.commentaires %}
+        <div class="review-comment">
+            <div class="review-comment-header">
+                <strong>{{ c.auteur }}</strong>
+                <span class="review-date">{{ c.date }}</span>
+            </div>
+            <div class="review-comment-text">{{ c.texte }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-light); margin-bottom:1rem; font-size:0.9rem;">Aucun commentaire pour le moment.</p>
+    {% endif %}
+
+    <!-- Formulaire -->
+    <form method="post" action="{{ url_for('review_dossier', nom=dossier.nom) }}" class="review-form">
+        <div style="display:flex; gap:0.75rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+            <div>
+                <label style="font-size:0.75rem; font-weight:600; color:var(--text-light);">Votre nom</label><br>
+                <input type="text" name="auteur" placeholder="Nom..." value="" style="padding:0.4rem 0.75rem; border:1px solid var(--border); border-radius:var(--radius); font-size:0.85rem; background:var(--input-bg); color:var(--text);">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; font-weight:600; color:var(--text-light);">Statut du dossier</label><br>
+                <select name="statut" style="padding:0.4rem 0.75rem; border:1px solid var(--border); border-radius:var(--radius); font-size:0.85rem; background:var(--input-bg); color:var(--text);">
+                    <option value="">Ne pas changer</option>
+                    <option value="en_attente" {% if review.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                    <option value="a_corriger" {% if review.statut == 'a_corriger' %}selected{% endif %}>A corriger</option>
+                    <option value="valide" {% if review.statut == 'valide' %}selected{% endif %}>Valide</option>
+                </select>
+            </div>
+        </div>
+        <textarea name="commentaire" rows="3" placeholder="Ajouter un commentaire de relecture..." class="note-textarea"></textarea>
+        <div style="margin-top:0.5rem;">
+            <button type="submit" class="btn btn-sm btn-primary">Envoyer</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

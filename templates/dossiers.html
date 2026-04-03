@@ -10,8 +10,12 @@
 {% if dossiers %}
     {% for d in dossiers %}
     <div class="dossier-card">
-        <div class="dossier-info">
-            <h3>{{ d.nom }}</h3>
+        <div class="dossier-info" style="flex:1;">
+            <h3>
+                <a href="{{ url_for('detail_dossier', nom=d.nom) }}" style="color:var(--text); text-decoration:none;">
+                    {{ d.nom }}
+                </a>
+            </h3>
             <p>{{ d.nb_fichiers }} fichier(s) - Cree le {{ d.date_creation }}</p>
             <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
                 {% for f in d.fichiers | sort %}
@@ -19,10 +23,16 @@
                 {% endfor %}
             </div>
         </div>
-        <div>
-            <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('{{ d.chemin | replace('\\', '\\\\') }}')">
-                Copier chemin
-            </button>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            {% set review = d.get('review', {}) %}
+            {% if review.get('statut') == 'valide' %}
+                <span class="statut statut-gagne">Valide</span>
+            {% elif review.get('statut') == 'a_corriger' %}
+                <span class="statut statut-analyse">A corriger</span>
+            {% else %}
+                <span class="statut statut-nouveau">En attente</span>
+            {% endif %}
+            <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-primary">Ouvrir</a>
         </div>
     </div>
     {% endfor %}

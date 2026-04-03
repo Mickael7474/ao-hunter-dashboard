@@ -752,7 +752,90 @@ tr:hover { background: var(--table-hover); }
     background: var(--primary);
 }
 
+/* Fichiers grid */
+.fichiers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fichier-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: background 0.2s;
+}
+
+.fichier-item:hover { background: var(--table-hover); }
+
+.fichier-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--meta-bg);
+    border-radius: var(--radius);
+    font-weight: 700;
+    font-size: 0.7rem;
+}
+
+.fichier-info { flex: 1; }
+
+.fichier-nom {
+    font-size: 0.85rem;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.fichier-actions { display: flex; gap: 0.4rem; }
+
+.preview-frame {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: white;
+}
+
+/* Review comments */
+.review-comments {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.review-comment {
+    padding: 0.75rem;
+    background: var(--meta-bg);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--primary);
+}
+
+.review-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+    font-size: 0.8rem;
+}
+
+.review-date {
+    color: var(--text-light);
+    font-size: 0.75rem;
+}
+
+.review-comment-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
 @media (max-width: 768px) {
     .kanban-board { flex-direction: column; }
     .kanban-col { min-width: 100%; }
+    .fichier-item { flex-wrap: wrap; }
+    .fichier-actions { width: 100%; justify-content: flex-end; }
 }
