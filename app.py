@@ -108,20 +108,28 @@ def sauvegarder_notes(notes: dict):
     NOTES_FILE.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+DOSSIERS_INDEX = DASHBOARD_DIR / "dossiers_index.json"
+
+
 def lister_dossiers() -> list[dict]:
+    # D'abord essayer le scan local (PC)
     dossiers = []
-    if not RESULTATS_DIR.exists():
-        return dossiers
-    for d in sorted(RESULTATS_DIR.iterdir(), reverse=True):
-        if d.is_dir() and d.name not in ("__pycache__", "test_dc1_dc2"):
-            fichiers = [f.name for f in d.glob("*") if f.is_file()]
-            dossiers.append({
-                "nom": d.name,
-                "chemin": str(d),
-                "nb_fichiers": len(fichiers),
-                "fichiers": fichiers,
-                "date_creation": datetime.fromtimestamp(d.stat().st_ctime).strftime("%Y-%m-%d %H:%M"),
-            })
+    if RESULTATS_DIR.exists():
+        for d in sorted(RESULTATS_DIR.iterdir(), reverse=True):
+            if d.is_dir() and d.name not in ("__pycache__", "test_dc1_dc2"):
+                fichiers = [f.name for f in d.glob("*") if f.is_file()]
+                if fichiers:
+                    dossiers.append({
+                        "nom": d.name,
+                        "chemin": str(d),
+                        "nb_fichiers": len(fichiers),
+                        "fichiers": fichiers,
+                        "date_creation": datetime.fromtimestamp(d.stat().st_ctime).strftime("%Y-%m-%d %H:%M"),
+                    })
+    # Fallback: index JSON (Render)
+    if not dossiers and DOSSIERS_INDEX.exists():
+        with open(DOSSIERS_INDEX, "r", encoding="utf-8") as f:
+            dossiers = json.load(f)
     return dossiers
 
 
