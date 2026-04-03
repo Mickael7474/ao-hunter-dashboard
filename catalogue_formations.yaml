@@ -1,0 +1,685 @@
+# ============================================================
+# CATALOGUE DE FORMATIONS ALMERA 2026
+# Extrait du catalogue PDF officiel (47 pages)
+# Utilise par le generateur de memoires techniques pour
+# proposer les vrais programmes au lieu d'en inventer.
+# ============================================================
+
+formations:
+
+  # ===================== IA GENERATIVE =====================
+  - id: "IA-GEN-INDIV"
+    titre: "Formation Individuelle IA Generative Personnalisee"
+    categorie: "IA Generative"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Professionnels souhaitant integrer les technologies d'IA generative dans leurs activites : entrepreneurs, experts en referencement, administrateurs, professionnels du marketing"
+    objectifs:
+      - "Comprendre les principes de base et le fonctionnement de l'IA generative"
+      - "Utiliser l'IA generative pour creer du contenu (texte, image, audio, video)"
+      - "Apprendre a formuler des consignes efficaces pour obtenir des resultats de qualite"
+      - "Evaluer l'adequation et la pertinence des creations generees par l'IA"
+      - "Integrer l'IA generative dans les processus de travail des entreprises"
+      - "Gagner du temps dans toutes les taches : envoi de mail, creation de slides, transcription de reunions..."
+    programme:
+      - module: "Introduction a l'IA Generative"
+        duree: "1 heure"
+        contenu: "Exploration des differentes branches de l'IA generative : texte, image, audio et video. Analyse de cas d'utilisation inedits pour booster la productivite."
+      - module: "IA Generative de Texte"
+        duree: "4 heures"
+        contenu: "Presentation de ChatGPT, Mistral, Gemini, Perplexity, Claude, Grok. Demonstrations en direct. Cas pratique : les participants creent leurs propres textes. Prompt Engineering, Creation de GPTs, Confidentialite et RGPD."
+      - module: "IA Generative d'Image"
+        duree: "30 minutes"
+        contenu: "Exploration des outils tels que Midjourney, Dall-E, Stable Diffusion, Leonardo. Atelier pratique decouverte."
+      - module: "IA Generative d'Audio"
+        duree: "30 minutes"
+        contenu: "Presentation des outils d'IA pour la creation audio. Atelier pratique : creation de clips audio."
+      - module: "IA Generative de Video"
+        duree: "30 minutes"
+        contenu: "Introduction aux outils d'IA en video. Atelier pratique : realisation de courtes videos."
+      - module: "Conclusion et Evaluation des Acquis"
+        duree: "30 minutes"
+        contenu: "Synthese des themes et outils abordes. Evaluation des acquis avec un questionnaire en ligne."
+    inclus: "Un document avec 250 prompts pour l'IA Generative de texte et une feuille d'aide pour Midjourney"
+
+  - id: "IA-GEN-DEEPSEEK"
+    titre: "Deepseek, Qwen, Gemini - S'y retrouver au milieu des IA Generatives de Texte"
+    categorie: "IA Generative"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Connaissance de base des IA generatives. Une familiarite avec les API et l'automatisation est un plus."
+    public: "Professionnels, developpeurs, data analysts, chefs de projet, consultants en IA, ou toute personne souhaitant comprendre et comparer les IA generatives de texte"
+    objectifs:
+      - "Comprendre les differences entre Deepseek, Qwen, Gemini et d'autres modeles"
+      - "Apprendre a utiliser OpenRouter pour tester et comparer les modeles en appelant les APIs"
+      - "Explorer les possibilites d'automatisation via Make"
+      - "Decouvrir comment executer des modeles localement avec LM Studio et Ollama"
+      - "Comprendre les enjeux de confidentialite et securite des donnees"
+    programme:
+      - module: "Introduction aux modeles Deepseek, Qwen et Gemini"
+        duree: "1h"
+        contenu: "Presentation des trois modeles, comparaison avec GPT-4, Mistral, Claude. IA open-source vs IA proprietaire."
+      - module: "Experimentation des modeles via OpenRouter et API"
+        duree: "1h30"
+        contenu: "Introduction a OpenRouter. Comparaison des performances. Cas pratique : envoyer une meme requete a plusieurs modeles et comparer les reponses."
+      - module: "Confidentialite et gestion des donnees"
+        duree: "1h"
+        contenu: "Quelles donnees sont enregistrees par ces modeles. Modeles heberges dans la VM vs execution en local."
+      - module: "Automatisation avec Make"
+        duree: "1h"
+        contenu: "Presentation de Make pour automatiser les workflows IA. Exemples d'automatisation. Cas pratique."
+      - module: "Faire tourner ses propres IA en local : LM Studio et Ollama"
+        duree: "1h30"
+        contenu: "Pourquoi executer un modele en local ? Outils apres installation de LM Studio. Cas pratique : tester un modele open-source en local."
+      - module: "Comparatif final et recommandations d'usage"
+        duree: "1h"
+        contenu: "Synthese des performances et avantages de Deepseek, Qwen, Gemini. Quel modele pour quel besoin ?"
+
+  - id: "IA-GEN-IMAGE-1J"
+    titre: "Creer des images avec l'IA Generative : ChatGPT, Midjourney et Krea"
+    categorie: "IA Generative"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Creatifs, communicants, marketeurs et curieux du numerique souhaitant apprendre a generer des visuels percutants"
+    objectifs:
+      - "Comprendre les principales approches d'IA generative d'image"
+      - "Utiliser Midjourney, Krea et ChatGPT pour produire des visuels simples"
+      - "Creer des prompts efficaces adaptes a chaque plateforme"
+      - "Realiser une creation visuelle complete dans un contexte professionnel"
+    programme:
+      - module: "Introduction et creation avec Midjourney"
+        duree: "Matin (3h30)"
+        contenu: "Panorama des IA generatives d'image. Decouverte de Midjourney. Atelier guide Midjourney."
+      - module: "Image dans ChatGPT et Krea + projet final"
+        duree: "Apres-midi (3h30)"
+        contenu: "Generer des images dans ChatGPT. Introduction a Krea.ai. Projet final : brief libre ou tirage au sort."
+
+  - id: "IA-GEN-IMAGE-2J"
+    titre: "Creer des images avec l'IA Generative : ChatGPT, Midjourney et Krea - 2 jours"
+    categorie: "IA Generative"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Creatifs, communicants, marketeurs et curieux du numerique"
+    objectifs:
+      - "Comprendre le fonctionnement des principales IA generatives d'image"
+      - "Utiliser Midjourney, Krea et ChatGPT pour creer des visuels pertinents"
+      - "Formuler des prompts efficaces adaptes a chaque plateforme"
+      - "Developper un projet visuel complet integrant plusieurs outils IA"
+      - "Integrer ces outils dans leur strategie de communication"
+    programme:
+      - module: "Jour 1 - Panorama et Midjourney"
+        duree: "7h"
+        contenu: "Panorama des IA generatives d'images. Premiers pas avec Midjourney. Atelier de creation simple. Techniques avancees et astuces. Optimisation et feedback collectif."
+      - module: "Jour 2 - ChatGPT Images, Krea et projet"
+        duree: "7h"
+        contenu: "Generer des images dans ChatGPT. Creer une sequence complete avec ChatGPT. Analyse croisee Midjourney vs ChatGPT. Presentation de Krea.ai. Atelier hybride. Projet final et restitution."
+
+  # ===================== CHATGPT =====================
+  - id: "CHATGPT-N1"
+    titre: "ChatGPT Niveau 1"
+    categorie: "ChatGPT"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Toute personne souhaitant prendre en main l'outil ChatGPT et l'exploiter a des fins professionnelles : entrepreneurs, experts en referencement, administrateurs, creatifs, marketing..."
+    objectifs:
+      - "Comprendre les concepts de base de ChatGPT et son fonctionnement"
+      - "Utiliser ChatGPT pour generer des reponses a des questions simples"
+      - "Creer des prompts (des consignes) efficaces pour ameliorer la qualite des reponses"
+      - "Evaluer la pertinence des reponses de ChatGPT"
+      - "Integrer ChatGPT dans son processus de travail en entreprise"
+    programme:
+      - module: "Introduction a ChatGPT et ses Fondamentaux"
+        contenu: "Presentation de ChatGPT, exploration de ses capacites et comprehension de son fonctionnement."
+      - module: "Creation et Gestion d'un Compte Utilisateur"
+        contenu: "Creation du compte utilisateur, gestion des parametres de securite et de confidentialite."
+      - module: "Navigation et Configuration de l'Interface Utilisateur"
+        contenu: "Decouverte de l'interface utilisateur, navigation, familiarisation avec les parametres."
+      - module: "Maitrise de la Syntaxe et des Commandes de ChatGPT (Prompt Engineering)"
+        contenu: "Apprentissage de la syntaxe et des commandes. Formulation de questions et de prompts."
+      - module: "Atelier Pratique sur le Prompt Engineering"
+        contenu: "Exercices de formulation de prompts efficaces et analyse des exemples concrets."
+      - module: "Comprendre les reponses de ChatGPT"
+        contenu: "Comprehension de la generation des reponses par ChatGPT et evaluation de leur pertinence."
+      - module: "Etudes de Cas dans Divers Secteurs"
+        contenu: "Utilisation de ChatGPT dans divers domaines professionnels (redaction, marketing, prospection...)."
+      - module: "Techniques Avancees et Personnalisation avec ChatGPT"
+        contenu: "Exploration des fonctionnalites avancees comme la programmation avec l'IA (comme assistant)."
+      - module: "Seance Interactive de Questions-Reponses avec ChatGPT"
+        contenu: "Test en direct des competences pour tenter de trouver un 'fail' de ChatGPT."
+      - module: "Techniques Avancees et Personnalisation avec ChatGPT"
+        contenu: "Exploration des fonctionnalites avancees de ChatGPT, y compris la personnalisation."
+      - module: "Integration de ChatGPT avec d'Autres Outils Numeriques"
+        contenu: "Apprentissage des methodes pour combiner ChatGPT avec d'autres technologies et outils."
+      - module: "Developpement d'un Mini-Projet"
+        contenu: "Mise en pratique des competences acquises a travers un projet individuel."
+      - module: "Application Pratique de ChatGPT dans un Contexte Professionnel"
+        contenu: "Scenarios d'integration de ChatGPT dans son processus de travail."
+      - module: "Retour d'Experience et Debriefing"
+        contenu: "Session de partage d'experiences et feedbacks pour evaluer l'apprentissage."
+      - module: "Evaluation des acquis"
+        contenu: "Evaluation des acquis avec un questionnaire en ligne."
+
+  - id: "CHATGPT-N2"
+    titre: "ChatGPT Niveau 2"
+    categorie: "ChatGPT"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Avoir suivi le cours ChatGPT Niveau 1 ou posseder des connaissances de base sur le fonctionnement de ChatGPT"
+    public: "Toute personne souhaitant pousser les avantages de ChatGPT au maximum. Destine aux professionnels ayant deja les bases de l'outil."
+    objectifs:
+      - "S'initier aux aspects avances de ChatGPT 5 (Turbo Ver.) et ChatGPT Multimodal : plugins, GPTs et alternatives"
+      - "Maitriser les plugins d'OpenAI et du Chrome Web Store pour des usages professionnels"
+      - "Exploiter les fonctionnalites avancees et la combinaison plugins + prompts pour des travaux complexes"
+      - "Creer des GPTs, ajouter une base de connaissances et resoudre des problematiques d'entreprise grace a l'IA"
+    programme:
+      - module: "Configuration et Utilisation des Custom Instructions"
+        contenu: "Approche detaillee de la configuration et de l'utilisation des instructions personnalisees."
+      - module: "Maitrise des Plugins IA du Chrome Web Store"
+        contenu: "Decouverte des plugins disponibles, permettant d'etendre les fonctionnalites de ChatGPT."
+      - module: "Creer des prompts efficaces"
+        contenu: "Etude des meilleures pratiques pour formuler des prompts qui generent des resultats optimaux."
+      - module: "Fonctionnalites avancees de ChatGPT Plus"
+        contenu: "Introduction a ChatGPT Plus, creation d'images avec Dall-E 3, recherches internet."
+      - module: "ChatGPT pour l'Analyse de Donnees"
+        contenu: "Utilisation de ChatGPT pour l'analyse de donnees, l'extraction d'informations cles."
+      - module: "Projet combinant les fonctionnalites de GPTs et les acquis de la matinee"
+        contenu: "Application des competences et connaissances des GPTs dans un projet pratique."
+      - module: "Application des Acquis sur des Cas d'Entreprise"
+        contenu: "Apprentissage pratique des connaissances acquises a des cas reels d'entreprise."
+      - module: "Workshop : Resolution de Problemes Specifiques de l'Entreprise"
+        contenu: "Atelier interactif ou les participants sont accompagnes et utilisent ChatGPT pour resoudre des problematiques specifiques."
+      - module: "ChatGPT et la Transformation Numerique"
+        contenu: "Voir concretement comment ChatGPT peut etre un outil cle dans les processus de transformation numerique."
+      - module: "Les GPTs"
+        contenu: "Visite du GPT store et generation des GPTs publies les plus interessantes du moment."
+      - module: "Creation et Gestion de GPTs Personnalises"
+        contenu: "Apprendre a creer et gerer des modeles GPT personnalises pour des besoins specifiques."
+      - module: "Projet Final"
+        contenu: "Creation d'un GPT avec une base de connaissances chargee qui permet aux apprenants d'avancer plus vite dans la vie de tous les jours."
+      - module: "Synthese et Plan d'Action"
+        contenu: "Developper un plan d'action pour integrer ChatGPT et ses applications avancees."
+
+  - id: "CHATGPT-ACCELERE"
+    titre: "ChatGPT Accelere"
+    categorie: "ChatGPT"
+    duree_heures: 3
+    duree_jours: 0.5
+    prerequis: "Aucun"
+    public: "Toute personne souhaitant maitriser rapidement l'outil et l'utiliser a des fins professionnelles"
+    objectifs:
+      - "Comprendre les concepts de base de ChatGPT et son fonctionnement"
+      - "Utiliser ChatGPT pour generer des reponses a des questions simples"
+      - "Creer des prompts efficaces pour ameliorer la qualite des reponses"
+      - "Evaluer la pertinence des reponses de ChatGPT"
+      - "Integrer ChatGPT dans son processus de travail en entreprise"
+      - "Exploiter tout le potentiel de ChatGPT pour ameliorer sa productivite"
+    programme:
+      - module: "Introduction a ChatGPT"
+        duree: "15 min"
+        contenu: "Presentation de l'outil et de ses fonctionnalites. Decouverte des avantages de ChatGPT pour les professionnels."
+      - module: "Creation et gestion de compte utilisateur"
+        duree: "15 min"
+        contenu: "Inscription et connexion a la plateforme. Configuration des parametres de base."
+      - module: "Navigation dans l'interface utilisateur"
+        duree: "15 min"
+        contenu: "Decouverte des differentes fonctionnalites de l'interface."
+      - module: "Utilisation de ChatGPT pour generer des reponses a des questions simples"
+        duree: "30 min"
+        contenu: "Formulation de prompts efficaces pour obtenir des reponses pertinentes."
+      - module: "Creation de prompts efficaces pour ameliorer la qualite des reponses"
+        duree: "45 min"
+        contenu: "Comprehension des elements cles d'un prompt reussi. Pratique de la creation de prompts pour differents scenarios professionnels."
+      - module: "Integration de ChatGPT dans son processus de travail en entreprise"
+        duree: "45 min"
+        contenu: "Utilisation de ChatGPT pour automatiser certaines taches et ameliorer la productivite. Integration de ChatGPT avec d'autres outils numeriques."
+      - module: "Etudes de cas et mise en pratique"
+        duree: "45 min"
+        contenu: "Analyse de cas concrets d'utilisation de ChatGPT dans differents domaines professionnels."
+      - module: "Conclusion et evaluation de la formation"
+        duree: "15 min"
+
+  - id: "CHATGPT-DIRIGEANTS"
+    titre: "Formation ChatGPT pour Dirigeants : Maitriser l'IA pour l'Excellence Manageriale"
+    categorie: "ChatGPT"
+    duree_heures: 3
+    duree_jours: 0.5
+    prerequis: "Aucun"
+    public: "Dirigeants souhaitant exploiter le potentiel de l'intelligence artificielle, et plus particulierement de ChatGPT, pour renforcer leur prise de decision, optimiser leur management et gagner en efficacite strategique"
+    objectifs:
+      - "Comprendre les fondamentaux de ChatGPT et son potentiel pour le leadership"
+      - "Maitriser l'utilisation basique de ChatGPT pour ameliorer la productivite"
+      - "Identifier les opportunites d'integration de ChatGPT dans la strategie d'entreprise"
+      - "Apprehender les enjeux ethiques et de securite lies a l'utilisation de l'IA"
+    programme:
+      - module: "Fondamentaux et Potentiel Strategique"
+        duree: "Matinee"
+        contenu: "Introduction a ChatGPT et son impact sur le leadership. Prise en main de ChatGPT. ChatGPT comme assistant strategique. Optimisation de la communication."
+      - module: "Applications Avancees et Considerations Strategiques"
+        duree: "Apres-midi"
+        contenu: "ChatGPT pour l'analyse de donnees et la prise de decision. Integration de ChatGPT dans les processus d'entreprise. Securite/Confidentialite des donnees et propriete intellectuelle. Developpement d'une vision IA pour votre entreprise."
+
+  - id: "CHATGPT-2JOURS"
+    titre: "Formation ChatGPT - Tout apprendre sur l'IA en 2 jours"
+    categorie: "ChatGPT"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Toute personne souhaitant comprendre et maitriser rapidement les bases de l'intelligence artificielle et de ChatGPT, quels que soient son niveau ou son domaine d'activite"
+    objectifs:
+      - "Comprendre le fonctionnement de ChatGPT et ses concepts de base"
+      - "Creer des prompts efficaces pour ameliorer la qualite des reponses"
+      - "Utiliser ChatGPT et ses fonctionnalites avancees (Turbo, Multimodal, plugins, GPTs)"
+      - "Maitriser l'integration des plugins et la creation de GPTs avec une base de connaissances"
+      - "Resoudre des problematiques professionnelles en combinant IA, prompts et GPTs"
+    programme:
+      - module: "Jour 1 - Fondamentaux"
+        duree: "7h"
+        contenu: "Introduction a ChatGPT. Creation et gestion d'un compte. Navigation et configuration. Maitrise de la syntaxe et des commandes. Atelier Prompt Engineering. Comprendre les reponses. Etudes de cas. Techniques avancees et personnalisation."
+      - module: "Jour 2 - Avances"
+        duree: "7h"
+        contenu: "Custom Instructions. Plugins IA Chrome Web Store. Creer des prompts efficaces. Fonctionnalites avancees et ChatGPTs. ChatGPT pour l'analyse de donnees. Projet combinant GPTs. Application sur des cas d'entreprise. Synthese et plan d'action."
+
+  # ===================== MIDJOURNEY =====================
+  - id: "MIDJOURNEY-1J"
+    titre: "Creer des images avec Midjourney"
+    categorie: "Midjourney"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, graphistes, chefs de projets, et passionnes de technologie desireux d'explorer la creation d'images via l'IA avec Midjourney"
+    objectifs:
+      - "Comprendre l'IA generative et le positionnement de Midjourney dans cet ecosysteme"
+      - "Apprendre a configurer et demarrer avec Midjourney"
+      - "S'initier a la creation d'images"
+      - "Maitriser la formulation de prompts pour des resultats visuels precis"
+      - "Etude de tous les parametres, commandes et fonctionnalites"
+      - "Realiser un projet personnel en mettant l'ensemble de ses competences en oeuvre"
+      - "Explorer les dernieres nouveautes de Midjourney"
+    programme:
+      - module: "Introduction a Midjourney et a l'IA Generative"
+        contenu: "Presentation de Midjourney et discussion sur les implications de l'IA dans differents secteurs."
+      - module: "Configuration et Demarrage avec Midjourney"
+        contenu: "Les apprenants sont encourages pour creer un compte Discord et configurer les parametres cibles."
+      - module: "Atelier de creation d'images simples avec Midjourney"
+        contenu: "Introduction aux fonctionnalites de base de Midjourney pour creer des images artistiques."
+      - module: "Parametres Basiques de Midjourney"
+        contenu: "Comprehension des reglages de base et leur impact sur la creation d'images."
+      - module: "Exploration des Styles et des Themes Visuels avec Midjourney"
+        contenu: "Exploration de differents styles artistiques et thematiques sur Midjourney."
+      - module: "Amelioration de ses images avec la Formulation Efficace de Prompts"
+        contenu: "Prompts techniques pour rediger des prompts clairs et precis."
+      - module: "Applications Pratiques de Midjourney (Cas avance)"
+        contenu: "Exploration rapide des utilisations de Midjourney dans le marketing, le design, l'education."
+      - module: "Parametres Avances de Midjourney"
+        contenu: "Exploration en detail des reglages avances de Midjourney."
+      - module: "Techniques de Composition Visuelle avec Midjourney"
+        contenu: "Apprentissage des techniques de composition visuelle et de design."
+      - module: "Projet Personnel avec Midjourney"
+        contenu: "Travail projet personnel ou les apprenants mettent en pratique les competences acquises."
+      - module: "Critique et Amelioration des Projets"
+        contenu: "Seance de feedback constructif."
+      - module: "Optimisation des Images pour Differents Medias"
+        contenu: "Techniques d'optimisation et generation pour differents formats."
+      - module: "Atelier de Collaboration Creative"
+        contenu: "Utilisation de Midjourney pour collaborer sur des projets creatifs."
+      - module: "Integration de Midjourney dans les Pratiques Professionnelles"
+        contenu: "Les participants explorent comment integrer Midjourney dans leur flux de travail professionnel."
+      - module: "Comparaison V5/V6 de Midjourney et dernieres nouveautes"
+        contenu: "Etude des changements apportes par la derniere version pour votre travail de Midjourney."
+
+  - id: "MIDJOURNEY-ACCELERE"
+    titre: "Midjourney Accelere"
+    categorie: "Midjourney"
+    duree_heures: 3
+    duree_jours: 0.5
+    prerequis: "Aucun"
+    public: "Professionnels souhaitant exploiter pleinement cet outil revolutionnaire d'intelligence artificielle dans un contexte professionnel"
+    objectifs:
+      - "Comprendre l'IA Generative : Introduction a Midjourney et a ses applications dans divers secteurs"
+      - "Demarrer avec Midjourney : Configuration de Discord, creation de compte et prise en main"
+      - "Creation d'images : Atelier pratique sur la generation d'images, les styles visuels et la redaction de prompts efficaces"
+      - "Cas Pratiques : Etudes de cas en marketing, design et communication"
+      - "Integration et Optimisation : Utiliser Midjourney dans vos flux de travail"
+
+  - id: "MIDJOURNEY-2J"
+    titre: "De Debutant a Expert sur Midjourney"
+    categorie: "Midjourney"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, graphistes, chefs de projets et passionnes de creation visuelle"
+    objectifs:
+      - "Comprendre les bases de Midjourney et developper des competences avancees"
+      - "Explorer et maitriser les fonctionnalites de creation et de personnalisation"
+      - "Appliquer les connaissances acquises a des cas pratiques professionnels"
+    programme:
+      - module: "Jour 1 - Des bases aux fonctionnalites avancees"
+        duree: "7h"
+        contenu: "Presentation de Midjourney. Exploration des bases. Organisation des creations. Personnalisation et references. Compositions creative."
+      - module: "Jour 2 - Optimisation, fonctions avancees et projet"
+        duree: "7h"
+        contenu: "Optimisation des rendus. Fonctions avancees supplementaires (mode Edition). Projet pratique. Outils complementaires (MidLibrary). Conclusion et evaluation."
+
+  - id: "MIDJOURNEY-INDIV-2J"
+    titre: "Formation Individuelle - Tout savoir pour faire des images professionnelles"
+    categorie: "Midjourney"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, graphistes, chefs de projets et passionnes de creation visuelle"
+    objectifs:
+      - "Comprendre les bases de Midjourney et developper des competences avancees"
+      - "Explorer et maitriser les fonctionnalites de creation et de personnalisation"
+      - "Appliquer les connaissances acquises a des cas pratiques professionnels"
+
+  # ===================== IA POUR LES PROFESSIONNELS =====================
+  - id: "IA-RH"
+    titre: "L'IA au service des RH"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Professionnels des ressources humaines, incluant les responsables RH, les recruteurs, les gestionnaires de talent, et les conseillers en organisation"
+    objectifs:
+      - "Comprendre les principes de base et le potentiel de l'IA dans le domaine des Ressources Humaines"
+      - "Identifier et exploiter les applications de l'IA pour optimiser les processus"
+      - "Formuler des strategies efficaces pour integrer l'IA dans les pratiques RH"
+      - "Evaluer l'impact et les enjeux ethiques de l'IA"
+      - "Planifier et gerer la transformation digitale avec l'IA"
+    programme:
+      - module: "Introduction a l'IA dans les RH"
+        contenu: "Concepts cles de l'IA. Apercu des applications de l'IA en RH."
+      - module: "Data Analytics en RH"
+        contenu: "Sources de donnees en RH et leur exploitation. Selection de donnees qualitatives et enjeux legaux (RGPD)."
+      - module: "ChatGPT et Autres Outils d'IA Generative en RH"
+        contenu: "Exploration de ChatGPT et son utilisation en RH. Atelier rapide de redaction d'annonces."
+      - module: "Recrutement et Fidelisation Assistes par l'IA"
+        contenu: "Optimisation du recrutement via l'IA : analyse de CV, entretiens assistes par l'IA."
+      - module: "Automatisation et Amelioration des Processus"
+        contenu: "Identification des taches administratives automatisables."
+      - module: "Enjeux Ethiques et Perspectives d'Avenir de l'IA en RH"
+        contenu: "Discussion sur les enjeux ethiques : equite, integrité, transparence."
+
+  - id: "IA-COMMERCIAUX"
+    titre: "L'IA au service des Commerciaux"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Professionnels de la vente, incluant les commerciaux, les responsables de ventes, et les directeurs commerciaux"
+    objectifs:
+      - "Comprendre les principes de base et le potentiel de l'IA dans le domaine commercial"
+      - "Identifier et exploiter les applications de l'IA pour optimiser les processus de vente"
+      - "Formuler des strategies efficaces pour integrer l'IA dans les pratiques commerciales"
+      - "Evaluer l'impact et les enjeux ethiques de l'IA"
+      - "Planifier et gerer la transformation digitale avec l'IA"
+
+  - id: "IA-FORMATEURS"
+    titre: "L'IA au service des Formateurs"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun"
+    public: "Formateurs, enseignants et educateurs interesses par l'integration de l'intelligence artificielle dans leurs methodologies pedagogiques"
+    objectifs:
+      - "Comprendre les principes de base de l'IA et son potentiel dans le domaine de la formation"
+      - "Decouvrir et exploiter les outils d'IA pour enrichir et personnaliser l'apprentissage"
+      - "Developper des strategies pour integrer efficacement l'IA dans les pratiques pedagogiques"
+      - "Evaluer l'impact de l'IA sur l'apprentissage"
+      - "Planifier et gerer la transformation digitale avec l'IA"
+
+  - id: "IA-MARKETING-2J"
+    titre: "L'IA au service du Marketing Digital"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, de la communication et du digital souhaitant maitriser les nouvelles strategies de referencement a l'ere de l'intelligence artificielle et de la recherche generative"
+    objectifs:
+      - "Comprendre les fondamentaux du SEO et son role dans une strategie de SEM complete"
+      - "Optimiser la presence et la visibilite de son entreprise sur le web"
+      - "Explorer et utiliser les outils de suivi et d'analyse des performances SEO"
+      - "Decouvrir les solutions d'IA pour automatiser et accelerer l'optimisation du referencement"
+      - "S'initier a la creation de prompts pertinents pour obtenir des resultats precis"
+      - "Exploiter l'IA generative pour produire des contenus web de qualite, adaptes au SEO"
+    programme:
+      - module: "Jour 1 Matin - Introduction au SEO et techniques d'optimisation"
+        contenu: "Fondamentaux SEO, Google Search Console, SERP. Outils et bonnes pratiques SEO. Atelier pratique SEO. Mythes et realites IA/SEO."
+      - module: "Jour 1 Apres-midi - Generation de contenus textuels avec l'IA"
+        contenu: "Introduction a l'IA generative (ChatGPT, Perplexity, Mistral, Gemini). Creation de contenu textuel avec l'IA."
+      - module: "Jour 2 Matin - Marketing sur les reseaux sociaux"
+        contenu: "Strategies de communication. Atelier pratique reseaux sociaux. Creation d'images avec Midjourney/Krea/Flux."
+      - module: "Jour 2 Apres-midi - Creation de textes et d'images avec l'IA"
+        contenu: "Atelier de projet : integrer l'IA dans la strategie de contenu. Methode KISS et conclusion."
+
+  - id: "IA-JURIDIQUE"
+    titre: "L'IA au service du Juridique"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Avocats, juristes, notaires, professionnels du droit souhaitant integrer l'IA dans leurs pratiques"
+    objectifs:
+      - "Comprendre les usages actuels et futurs de l'IA dans le domaine juridique"
+      - "Decouvrir les modeles d'IA adaptes aux besoins des juristes"
+      - "Utiliser l'IA pour la recherche documentaire, l'analyse de textes juridiques et la redaction"
+      - "Acceder rapidement aux decisions de justice, arrets et jurisprudences grace a l'IA"
+      - "Tester des cas pratiques de redaction de contrats, statuts et autres documents juridiques"
+      - "Comprendre les enjeux ethiques, legaux et de confidentialite lies a l'IA dans le domaine juridique"
+
+  - id: "IA-MANAGERS"
+    titre: "L'IA pour les Managers : Mieux decider, mieux automatiser"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Managers, responsables financiers, controleurs de gestion, consultants, cadres pilotant des donnees ou des projets souhaitant integrer l'IA dans leurs pratiques"
+    objectifs:
+      - "Comprendre les fondamentaux de l'IA appliquee au management, a la finance et a la performance operationnelle"
+      - "Utiliser l'IA pour automatiser les taches recurrentes : reporting, previsions, analyses de couts"
+      - "Maitriser la generation automatique de rapports, la synthese de donnees et la simulation de scenarios"
+      - "Decouvrir des outils d'analyse predictive simples, exploitables depuis Excel ou Google Sheets"
+      - "Structurer, nettoyer et valoriser ses donnees pour des resultats fiables avec les assistants IA"
+      - "Mettre en pratique ces competences via des ateliers concrets et elaborer un plan IA adapte a son equipe"
+
+  - id: "IA-EMPLOI"
+    titre: "Developper sa recherche d'emploi avec l'IA generative"
+    categorie: "IA pour les Professionnels"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Chercheurs d'emploi, personnes en reconversion, jeunes diplomes, beneficiaires de dispositifs d'insertion"
+    objectifs:
+      - "Comprendre les usages concrets de l'IA dans une recherche d'emploi"
+      - "Creer un CV et une lettre de motivation avec ChatGPT"
+      - "Optimiser leur profil LinkedIn avec l'IA"
+      - "Automatiser leur veille et leur suivi de candidatures"
+      - "Utiliser des prompts simples et efficaces pour interagir avec des outils d'IA"
+
+  # ===================== COPILOT =====================
+  - id: "COPILOT-1J"
+    titre: "Microsoft Copilot : Utiliser l'IA pour optimiser la productivite et la collaboration sur Bing et Microsoft 365"
+    categorie: "Copilot"
+    duree_heures: 7
+    duree_jours: 1
+    format: "2 demi-journees de 3h30"
+    prerequis: "Aucun, cependant une familiarite avec Microsoft 365 est recommandee"
+    public: "Professionnels, entrepreneurs, equipes projet, managers et toute personne souhaitant exploiter Microsoft Copilot pour ameliorer la productivite et la collaboration"
+    objectifs:
+      - "Comprendre les capacites et les fonctionnalites de Microsoft Copilot au sein de Microsoft 365"
+      - "Utiliser Copilot sur Bing pour des recherches avancees et obtenir des reponses rapides"
+      - "Exploiter Copilot dans Microsoft 365 pour accelerer la creation de contenus, analyser des donnees et ameliorer le travail collaboratif"
+      - "Integrer Copilot et d'autres outils d'IA dans ses processus quotidiens"
+    programme:
+      - module: "Matin - Decouverte et fondamentaux de Microsoft Copilot"
+        contenu: "Introduction a Microsoft Copilot. Utilisation de Microsoft Copilot sur Bing. Gain de productivite avec Copilot dans Microsoft 365. Projet combinant les acquis."
+      - module: "Apres-midi - Approfondissement et applications avancees"
+        contenu: "Collaboration et transcription automatiques avec l'IA (Teams). Exploration des fonctionnalites avancees de Copilot sur Bing. Securite et bonnes pratiques avec Microsoft Copilot. Pratique et session de Questions/Reponses. Bilan et methodologie KISS."
+
+  - id: "COPILOT-2J"
+    titre: "Microsoft Copilot : Formation pour optimiser la productivite et la collaboration sur Bing et Microsoft 365 - 2 jours"
+    categorie: "Copilot"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun, cependant une familiarite avec Microsoft 365 est recommandee"
+    public: "Professionnels, entrepreneurs, equipes projet, managers et toute personne souhaitant exploiter Microsoft Copilot"
+    objectifs:
+      - "Comprendre les fonctionnalites de Copilot et son integration dans Microsoft 365"
+      - "Utiliser Copilot sur Bing pour rechercher, synthetiser et analyser des informations"
+      - "Tirer parti de Copilot dans Word, Excel, PowerPoint et Teams"
+      - "Integrer Copilot dans son quotidien professionnel"
+    programme:
+      - module: "Jour 1 - Introduction et prise en main"
+        duree: "7h"
+        contenu: "Introduction a Microsoft Copilot et son role. Explorer les capacites de Copilot sur Bing. Premiers pas avec Copilot dans Microsoft 365. Optimiser ses ecrits avec Copilot dans Word. Synthetiser et analyser des donnees avec Copilot dans Excel. Projet de fin de journee."
+      - module: "Jour 2 - Collaboration et applications metiers"
+        duree: "7h"
+        contenu: "Ameliorer sa communication avec Copilot dans Teams et Outlook. Construire des presentations impactantes dans PowerPoint avec Copilot. Structurer son organisation personnelle avec Copilot. Adaptation de Copilot a differents metiers. Bonnes pratiques et limites de Copilot. Synthese, plan d'action et questions-reponses."
+
+  # ===================== MISTRAL =====================
+  - id: "MISTRAL-PROJET"
+    titre: "Mistral au service de la Gestion de Projet"
+    categorie: "Mistral"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Chefs de projet, responsables d'equipe et professionnels de la gestion de projet souhaitant integrer l'intelligence artificielle, notamment les modeles Mistral, pour optimiser la planification, la coordination et le pilotage de leurs projets"
+    objectifs:
+      - "Acquerir les competences pour piloter un projet IA de bout en bout"
+      - "Comprendre les enjeux techniques, financiers et humains d'un projet realise avec l'IA"
+      - "Integrer la plateforme Mistral dans les workflows de gestion de projet"
+
+  - id: "MISTRAL-ENTREPRISE"
+    titre: "Mistral au service des Entreprises"
+    categorie: "Mistral"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Professionnels et dirigeants d'entreprise souhaitant decouvrir et exploiter le potentiel des modeles d'IA francais, notamment Mistral, pour ameliorer leurs processus, innover et gagner en competitivite"
+    objectifs:
+      - "Comprendre les capacites des modeles de langage Mistral dans un contexte professionnel"
+      - "Identifier les cas d'usage pertinents pour l'entreprise"
+      - "Planifier et deployer des projets IA bases sur les modeles Mistral"
+      - "Analyser le retour sur investissement (ROI) des solutions IA"
+
+  # ===================== FLUX =====================
+  - id: "FLUX-KREA"
+    titre: "Aller au-dela de Midjourney avec Flux sur Krea.ai"
+    categorie: "Flux"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Avoir suivi une formation sur Midjourney ou posseder des connaissances de base sur la generation d'images avec l'IA. Disposer d'un compte sur Discord et Midjourney. Connaitre les bases du prompt engineering."
+    public: "Professionnels du design, du marketing, de la communication et aux creatifs souhaitant aller bien plus loin qu'avec Midjourney en utilisant Flux"
+    objectifs:
+      - "Comprendre les differences et complementarites entre Midjourney et Flux"
+      - "Exploiter Flux sur la plateforme Krea.ai pour generer des images plus precises et interactives"
+      - "Automatiser et optimiser leur workflow de creation d'images IA"
+      - "Experimenter des approches hybrides combinant plusieurs IA pour ameliorer la qualite et la personnalisation des images"
+      - "Integrer Flux et Midjourney dans leur processus de travail professionnel"
+
+  # ===================== SEO, GSO & GEO =====================
+  - id: "SEO-1J"
+    titre: "Programme IA et Referencement (SEO, GSO et GEO) - 1 jour"
+    categorie: "SEO, GSO & GEO"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, de la communication et du digital souhaitant maitriser les nouvelles strategies de referencement a l'ere de l'intelligence artificielle et de la recherche generative"
+    objectifs:
+      - "Comprendre l'evolution du SEO vers la GSO (Generative Search Optimization) et ses impacts sur la visibilite en ligne"
+      - "Exploiter l'intelligence artificielle pour creer du contenu optimise, pertinent et naturel"
+      - "Concevoir des prompts efficaces pour generer des textes, FAQ, extraits enrichis et contenus UX-first"
+      - "Piloter la performance SEO a l'aide d'outils d'intelligence d'analyse, d'audit et de production automatisee"
+      - "Anticiper les mutations du referencement liees a l'emergence de technologies comme ChatGPT, Gemini ou Perplexity"
+      - "Renforcer sa strategie digitale et developper sa marque personnelle"
+
+  - id: "SEO-2J"
+    titre: "Programme IA et Referencement (SEO, GSO et GEO) - 2 jours"
+    categorie: "SEO, GSO & GEO"
+    duree_heures: 14
+    duree_jours: 2
+    prerequis: "Aucun"
+    public: "Professionnels du marketing, de la communication et du digital"
+    objectifs:
+      - "Comprendre l'evolution du SEO vers la GSO"
+      - "Exploiter l'intelligence artificielle pour creer du contenu optimise"
+      - "Concevoir des prompts efficaces pour generer des textes, FAQ, extraits enrichis"
+      - "Piloter la performance SEO a l'aide d'outils d'analyse et de production automatisee"
+      - "Anticiper les mutations du referencement"
+      - "Renforcer sa strategie digitale et developper sa marque personnelle"
+
+  # ===================== LES AGENTS IA =====================
+  - id: "AGENT-IA"
+    titre: "Agent IA en Action - Concevez et deployez votre premier Agent IA"
+    categorie: "Les Agents IA"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Chefs de projet, responsables d'equipe et professionnels souhaitant integrer l'IA agentique dans leurs pratiques. Ideale pour ceux qui veulent optimiser la planification, la coordination et l'execution de leurs workflows grace a des agents IA autonomes."
+    objectifs:
+      - "Comprendre les principes cles de l'IA agentique appliques a la gestion de projet"
+      - "Identifier les cas d'usage pertinents et les limites des modeles Mistral pour le pilotage"
+      - "Integrer un agent base sur Mistral dans un workflow metier pour ameliorer la coordination"
+    programme:
+      - module: "Matin - Comprendre les agents d'IA"
+        contenu: "Introduction a l'IA agentique. Architecture d'un agent IA. Demonstration d'un agent IA. Cas d'usage et limites."
+      - module: "Apres-midi - Concevoir et tester un agent IA"
+        contenu: "Conception d'un agent IA. Manipulation d'un agent IA (no-code ou code). Integration dans un workflow metier."
+
+  - id: "AGENT-IA-COPILOT"
+    titre: "Agent IA Copilot - Maitrise de Microsoft 365 Copilot et Copilot Studio"
+    categorie: "Les Agents IA"
+    duree_heures: 7
+    duree_jours: 1
+    prerequis: "Aucun"
+    public: "Chefs de projet, responsables d'equipe, collaborateurs metiers et professionnels souhaitant integrer Microsoft 365 Copilot et Copilot Studio dans leurs pratiques quotidiennes"
+    objectifs:
+      - "Comprendre les bases et le fonctionnement de Microsoft 365 Copilot et Copilot Studio"
+      - "Identifier les cas d'usage les plus pertinents et les principales limites des copilots dans les activites professionnelles"
+      - "Creer et integrer un agent personnalise via Copilot Studio pour automatiser un workflow metier et ameliorer la coordination des equipes"
+
+# ===================== INDICATEURS QUALITE =====================
+indicateurs_qualite:
+  satisfaction_apprenants:
+    indicateur: "Niveau de satisfaction globale"
+    valeur: "4.5/5"
+  recommandation:
+    indicateur: "Recommandation declarative"
+    valeur_cible: ">90%"
+  assiduite:
+    indicateur: "Taux de presence et d'implication"
+    valeur_cible: ">90%"
+  atteinte_objectifs:
+    indicateur: "Atteinte des objectifs definis en amont"
+    valeur_cible: ">80%"
+  mise_en_application:
+    indicateur: "Application concrete des competences acquises"
+    valeur_cible: "Adoption observee ou declaree chez plus de 80% des participants"
+  volume:
+    indicateur: "Volume annuel d'apprenants"
+    valeur: "Plus de 2000 apprenants formes depuis la creation"
+
+# ===================== MODALITES =====================
+modalites:
+  inscription:
+    - "Prise de rendez-vous prealable pour qualifier votre besoin, votre contexte et vos objectifs"
+    - "Proposition d'un programme personnalise et envoi d'un devis"
+    - "Validation du devis et signature de la convention ou du contrat de formation"
+    - "Choix du creneau de formation en fonction de vos disponibilites"
+    - "Demarrage de la formation aux dates convenues, avec acces aux supports et aux outils"
+  delai: "Compter un delai minimum de deux semaines entre le premier echange et le demarrage de la formation"
+  tarification:
+    entreprise: "Sur devis, adapte a vos enjeux, votre contexte metier et vos objectifs operationnels"
+    individuel: "Conditions tarifaires definies et consultables directement sur le site internet"
+  referent_handicap: "Mickael Bertolla (contact@almera.one)"

@@ -103,6 +103,18 @@ def _veille_auto():
     except Exception as e:
         logger.error(f"Erreur veille concurrence: {e}")
 
+    # Pipeline full-auto : Go/No-Go -> generation dossier -> brouillon Gmail
+    try:
+        from pipeline_auto import lancer_pipeline
+        pipeline_result = lancer_pipeline()
+        if pipeline_result["generes"] > 0:
+            logger.info(f"Pipeline auto: {pipeline_result['generes']} dossier(s) genere(s), {pipeline_result['brouillons']} brouillon(s)")
+            socketio.emit("pipeline_complete", pipeline_result)
+        else:
+            logger.info(f"Pipeline auto: aucun dossier genere ({pipeline_result.get('details', [])})")
+    except Exception as e:
+        logger.error(f"Erreur pipeline auto: {e}")
+
 logger = logging.getLogger("ao_hunter.dashboard")
 
 # Chemins - en local: ao_hunter/resultats/, sur Render: dossier dashboard/
@@ -1069,6 +1081,27 @@ def api_deadlines():
         "jours_restants": a["jours_restants"],
         "urgence": a["urgence"],
     } for a in alertes])
+
+
+@app.route("/api/pipeline")
+def api_pipeline():
+    """GET /api/pipeline - Statut et historique du pipeline automatique."""
+    try:
+        from pipeline_auto import charger_log
+        log = charger_log()
+        aujourd_hui = datetime.now().strftime("%Y-%m-%d")
+        generes_today = sum(1 for e in log if e.get("action") == "GENERE" and e.get("timestamp", "").startswith(aujourd_hui))
+        total_generes = sum(1 for e in log if e.get("action") == "GENERE")
+        total_skip = sum(1 for e in log if e.get("action") == "SKIP")
+        return jsonify({
+            "generes_aujourd_hui": generes_today,
+            "max_par_jour": 1,
+            "total_generes": total_generes,
+            "total_skip": total_skip,
+            "derniers": log[-10:][::-1],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/veille", methods=["POST"])
