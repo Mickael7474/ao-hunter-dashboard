@@ -24,7 +24,7 @@
             <span class="kanban-count">{{ colonnes[statut] | length }}</span>
         </div>
         <div class="kanban-cards" data-statut="{{ statut }}"
-             ondrop="kanbanDrop(event)" ondragover="event.preventDefault()" ondragenter="this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')">
+             ondrop="kanbanDrop(event)" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)">
             {% for ao in colonnes[statut] %}
             <div class="kanban-card" draggable="true" data-id="{{ ao.id }}"
                  ondragstart="kanbanDragStart(event)">
@@ -62,16 +62,21 @@
 {% block scripts %}
 <script>
 function kanbanDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.target.dataset.id);
-    e.target.classList.add('dragging');
+    // Remonter au .kanban-card si on drag un element enfant
+    var card = e.target.closest('.kanban-card');
+    if (!card) return;
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
 }
 
 function kanbanDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
-    const aoId = e.dataTransfer.getData('text/plain');
-    const newStatut = e.currentTarget.dataset.statut;
-    const card = document.querySelector('.kanban-card[data-id="' + aoId + '"]');
+    var aoId = e.dataTransfer.getData('text/plain');
+    if (!aoId) return;
+    var newStatut = e.currentTarget.dataset.statut;
+    var card = document.querySelector('.kanban-card[data-id="' + aoId + '"]');
     if (card) card.classList.remove('dragging');
 
     fetch('/ao/' + encodeURIComponent(aoId) + '/statut-ajax', {
@@ -79,28 +84,38 @@ function kanbanDrop(e) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({statut: newStatut})
     })
-    .then(r => r.json())
-    .then(data => {
-        if (data.status === 'ok') {
-            // Move card to new column
-            if (card) {
-                e.currentTarget.appendChild(card);
-                // Remove empty message if present
-                const empty = e.currentTarget.querySelector('.kanban-empty');
-                if (empty) empty.remove();
-            }
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.status === 'ok' && card) {
+            e.currentTarget.appendChild(card);
+            var empty = e.currentTarget.querySelector('.kanban-empty');
+            if (empty) empty.remove();
             // Update counts
-            document.querySelectorAll('.kanban-col').forEach(col => {
-                const cards = col.querySelector('.kanban-cards').querySelectorAll('.kanban-card');
+            document.querySelectorAll('.kanban-col').forEach(function(col) {
+                var cards = col.querySelector('.kanban-cards').querySelectorAll('.kanban-card');
                 col.querySelector('.kanban-count').textContent = cards.length;
             });
         }
-    });
+    })
+    .catch(function(err) { console.error('Kanban error:', err); });
+}
+
+function kanbanDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+}
+
+function kanbanDragLeave(e) {
+    // Ne pas retirer drag-over si on survole un enfant
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('drag-over');
+    }
 }
 
 document.addEventListener('dragend', function(e) {
-    if (e.target.classList) e.target.classList.remove('dragging');
-    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('.dragging').forEach(function(el) { el.classList.remove('dragging'); });
+    document.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
 });
 </script>
 {% endblock %}
