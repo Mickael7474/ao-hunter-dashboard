@@ -159,6 +159,9 @@
         </div>
         <div class="fichier-actions-bar">
             <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}" class="btn btn-sm btn-outline">&larr; Retour au dossier</a>
+            {% if mode == 'markdown' %}
+            <a href="{{ url_for('editer_fichier', nom=nom_dossier, fichier=nom_fichier) }}" class="btn btn-sm btn-outline">Editer</a>
+            {% endif %}
             <a href="{{ url_for('servir_fichier_raw', nom=nom_dossier, fichier=nom_fichier) }}" download class="btn btn-sm btn-primary">Telecharger</a>
         </div>
     </div>

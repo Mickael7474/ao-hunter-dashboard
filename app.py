@@ -2710,6 +2710,218 @@ def api_batch_statut():
     return jsonify({"status": "ok", "modifies": modifies, "statut": nouveau_statut})
 
 
+# --- Feature : Regenerer une piece individuelle ---
+
+@app.route("/api/dossiers/<path:nom>/regenerer/<path:fichier>", methods=["POST"])
+def api_regenerer_piece(nom, fichier):
+    """POST /api/dossiers/<nom>/regenerer/<fichier> - Regenere une piece du dossier."""
+    def _regen_bg():
+        try:
+            from generateur_render import regenerer_piece
+            socketio.emit("veille_log", {"msg": f"Regeneration: {fichier}..."})
+            result = regenerer_piece(nom, fichier)
+            if result["success"]:
+                socketio.emit("veille_log", {"msg": f"Regenere: {fichier} ({result['nb_mots']} mots, {result['duree_sec']}s)"})
+            else:
+                socketio.emit("veille_log", {"msg": f"Erreur regen: {result['erreur']}"})
+            socketio.emit("regen_complete", {"dossier": nom, "fichier": fichier, "result": result})
+        except Exception as e:
+            socketio.emit("veille_log", {"msg": f"Erreur regen: {e}"})
+
+    thread = threading.Thread(target=_regen_bg, daemon=True)
+    thread.start()
+    return jsonify({"status": "started", "fichier": fichier})
+
+
+# --- Feature : Editeur inline markdown ---
+
+@app.route("/dossiers/<path:nom>/editer/<path:fichier>", methods=["GET", "POST"])
+def editer_fichier(nom, fichier):
+    """Editeur inline pour les fichiers .md du dossier."""
+    # Trouver le fichier
+    fichier_path = None
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        candidate = base / nom / fichier
+        if candidate.exists():
+            fichier_path = candidate
+            break
+
+    if not fichier_path or not fichier_path.suffix.lower() == ".md":
+        return redirect(url_for("detail_dossier", nom=nom))
+
+    if request.method == "POST":
+        contenu = request.form.get("contenu", "")
+        fichier_path.write_text(contenu, encoding="utf-8")
+
+        # Re-convertir en DOCX si possible
+        try:
+            from export_docx_render import markdown_to_docx, DOCX_DISPONIBLE
+            if DOCX_DISPONIBLE:
+                docx_path = fichier_path.with_suffix(".docx")
+                fiche_ao = fichier_path.parent / "fiche_ao.json"
+                titre_ao = ""
+                if fiche_ao.exists():
+                    titre_ao = json.loads(fiche_ao.read_text(encoding="utf-8")).get("titre", "")
+                titre_doc = fichier.replace(".md", "").split("_", 1)[-1].replace("_", " ").title()
+                markdown_to_docx(contenu, str(docx_path), titre_ao=titre_ao, titre_doc=titre_doc)
+        except Exception as e:
+            logger.warning(f"Re-conversion DOCX apres edit: {e}")
+
+        return redirect(url_for("servir_fichier", nom=nom, fichier=fichier))
+
+    contenu = fichier_path.read_text(encoding="utf-8")
+    contenu_html = _convertir_md_en_html(contenu)
+    return render_template("editeur.html", nom_dossier=nom, nom_fichier=fichier,
+                           contenu=contenu, contenu_html=contenu_html)
+
+
+# --- Feature : Export PDF natif ---
+
+@app.route("/dossiers/<path:nom>/pdf")
+def export_dossier_pdf(nom):
+    """Exporte le dossier complet en PDF via xhtml2pdf."""
+    from flask import send_file as _send_file
+
+    # Collecter tous les fichiers .md du dossier
+    dossier_path = None
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        candidate = base / nom
+        if candidate.exists():
+            dossier_path = candidate
+            break
+
+    if not dossier_path:
+        return "Dossier introuvable", 404
+
+    # Construire le HTML complet
+    html_parts = [f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Dossier {nom}</title>
+<style>
+    body {{ font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; margin: 2cm; }}
+    h1 {{ color: #1e40af; font-size: 20pt; border-bottom: 3px solid #1e40af; padding-bottom: 8px; page-break-before: always; }}
+    h1:first-of-type {{ page-break-before: avoid; }}
+    h2 {{ color: #1e40af; font-size: 15pt; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }}
+    h3 {{ color: #334155; font-size: 13pt; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+    th {{ background: #1e40af; color: white; padding: 8px; text-align: left; font-size: 10pt; }}
+    td {{ padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 10pt; }}
+    tr:nth-child(even) td {{ background: #f8fafc; }}
+    .cover {{ text-align: center; padding: 100px 40px; }}
+    .cover h1 {{ font-size: 28pt; border: none; page-break-before: avoid; }}
+    .cover p {{ font-size: 14pt; color: #64748b; }}
+    .almera-brand {{ color: #1e40af; font-size: 16pt; font-weight: bold; }}
+    @page {{ margin: 2cm; @bottom-center {{ content: "Page " counter(page) " / " counter(pages); font-size: 9pt; color: #94a3b8; }} }}
+</style></head><body>
+<div class="cover">
+    <p class="almera-brand">ALMERA - AI MENTOR</p>
+    <h1>{nom.replace('_', ' ')}</h1>
+    <p>Dossier de candidature</p>
+    <p style="font-size:11pt; margin-top:40px;">25 rue Campagne Premiere, 75014 Paris | contact@almera.one | almera.one</p>
+</div>"""]
+
+    md_files = sorted([f for f in dossier_path.iterdir() if f.suffix == ".md"])
+    for md_file in md_files:
+        contenu = md_file.read_text(encoding="utf-8")
+        html = _convertir_md_en_html(contenu)
+        html_parts.append(f'<div class="document-section">{html}</div>')
+
+    html_parts.append("</body></html>")
+    html_complet = "\n".join(html_parts)
+
+    # Generer le PDF
+    try:
+        from xhtml2pdf import pisa
+        pdf_path = dossier_path / f"{nom}.pdf"
+        with open(str(pdf_path), "wb") as f:
+            pisa_status = pisa.CreatePDF(html_complet, dest=f)
+        if pisa_status.err:
+            return "Erreur generation PDF", 500
+        return _send_file(str(pdf_path), as_attachment=True, download_name=f"{nom}.pdf")
+    except ImportError:
+        # Fallback : servir le HTML pour impression navigateur
+        return html_complet, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+# --- Feature : Historique des generations ---
+
+@app.route("/api/generations")
+def api_generations():
+    """GET /api/generations - Historique des generations."""
+    try:
+        from generateur_render import charger_historique_generations
+        log = charger_historique_generations()
+        # Stats agregees
+        cout_total = sum(e.get("cout_estime_usd", 0) for e in log)
+        mots_total = sum(e.get("nb_mots", 0) for e in log)
+        return jsonify({
+            "historique": log[-50:],  # 50 derniers
+            "stats": {
+                "nb_generations": len(log),
+                "cout_total_usd": round(cout_total, 2),
+                "mots_total": mots_total,
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# --- Feature : Score qualite dans detail dossier ---
+
+@app.route("/api/dossiers/<path:nom>/qualite")
+def api_qualite_dossier(nom):
+    """GET /api/dossiers/<nom>/qualite - Score qualite du dossier."""
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        dossier_path = base / nom
+        if not dossier_path.exists():
+            continue
+
+        result = {}
+        # Review auto
+        review_path = dossier_path / "review_auto.json"
+        if review_path.exists():
+            try:
+                result["review"] = json.loads(review_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # Conformite RC
+        rc_path = dossier_path / "conformite_rc.json"
+        if rc_path.exists():
+            try:
+                result["conformite_rc"] = json.loads(rc_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # Coherence
+        coh_path = dossier_path / "coherence_check.json"
+        if coh_path.exists():
+            try:
+                result["coherence"] = json.loads(coh_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        if result:
+            # Score global = moyenne ponderee
+            scores = []
+            if result.get("review", {}).get("score_qualite"):
+                scores.append(("Review IA", result["review"]["score_qualite"], 3))
+            if result.get("conformite_rc", {}).get("score"):
+                scores.append(("Conformite RC", result["conformite_rc"]["score"], 2))
+            if result.get("coherence", {}).get("score"):
+                scores.append(("Coherence", result["coherence"]["score"], 1))
+
+            if scores:
+                total_poids = sum(s[2] for s in scores)
+                score_global = round(sum(s[1] * s[2] for s in scores) / total_poids)
+                result["score_global"] = score_global
+                result["details_scores"] = [{"nom": s[0], "score": s[1]} for s in scores]
+
+            return jsonify(result)
+
+    return jsonify({"error": "Dossier introuvable"}), 404
+
+
 # Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)
 if os.environ.get("RENDER"):
     init_scheduler()

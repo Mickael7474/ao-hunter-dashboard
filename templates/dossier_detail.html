@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Dossier - {{ dossier.nom }}{% endblock %}
 
+{% block head %}
+<style>
+    .quality-card { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+    .quality-score { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; border-radius:var(--radius); font-weight:700; font-size:1.1rem; }
+    .quality-score.high { background:#dcfce7; color:#16a34a; }
+    .quality-score.mid { background:#fef3c7; color:#d97706; }
+    .quality-score.low { background:#fee2e2; color:#dc2626; }
+    .quality-detail { font-size:0.8rem; color:var(--text-light); display:flex; gap:0.75rem; flex-wrap:wrap; }
+    .quality-detail span { background:var(--card-bg); border:1px solid var(--border); padding:2px 8px; border-radius:4px; }
+    .regen-btn { background:none; border:1px solid var(--border); border-radius:4px; padding:2px 8px; font-size:0.7rem; cursor:pointer; color:var(--primary); transition:all 0.15s; }
+    .regen-btn:hover { background:var(--primary); color:#fff; }
+    .regen-btn:disabled { opacity:0.5; cursor:wait; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
@@ -9,8 +24,9 @@
         <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}</p>
     </div>
     <div style="display:flex; gap:0.5rem; align-items:center;">
-        <a href="{{ url_for('dossier_print_view', nom=dossier.nom) }}" target="_blank" class="btn btn-sm btn-outline" style="white-space:nowrap;">Exporter PDF</a>
-        <a href="{{ url_for('export_dossier_zip', nom=dossier.nom) }}" class="btn btn-sm btn-primary" style="white-space:nowrap;">Telecharger ZIP</a>
+        <a href="{{ url_for('export_dossier_pdf', nom=dossier.nom) }}" class="btn btn-sm btn-outline" style="white-space:nowrap;">PDF</a>
+        <a href="{{ url_for('dossier_print_view', nom=dossier.nom) }}" target="_blank" class="btn btn-sm btn-outline" style="white-space:nowrap;">Imprimer</a>
+        <a href="{{ url_for('export_dossier_zip', nom=dossier.nom) }}" class="btn btn-sm btn-primary" style="white-space:nowrap;">ZIP</a>
         {% if review.statut == 'valide' %}
             <span class="statut statut-gagne" style="font-size:1rem; padding:6px 16px;">Valide</span>
         {% elif review.statut == 'a_corriger' %}
@@ -18,6 +34,15 @@
         {% else %}
             <span class="statut statut-nouveau" style="font-size:1rem; padding:6px 16px;">En attente de relecture</span>
         {% endif %}
+    </div>
+</div>
+
+<!-- Score qualite automatique -->
+<div class="card" id="qualityCard" style="display:none;">
+    <div class="card-header"><h2>Score qualite</h2></div>
+    <div class="quality-card">
+        <div class="quality-score" id="qualityScore"></div>
+        <div class="quality-detail" id="qualityDetails"></div>
     </div>
 </div>
 
@@ -29,6 +54,10 @@
     <div class="fichiers-grid">
         {% for f in dossier.fichiers | sort %}
         {% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
+        {% set base = f.rsplit('.', 1)[0] if '.' in f else f %}
+        {# Cacher les .md quand le .docx correspondant existe #}
+        {% if ext == 'md' and (base ~ '.docx') in dossier.fichiers %}
+        {% else %}
         <div class="fichier-item">
             <div class="fichier-icon">
                 {% if ext == 'docx' or ext == 'doc' %}
@@ -37,6 +66,10 @@
                     <span style="color:#dc2626;">PDF</span>
                 {% elif ext == 'xlsx' or ext == 'xls' %}
                     <span style="color:#16a34a;">XLS</span>
+                {% elif ext == 'json' %}
+                    <span style="color:#0369a1;">JSON</span>
+                {% elif ext == 'html' %}
+                    <span style="color:#d97706;">HTML</span>
                 {% elif ext == 'txt' %}
                     <span style="color:#64748b;">TXT</span>
                 {% else %}
@@ -50,11 +83,20 @@
                 <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" target="_blank" class="btn btn-sm btn-outline">
                     Ouvrir
                 </a>
+                {% if ext == 'md' %}
+                <a href="{{ url_for('editer_fichier', nom=dossier.nom, fichier=f) }}" class="btn btn-sm btn-outline" title="Editer">
+                    Editer
+                </a>
+                <button class="regen-btn" onclick="regenerer('{{ f }}')" title="Regenerer cette piece">
+                    Regenerer
+                </button>
+                {% endif %}
                 <a href="{{ url_for('servir_fichier_raw', nom=dossier.nom, fichier=f) }}" download class="btn btn-sm btn-outline">
-                    Telecharger
+                    DL
                 </a>
             </div>
         </div>
+        {% endif %}
         {% endfor %}
     </div>
 </div>
@@ -119,4 +161,61 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Charger le score qualite au chargement
+(function() {
+    fetch('/api/dossiers/{{ dossier.nom }}/qualite')
+        .then(r => r.json())
+        .then(data => {
+            if (data.score_global !== undefined) {
+                const card = document.getElementById('qualityCard');
+                const scoreEl = document.getElementById('qualityScore');
+                const detailsEl = document.getElementById('qualityDetails');
+                const s = data.score_global;
+                const cls = s >= 80 ? 'high' : s >= 60 ? 'mid' : 'low';
+                scoreEl.className = 'quality-score ' + cls;
+                scoreEl.textContent = s + '/100';
+                if (data.details_scores) {
+                    detailsEl.innerHTML = data.details_scores.map(d =>
+                        '<span>' + d.nom + ': ' + d.score + '/100</span>'
+                    ).join('');
+                }
+                card.style.display = '';
+            }
+        })
+        .catch(() => {});
+})();
+
+function regenerer(fichier) {
+    if (!confirm('Regenerer ' + fichier + ' ? Cela consommera des credits API.')) return;
+    const btns = document.querySelectorAll('.regen-btn');
+    btns.forEach(b => b.disabled = true);
+
+    fetch('/api/dossiers/{{ dossier.nom }}/regenerer/' + fichier, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'started') {
+                if (typeof io !== 'undefined') {
+                    const socket = io();
+                    socket.on('regen_complete', function(msg) {
+                        if (msg.fichier === fichier) {
+                            if (msg.result && msg.result.success) {
+                                alert('Regenere: ' + fichier + ' (' + msg.result.nb_mots + ' mots, ' + msg.result.duree_sec + 's)');
+                            } else {
+                                alert('Erreur: ' + (msg.result ? msg.result.erreur : 'inconnue'));
+                            }
+                            location.reload();
+                        }
+                    });
+                } else {
+                    alert('Regeneration lancee. Rechargez la page dans quelques secondes.');
+                }
+            }
+        })
+        .catch(e => alert('Erreur: ' + e));
+}
+</script>
 {% endblock %}

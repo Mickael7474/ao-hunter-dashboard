@@ -411,18 +411,29 @@ def estimer_concurrence(ao: dict) -> dict:
         niveau = "Tres forte"
         nb_concurrents = "20+ candidats probables"
 
+    # Formater le nombre de concurrents
+    if nb_concurrents_historique and isinstance(nb_concurrents_historique, int):
+        nb_concurrents_final = f"~{nb_concurrents_historique} candidats (historique attributions)"
+    else:
+        nb_concurrents_final = nb_concurrents
+
     return {
         "niveau": niveau,
         "concurrence_score": score_concurrence,
         "score": score_concurrence,
-        "nb_concurrents_estime": nb_concurrents_historique or nb_concurrents,
+        "nb_concurrents_estime": nb_concurrents_final,
         "facteurs_hausse": facteurs,
         "avantages_almera": avantages,
     }
 
 
 def _estimer_nb_concurrents_historique(ao: dict) -> int | None:
-    """Estime le nombre de concurrents a partir des attributions passees."""
+    """Estime le nombre de concurrents a partir des attributions passees.
+
+    Methode : compte les titulaires distincts pour des AO du meme domaine,
+    puis applique un ratio candidats/titulaire base sur les stats marche public.
+    En formation professionnelle, le ratio moyen est ~3 candidats par gagnant.
+    """
     if not CONCURRENCE_FILE.exists():
         return None
 
@@ -431,20 +442,47 @@ def _estimer_nb_concurrents_historique(ao: dict) -> int | None:
     except (json.JSONDecodeError, OSError):
         return None
 
-    if len(attributions) < 5:
+    if len(attributions) < 3:
         return None
 
-    # Compter le nombre moyen de titulaires distincts sur des AO similaires
-    titulaires = set()
+    titre_ao = (ao.get("titre") or "").lower()
+
+    # Filtrer les attributions similaires par domaine (formation, IA, numerique)
+    mots_domaine = {"formation", "ia", "intelligence artificielle", "numerique", "digital", "competences"}
+    attributions_domaine = []
     for a in attributions:
-        t = a.get("titulaire", "").strip()
+        titre_attr = (a.get("objet") or a.get("titre") or "").lower()
+        if any(m in titre_attr for m in mots_domaine) or any(m in titre_ao for m in mots_domaine):
+            attributions_domaine.append(a)
+
+    # Si pas assez d'attributions du meme domaine, utiliser toutes
+    pool = attributions_domaine if len(attributions_domaine) >= 3 else attributions
+
+    # Compter les offres recues par attribution (si disponible)
+    nb_offres_list = []
+    for a in pool:
+        nb = a.get("nb_offres_recues") or a.get("nb_offres") or a.get("nb_candidats")
+        if nb and isinstance(nb, (int, float)) and nb > 0:
+            nb_offres_list.append(int(nb))
+
+    if nb_offres_list:
+        # Utiliser la mediane des nb_offres reelles
+        nb_offres_list.sort()
+        median_idx = len(nb_offres_list) // 2
+        return nb_offres_list[median_idx]
+
+    # Fallback : compter les titulaires distincts x ratio
+    titulaires = set()
+    for a in pool:
+        t = (a.get("titulaire") or "").strip()
         if t:
             titulaires.add(t.lower())
 
-    if titulaires:
-        # Heuristique : nb titulaires uniques ~ nb moyen de candidats / 3
-        # (1 gagnant pour ~3 candidats en moyenne)
-        return max(3, len(titulaires) // 3)
+    if len(titulaires) >= 3:
+        # Ratio marche formation : en moyenne ~2.5 candidats par titulaire unique
+        # (un titulaire gagne ~40% des AO auxquels il postule)
+        nb_estime = max(4, int(len(titulaires) * 2.5 / max(1, len(pool) / len(titulaires))))
+        return min(nb_estime, 25)  # Plafonner a 25
 
     return None
 

@@ -366,6 +366,21 @@ Le volume de chaque section doit etre proportionnel a son poids dans la notation
     except Exception as e:
         logger.warning(f"Memoire adaptative: erreur lecons: {e}")
 
+    # Feature : Intelligence concurrentielle (analyse concurrents + contre-arguments)
+    concurrence_bloc = ""
+    try:
+        from intelligence_concurrentielle import analyser_concurrents_ao, concurrents_par_defaut, enrichir_prompt_memoire
+        noms = concurrents_par_defaut()
+        analyse_conc = analyser_concurrents_ao(noms, ao=ao)
+        prompt_conc = analyse_conc.get("prompt_memoire", "")
+        if prompt_conc:
+            concurrence_bloc = f"""
+
+=== {prompt_conc} ==="""
+            logger.info(f"Intelligence concurrentielle: {len(analyse_conc.get('concurrents', []))} concurrents analyses")
+    except Exception as e:
+        logger.warning(f"Intelligence concurrentielle non disponible: {e}")
+
     # Contexte DECP (données marché réelles)
     decp_bloc = ""
     if decp and decp.get("nb_marches_trouves", 0) > 0:
@@ -389,7 +404,7 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
 ## ENTREPRISE CANDIDATE
 {_bloc_infos_entreprise()}
-{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{lecons_bloc}{decp_bloc}
+{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{lecons_bloc}{concurrence_bloc}{decp_bloc}
 
 ## INSTRUCTIONS
 1. Redige un memoire technique COMPLET en francais (minimum {_objectif_mots(criteres)} mots)
@@ -1945,6 +1960,13 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         result["avertissement"] = f"{len(erreurs)} erreur(s) lors de la generation"
         logger.warning(f"Dossier {dossier_nom}: {len(erreurs)} erreurs - {erreurs}")
 
+    # Historique de generation
+    try:
+        import time as _time
+        _log_generation(dossier_nom, ao, piece=None, nb_mots=nb_mots_total, duree_sec=0)
+    except Exception:
+        pass
+
     logger.info(f"Dossier complet genere: {dossier_nom} ({len(fichiers_generes)} fichiers, {nb_mots_total} mots)")
     return result
 
@@ -1953,6 +1975,148 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
 def generer_memoire_technique(ao: dict, type_presta: str = "Formation") -> dict:
     """Compatibilite arriere - genere maintenant un dossier complet."""
     return generer_dossier_complet(ao, type_presta)
+
+
+# --- Regeneration piece par piece ---
+
+# Mapping nom fichier -> (fonction_generatrice, args_supplementaires)
+PIECES_GENERABLES = {
+    "02_memoire_technique.md": "memoire",
+    "03_lettre_candidature.md": "lettre",
+    "04_bpu_dpgf.md": "bpu",
+    "05_planning_previsionnel.md": "planning",
+    "06_cv_formateurs.md": "cv",
+    "07_dc1_dc2.md": "dc",
+    "08_programme_formation.md": "programme",
+    "09_references_clients.md": "references",
+    "11_acte_engagement.md": "acte_engagement",
+    "12_dume.md": "dume",
+    "13_moyens_techniques.md": "moyens_techniques",
+}
+
+
+def regenerer_piece(dossier_nom: str, fichier: str, ao: dict = None, type_presta: str = "Formation") -> dict:
+    """Regenere une seule piece d'un dossier existant.
+
+    Args:
+        dossier_nom: Nom du dossier (ex: AO_BOAMP-26_12345_20260404)
+        fichier: Nom du fichier a regenerer (ex: 02_memoire_technique.md)
+        ao: Dictionnaire de l'AO (si None, charge depuis fiche_ao.json)
+        type_presta: Type de prestation
+
+    Returns:
+        dict avec success, fichier, nb_mots, erreur
+    """
+    import time as _time
+    t0 = _time.time()
+
+    piece_type = PIECES_GENERABLES.get(fichier)
+    if not piece_type:
+        return {"success": False, "erreur": f"Piece '{fichier}' non regenerable"}
+
+    dossier_path = DOSSIERS_DIR / dossier_nom
+    if not dossier_path.exists():
+        return {"success": False, "erreur": f"Dossier '{dossier_nom}' introuvable"}
+
+    # Charger l'AO depuis fiche_ao.json si pas fourni
+    if not ao:
+        fiche_path = dossier_path / "fiche_ao.json"
+        if fiche_path.exists():
+            ao = json.loads(fiche_path.read_text(encoding="utf-8"))
+        else:
+            return {"success": False, "erreur": "fiche_ao.json introuvable dans le dossier"}
+
+    try:
+        generateurs = {
+            "memoire": lambda: _generer_memoire(ao, type_presta),
+            "lettre": lambda: _generer_lettre(ao),
+            "bpu": lambda: _generer_bpu(ao),
+            "planning": lambda: _generer_planning(ao),
+            "cv": lambda: _generer_cv_formateurs(ao),
+            "dc": lambda: _generer_dc1_dc2(ao),
+            "programme": lambda: _generer_programme_formation(ao),
+            "references": lambda: _generer_references_clients(ao),
+            "acte_engagement": lambda: _generer_acte_engagement(ao),
+            "dume": lambda: _generer_dume(ao),
+            "moyens_techniques": lambda: _generer_moyens_techniques(ao),
+        }
+
+        contenu = generateurs[piece_type]()
+        _sauvegarder(dossier_path, fichier, contenu)
+        nb_mots = len(contenu.split())
+
+        # Re-convertir en DOCX si applicable
+        try:
+            from export_docx_render import markdown_to_docx, DOCX_DISPONIBLE
+            if DOCX_DISPONIBLE:
+                docx_name = fichier.replace(".md", ".docx")
+                titre_ao = ao.get("titre", "Appel d'offres")
+                titre_doc = fichier.replace(".md", "").split("_", 1)[-1].replace("_", " ").title()
+                markdown_to_docx(contenu, str(dossier_path / docx_name), titre_ao=titre_ao, titre_doc=titre_doc)
+                logger.info(f"DOCX re-genere: {docx_name}")
+        except Exception as e:
+            logger.warning(f"Erreur re-conversion DOCX: {e}")
+
+        duree = round(_time.time() - t0, 1)
+
+        # Logger dans l'historique
+        _log_generation(dossier_nom, ao, fichier, nb_mots, duree)
+
+        logger.info(f"Piece regeneree: {fichier} ({nb_mots} mots, {duree}s)")
+        return {"success": True, "fichier": fichier, "nb_mots": nb_mots, "duree_sec": duree}
+
+    except Exception as e:
+        logger.error(f"Erreur regeneration {fichier}: {e}")
+        return {"success": False, "erreur": str(e)}
+
+
+# --- Historique des generations ---
+
+GENERATIONS_LOG = DASHBOARD_DIR / "generations_log.json"
+
+
+def _log_generation(dossier_nom: str, ao: dict, piece: str = None, nb_mots: int = 0, duree_sec: float = 0):
+    """Enregistre une generation dans l'historique."""
+    log = []
+    if GENERATIONS_LOG.exists():
+        try:
+            log = json.loads(GENERATIONS_LOG.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            log = []
+
+    # Estimation cout (Sonnet 4 : $3/MTok input, $15/MTok output)
+    # ~1500 tokens input par appel, nb_mots * 1.5 tokens output
+    tokens_input_est = 1500
+    tokens_output_est = int(nb_mots * 1.5)
+    cout_est = round((tokens_input_est * 3 + tokens_output_est * 15) / 1_000_000, 4)
+
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "dossier": dossier_nom,
+        "ao_titre": ao.get("titre", "")[:100],
+        "ao_id": ao.get("id", ""),
+        "piece": piece or "dossier_complet",
+        "nb_mots": nb_mots,
+        "duree_sec": duree_sec,
+        "cout_estime_usd": cout_est,
+    }
+    log.append(entry)
+
+    # Garder les 500 dernieres entrees
+    if len(log) > 500:
+        log = log[-500:]
+
+    GENERATIONS_LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def charger_historique_generations() -> list:
+    """Charge l'historique des generations."""
+    if not GENERATIONS_LOG.exists():
+        return []
+    try:
+        return json.loads(GENERATIONS_LOG.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
 
 
 def _convertir_en_docx(dossier_path: Path, ao: dict, fichiers_generes: list):

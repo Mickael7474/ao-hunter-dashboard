@@ -45,7 +45,8 @@
             {% else %}
                 <span class="statut statut-nouveau">En attente</span>
             {% endif %}
-            <a href="{{ url_for('dossier_print_view', nom=d.nom) }}" target="_blank" class="btn btn-sm btn-outline" title="Exporter PDF">PDF</a>
+            <span class="quality-badge" data-dossier="{{ d.nom }}" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px; display:none;"></span>
+            <a href="{{ url_for('export_dossier_pdf', nom=d.nom) }}" class="btn btn-sm btn-outline" title="Exporter PDF">PDF</a>
             <a href="{{ url_for('export_dossier_zip', nom=d.nom) }}" class="btn btn-sm btn-outline" title="Telecharger ZIP">ZIP</a>
             <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-outline" title="Editer le dossier">Editer</a>
             <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-primary">Ouvrir</a>
@@ -58,4 +59,26 @@
         <p style="font-size:0.85rem; margin-top:0.5rem;">Les dossiers sont generes automatiquement pour les AO avec un score &gt; 70%</p>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Charger les scores qualite pour chaque dossier
+document.querySelectorAll('.quality-badge').forEach(badge => {
+    const nom = badge.dataset.dossier;
+    fetch('/api/dossiers/' + nom + '/qualite')
+        .then(r => r.json())
+        .then(data => {
+            if (data.score_global !== undefined) {
+                const s = data.score_global;
+                badge.textContent = s + '/100';
+                badge.style.display = '';
+                if (s >= 80) { badge.style.background = '#dcfce7'; badge.style.color = '#16a34a'; }
+                else if (s >= 60) { badge.style.background = '#fef3c7'; badge.style.color = '#d97706'; }
+                else { badge.style.background = '#fee2e2'; badge.style.color = '#dc2626'; }
+            }
+        })
+        .catch(() => {});
+});
+</script>
 {% endblock %}

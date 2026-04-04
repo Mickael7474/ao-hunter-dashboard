@@ -125,6 +125,35 @@
     </div>
 </div>
 
+<!-- Historique des generations -->
+<div class="card" id="histGenCard">
+    <div class="card-header">
+        <h2>Historique des generations</h2>
+    </div>
+    <div class="stats-grid" id="genStatsGrid">
+        <div class="stat-card">
+            <div class="stat-value" id="gen-count">-</div>
+            <div class="stat-label">Generations</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-value" id="gen-mots">-</div>
+            <div class="stat-label">Mots generes</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value" id="gen-cout">-</div>
+            <div class="stat-label">Cout total (USD)</div>
+        </div>
+    </div>
+    <div class="table-wrapper" style="margin-top:1rem; max-height:300px; overflow-y:auto;">
+        <table>
+            <thead>
+                <tr><th>Date</th><th>Dossier</th><th>Piece</th><th>Mots</th><th>Duree</th><th>Cout</th></tr>
+            </thead>
+            <tbody id="genHistBody"></tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Top Regions -->
 <div class="card" id="regionsCard" style="display:none;">
     <div class="card-header">
@@ -172,14 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
     Promise.all([
         fetch('/api/stats').then(r => r.json()),
         fetch('/api/ao').then(r => r.json()),
-        fetch('/api/dossiers').then(r => r.json())
-    ]).then(([stats, aoList, dossiers]) => {
+        fetch('/api/dossiers').then(r => r.json()),
+        fetch('/api/generations').then(r => r.json()).catch(() => ({historique:[], stats:{}}))
+    ]).then(([stats, aoList, dossiers, genData]) => {
         renderFunnel(stats, dossiers);
         renderKPI(stats);
         renderSources(stats.sources || {});
         renderAcheteurs(aoList);
         renderROI(stats, aoList, dossiers);
         renderRegions(stats.top_regions || {});
+        renderGenerations(genData);
     }).catch(err => console.error('Statistiques: erreur chargement', err));
 });
 
@@ -285,6 +316,37 @@ function renderRegions(regions) {
                 <div class="bar-fill region" style="width:${pct}%">${count}</div>
             </div>
         </div>`;
+    }).join('');
+}
+
+function renderGenerations(genData) {
+    const stats = genData.stats || {};
+    const hist = genData.historique || [];
+
+    document.getElementById('gen-count').textContent = stats.nb_generations || 0;
+    document.getElementById('gen-mots').textContent = stats.mots_total
+        ? new Intl.NumberFormat('fr-FR').format(stats.mots_total)
+        : '0';
+    document.getElementById('gen-cout').textContent = (stats.cout_total_usd || 0).toFixed(2) + ' $';
+
+    const tbody = document.getElementById('genHistBody');
+    if (hist.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-light);">Aucune generation enregistree</td></tr>';
+        return;
+    }
+    // Afficher les plus recents en premier
+    tbody.innerHTML = hist.slice().reverse().map(e => {
+        const date = e.timestamp ? new Date(e.timestamp).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+        const dossier = (e.dossier || '').substring(0, 30);
+        const piece = e.piece === 'dossier_complet' ? 'Complet' : (e.piece || '-').replace('.md','').split('_').slice(1).join(' ');
+        return `<tr>
+            <td style="font-size:0.8rem;">${date}</td>
+            <td style="font-size:0.8rem;" title="${e.dossier}">${dossier}</td>
+            <td style="font-size:0.8rem;">${piece}</td>
+            <td style="font-size:0.8rem;">${e.nb_mots || 0}</td>
+            <td style="font-size:0.8rem;">${e.duree_sec ? e.duree_sec + 's' : '-'}</td>
+            <td style="font-size:0.8rem;">${e.cout_estime_usd ? e.cout_estime_usd.toFixed(3) + '$' : '-'}</td>
+        </tr>`;
     }).join('');
 }
 </script>

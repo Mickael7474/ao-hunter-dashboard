@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Editer {{ nom_fichier }}{% endblock %}
+
+{% block head %}
+<style>
+    .editor-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        height: calc(100vh - 220px);
+        min-height: 500px;
+    }
+    .editor-pane, .preview-pane {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+    .pane-header {
+        background: var(--card-bg);
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .editor-textarea {
+        flex: 1;
+        width: 100%;
+        border: none;
+        padding: 1rem 1.25rem;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        resize: none;
+        background: var(--card-bg);
+        color: var(--text);
+        tab-size: 4;
+    }
+    .editor-textarea:focus {
+        outline: none;
+    }
+    .preview-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem 2rem;
+        background: var(--card-bg);
+        line-height: 1.7;
+        font-size: 0.95rem;
+    }
+    .preview-content h1 { font-size: 1.5rem; margin: 1.2rem 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--primary); }
+    .preview-content h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; padding-bottom: 0.2rem; border-bottom: 1px solid var(--border); }
+    .preview-content h3 { font-size: 1.05rem; margin: 0.8rem 0 0.4rem; }
+    .preview-content p { margin: 0.4rem 0; }
+    .preview-content ul, .preview-content ol { margin: 0.4rem 0; padding-left: 1.5rem; }
+    .preview-content li { margin: 0.2rem 0; }
+    .preview-content table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.9rem; }
+    .preview-content th { background: var(--primary); color: #fff; padding: 0.4rem 0.6rem; text-align: left; }
+    .preview-content td { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--border); }
+    .editor-toolbar {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .word-count {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin-left: auto;
+    }
+    @media (max-width: 900px) {
+        .editor-container { grid-template-columns: 1fr; height: auto; }
+        .editor-pane { min-height: 350px; }
+        .preview-pane { min-height: 300px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:0.3rem;">
+            <a href="{{ url_for('liste_dossiers') }}" style="color:var(--primary);">Dossiers</a> /
+            <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}" style="color:var(--primary);">{{ nom_dossier }}</a> /
+            Editer {{ nom_fichier }}
+        </p>
+        <h1>Editer {{ nom_fichier }}</h1>
+    </div>
+    <div class="editor-toolbar">
+        <button type="button" onclick="document.getElementById('editForm').submit();" class="btn btn-primary">Sauvegarder</button>
+        <a href="{{ url_for('servir_fichier', nom=nom_dossier, fichier=nom_fichier) }}" class="btn btn-outline">Annuler</a>
+        <span class="word-count" id="wordCount"></span>
+    </div>
+</div>
+
+<form id="editForm" method="POST">
+<div class="editor-container">
+    <div class="editor-pane">
+        <div class="pane-header">
+            <span>Markdown</span>
+            <span style="font-size:0.7rem; color:var(--text-light);">Ctrl+S pour sauvegarder</span>
+        </div>
+        <textarea name="contenu" class="editor-textarea" id="editorArea" spellcheck="false">{{ contenu }}</textarea>
+    </div>
+    <div class="preview-pane">
+        <div class="pane-header">
+            <span>Apercu</span>
+        </div>
+        <div class="preview-content" id="previewArea">
+            {{ contenu_html | safe }}
+        </div>
+    </div>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const editor = document.getElementById('editorArea');
+    const preview = document.getElementById('previewArea');
+    const wordCount = document.getElementById('wordCount');
+    const form = document.getElementById('editForm');
+    let debounceTimer = null;
+
+    function updateWordCount() {
+        const text = editor.value.trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        wordCount.textContent = words + ' mots';
+    }
+
+    function simpleMarkdownToHtml(md) {
+        let html = md
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^\- (.+)$/gm, '<li>$1</li>')
+            .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+            .replace(/^---$/gm, '<hr>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+        // Wrap loose <li> in <ul>
+        html = html.replace(/(<li>.*?<\/li>)+/gs, '<ul>$&</ul>');
+        return '<p>' + html + '</p>';
+    }
+
+    editor.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() {
+            preview.innerHTML = simpleMarkdownToHtml(editor.value);
+            updateWordCount();
+        }, 300);
+    });
+
+    // Ctrl+S to save
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+    });
+
+    // Tab support in textarea
+    editor.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 4;
+        }
+    });
+
+    updateWordCount();
+})();
+</script>
+{% endblock %}
