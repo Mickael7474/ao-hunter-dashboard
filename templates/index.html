@@ -74,6 +74,57 @@
     </div>
 </div>
 
+<!-- KPIs temps reel enrichis -->
+<div class="stats-grid" id="kpisLive" style="margin-bottom:1rem;">
+    <div class="stat-card" style="border-left:4px solid var(--success);">
+        <div class="stat-value" id="kpiGagnes">-</div>
+        <div class="stat-label">AO Gagnes</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--danger);">
+        <div class="stat-value" id="kpiPerdus">-</div>
+        <div class="stat-label">AO Perdus</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--primary);">
+        <div class="stat-value" id="kpiSoumis">-</div>
+        <div class="stat-label">En attente resultat</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--warning);">
+        <div class="stat-value" id="kpiWinRate">-</div>
+        <div class="stat-label">Taux de gain</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #8b5cf6;">
+        <div class="stat-value" id="kpiProchaineVeille">-</div>
+        <div class="stat-label">Prochaine veille</div>
+    </div>
+</div>
+
+<script>
+// Charger KPIs en temps reel
+fetch('/api/stats').then(r => r.json()).then(function(data) {
+    document.getElementById('kpiGagnes').textContent = data.par_statut?.gagne || 0;
+    document.getElementById('kpiPerdus').textContent = data.par_statut?.perdu || 0;
+    document.getElementById('kpiSoumis').textContent = data.par_statut?.soumis || 0;
+    var gagnes = data.par_statut?.gagne || 0;
+    var total_decides = gagnes + (data.par_statut?.perdu || 0);
+    document.getElementById('kpiWinRate').textContent = total_decides > 0 ? Math.round(gagnes / total_decides * 100) + '%' : '-';
+}).catch(function(){});
+fetch('/api/veille/status').then(r => r.json()).then(function(data) {
+    if (data.prochaine_veille) {
+        var d = new Date(data.prochaine_veille);
+        document.getElementById('kpiProchaineVeille').textContent = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    }
+}).catch(function(){});
+</script>
+
+<!-- Actions rapides -->
+<div class="card" style="padding:0.75rem; margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+    <span style="font-weight:600; font-size:0.85rem; margin-right:0.5rem;">Actions rapides :</span>
+    <button class="btn btn-sm btn-primary" onclick="fetch('/api/veille',{method:'POST'}).then(()=>showToast('Veille lancee','info'))">Lancer veille</button>
+    <button class="btn btn-sm btn-outline" onclick="fetch('/api/backup',{method:'POST'}).then(r=>r.json()).then(d=>showToast('Backup: '+d.saved+' fichier(s)','success'))">Sauvegarder donnees</button>
+    <a href="{{ url_for('page_concurrence') }}" class="btn btn-sm btn-outline" style="border-color:#8b5cf6; color:#8b5cf6;">Intelligence concurrentielle</a>
+    <a href="{{ url_for('liste_ao') }}?score_min=0.7&tri=score" class="btn btn-sm btn-outline" style="border-color:var(--success); color:var(--success);">AO score > 70%</a>
+</div>
+
 <!-- Graphs -->
 <div class="grid-2">
     <div class="card">

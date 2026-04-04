@@ -2770,7 +2770,7 @@ def editer_fichier(nom, fichier):
                 if fiche_ao.exists():
                     titre_ao = json.loads(fiche_ao.read_text(encoding="utf-8")).get("titre", "")
                 titre_doc = fichier.replace(".md", "").split("_", 1)[-1].replace("_", " ").title()
-                markdown_to_docx(contenu, str(docx_path), titre_ao=titre_ao, titre_doc=titre_doc)
+                markdown_to_docx(contenu, str(docx_path), titre_document=titre_ao, sous_titre=titre_doc)
         except Exception as e:
             logger.warning(f"Re-conversion DOCX apres edit: {e}")
 
@@ -3185,9 +3185,306 @@ def api_upload_dce(ao_id):
     })
 
 
+# ===================================================================
+# Feature 5+13 : Authentification multi-utilisateur (Flask-Login)
+# ===================================================================
+
+try:
+    from auth import init_auth, check_login, login_required as auth_required
+    from flask_login import current_user, login_user, logout_user
+    init_auth(app)
+    AUTH_ENABLED = True
+    logger.info("Authentification activee")
+except ImportError:
+    AUTH_ENABLED = False
+    logger.info("Auth non disponible (flask-login manquant) - mode ouvert")
+
+    # Dummy decorateur
+    def auth_required(f):
+        return f
+    class _FakeUser:
+        is_authenticated = True
+        nom = "Admin"
+        role = "admin"
+        is_admin = True
+        id = "admin"
+    current_user = _FakeUser()
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not AUTH_ENABLED:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        user = check_login(request.form.get("username", ""), request.form.get("password", ""))
+        if user:
+            login_user(user, remember=True)
+            return redirect(request.args.get("next") or url_for("index"))
+        from flask import flash
+        flash("Identifiant ou mot de passe incorrect.", "error")
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    if AUTH_ENABLED:
+        logout_user()
+    return redirect(url_for("login"))
+
+
+@app.context_processor
+def inject_auth():
+    if AUTH_ENABLED:
+        from flask_login import current_user as cu
+        return {"current_user": cu, "auth_enabled": True}
+    return {"current_user": current_user, "auth_enabled": False}
+
+
+# ===================================================================
+# Feature 3 : Self-ping anti cold-start (Render)
+# ===================================================================
+
+def _self_ping():
+    """Ping l'app elle-meme pour eviter le cold start Render."""
+    try:
+        import httpx
+        url = os.environ.get("RENDER_EXTERNAL_URL", "https://ao-hunter-dashboard.onrender.com")
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(f"{url}/api/ping")
+            logger.debug(f"Self-ping: {resp.status_code}")
+    except Exception:
+        pass
+
+
+@app.route("/api/ping")
+def api_ping():
+    return jsonify({"status": "ok", "time": datetime.now().isoformat()})
+
+
+# ===================================================================
+# Feature 6 : Pipeline auto idempotent
+# ===================================================================
+
+PIPELINE_PROCESSED_FILE = DASHBOARD_DIR / "pipeline_processed.json"
+
+def _charger_pipeline_processed():
+    if PIPELINE_PROCESSED_FILE.exists():
+        try:
+            return json.loads(PIPELINE_PROCESSED_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"processed_ids": [], "last_run": None}
+
+
+def _marquer_pipeline_processed(ao_id):
+    data = _charger_pipeline_processed()
+    if ao_id not in data["processed_ids"]:
+        data["processed_ids"].append(ao_id)
+    data["last_run"] = datetime.now().isoformat()
+    # Garder les 500 derniers
+    data["processed_ids"] = data["processed_ids"][-500:]
+    PIPELINE_PROCESSED_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.route("/api/pipeline/processed")
+def api_pipeline_processed():
+    return jsonify(_charger_pipeline_processed())
+
+
+# ===================================================================
+# Feature 11 : Webhook Slack/Teams alertes
+# ===================================================================
+
+WEBHOOK_URL = os.environ.get("AO_HUNTER_WEBHOOK_URL", "")  # Slack ou Teams
+
+
+def envoyer_webhook(message: str, urgence: str = "info"):
+    """Envoie une notification via webhook Slack/Teams."""
+    if not WEBHOOK_URL:
+        return
+    try:
+        import httpx
+        # Format Slack
+        payload = {
+            "text": f"{'🔴' if urgence == 'urgent' else '🔵'} *AO Hunter* - {message}"
+        }
+        with httpx.Client(timeout=10) as client:
+            client.post(WEBHOOK_URL, json=payload)
+    except Exception as e:
+        logger.warning(f"Webhook erreur: {e}")
+
+
+# ===================================================================
+# Feature 12 : Scoring IA (route API)
+# ===================================================================
+
+@app.route("/api/ao/<ao_id>/score-ia", methods=["POST"])
+def api_score_ia(ao_id):
+    """Score un AO via Claude IA."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+    try:
+        from scoring_ia import scorer_ao_ia
+        result = scorer_ao_ia(ao)
+        # Sauvegarder le score IA dans l'AO
+        ao["score_ia"] = result.get("score", 0)
+        ao["score_ia_justification"] = result.get("justification", "")
+        ao["score_ia_recommandation"] = result.get("recommandation", "")
+        sauvegarder_ao(appels)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===================================================================
+# Feature 1 : Backup donnees vers GitHub (route + scheduler)
+# ===================================================================
+
+@app.route("/api/backup", methods=["POST"])
+def api_backup():
+    """Lance un backup des donnees vers GitHub."""
+    try:
+        from db_backup import backup_to_git
+        result = backup_to_git()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===================================================================
+# Feature 4 : Download DCE HTTP direct
+# ===================================================================
+
+@app.route("/api/ao/<ao_id>/download-dce-http", methods=["POST"])
+def api_download_dce_http(ao_id):
+    """Telecharge le DCE via URL directe HTTP (sans Playwright)."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+
+    url = ao.get("url_profil_acheteur") or ao.get("url", "")
+    if not url:
+        return jsonify({"error": "Aucune URL disponible pour cet AO"}), 400
+
+    try:
+        from dce_auto import telecharger_dce_http
+        result = telecharger_dce_http(ao_id, url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===================================================================
+# Feature 14 : Dashboard concurrent enrichi
+# ===================================================================
+
+@app.route("/concurrence")
+def page_concurrence():
+    """Dashboard concurrent avec graphiques."""
+    conc_file = DASHBOARD_DIR / "concurrence.json"
+    concurrents = []
+    if conc_file.exists():
+        try:
+            concurrents = json.loads(conc_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # Agreger par concurrent
+    from collections import Counter, defaultdict
+    par_concurrent = defaultdict(lambda: {"nb": 0, "secteurs": Counter(), "montants": [], "mois": Counter()})
+    for c in concurrents:
+        nom = c.get("titulaire", "Inconnu")
+        par_concurrent[nom]["nb"] += 1
+        sect = c.get("secteur") or c.get("type_marche") or "Autre"
+        par_concurrent[nom]["secteurs"][sect] += 1
+        if c.get("montant"):
+            try:
+                par_concurrent[nom]["montants"].append(float(c["montant"]))
+            except (ValueError, TypeError):
+                pass
+        date_str = c.get("date_attribution") or c.get("date_publication") or ""
+        if len(date_str) >= 7:
+            par_concurrent[nom]["mois"][date_str[:7]] += 1
+
+    # Top 20
+    top = sorted(par_concurrent.items(), key=lambda x: x[1]["nb"], reverse=True)[:20]
+    top_data = []
+    for nom, data in top:
+        top_data.append({
+            "nom": nom,
+            "nb_marches": data["nb"],
+            "montant_moyen": round(sum(data["montants"]) / len(data["montants"])) if data["montants"] else 0,
+            "montant_total": round(sum(data["montants"])) if data["montants"] else 0,
+            "top_secteurs": data["secteurs"].most_common(3),
+            "tendance": dict(sorted(data["mois"].items())[-12:]),
+        })
+
+    # Stats globales
+    total_marches = len(concurrents)
+    nb_concurrents_uniques = len(par_concurrent)
+    montant_total = sum(float(c.get("montant", 0)) for c in concurrents if c.get("montant"))
+
+    return render_template("concurrence_dashboard.html",
+                           top_concurrents=top_data,
+                           total_marches=total_marches,
+                           nb_concurrents=nb_concurrents_uniques,
+                           montant_total=montant_total,
+                           concurrents_json=json.dumps(top_data, ensure_ascii=False))
+
+
+# ===================================================================
+# Scheduler : ajouter self-ping + backup periodique
+# ===================================================================
+
+def init_scheduler_enhanced():
+    """Version amelioree du scheduler avec self-ping + backup."""
+    global _scheduler
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.interval import IntervalTrigger
+        from apscheduler.triggers.cron import CronTrigger
+
+        if _scheduler is None:
+            _scheduler = BackgroundScheduler(daemon=True)
+
+        # Self-ping toutes les 13 minutes (anti cold-start)
+        _scheduler.add_job(
+            func=_self_ping,
+            trigger=IntervalTrigger(minutes=13),
+            id="self_ping",
+            name="Self-ping anti cold-start",
+            replace_existing=True,
+        )
+
+        # Backup donnees toutes les 6h
+        _scheduler.add_job(
+            func=lambda: __import__("db_backup").backup_to_git() if os.environ.get("RENDER") else None,
+            trigger=IntervalTrigger(hours=6),
+            id="auto_backup",
+            name="Backup donnees GitHub",
+            replace_existing=True,
+        )
+
+        if not _scheduler.running:
+            _scheduler.start()
+        logger.info("Scheduler enhanced: self-ping + backup ajoutes")
+    except Exception as e:
+        logger.warning(f"Scheduler enhanced non disponible: {e}")
+
+
 # Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)
 if os.environ.get("RENDER"):
     init_scheduler()
+    init_scheduler_enhanced()
+else:
+    # En local, juste le self-ping pour le dev
+    try:
+        init_scheduler_enhanced()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Intelligence Concurrentielle{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Intelligence concurrentielle</h1>
+    <p>Analyse des attributions de marches publics dans votre secteur</p>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Marches suivis</div>
+        <div class="stat-value">{{ total_marches }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Concurrents identifies</div>
+        <div class="stat-value">{{ nb_concurrents }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Volume total</div>
+        <div class="stat-value">{{ "{:,.0f}".format(montant_total) }} EUR</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Top concurrent</div>
+        <div class="stat-value" style="font-size:1rem;">{{ top_concurrents[0].nom if top_concurrents else '-' }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+    <!-- Graphique barres : top concurrents -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0; font-size:0.95rem;">Top 10 concurrents (nb marches)</h3>
+        <div class="chart-container">
+            <canvas id="chartConcurrents"></canvas>
+        </div>
+    </div>
+
+    <!-- Graphique camembert : repartition montants -->
+    <div class="card" style="padding:1rem;">
+        <h3 style="margin-top:0; font-size:0.95rem;">Repartition des montants</h3>
+        <div class="chart-container">
+            <canvas id="chartMontants"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau detaille -->
+<div class="card" style="padding:1rem;">
+    <h3 style="margin-top:0; font-size:0.95rem;">Detail par concurrent</h3>
+    <div class="table-wrapper">
+        <table style="width:100%; font-size:0.8rem;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Concurrent</th>
+                    <th>Nb marches</th>
+                    <th>Montant moyen</th>
+                    <th>Montant total</th>
+                    <th>Secteurs</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in top_concurrents %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td style="font-weight:600;">{{ c.nom }}</td>
+                    <td style="text-align:center;">{{ c.nb_marches }}</td>
+                    <td>{{ "{:,.0f}".format(c.montant_moyen) }} EUR</td>
+                    <td>{{ "{:,.0f}".format(c.montant_total) }} EUR</td>
+                    <td>
+                        {% for secteur, count in c.top_secteurs %}
+                        <span class="badge" style="font-size:0.65rem;">{{ secteur }} ({{ count }})</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Graphique tendance temporelle -->
+<div class="card" style="padding:1rem;">
+    <h3 style="margin-top:0; font-size:0.95rem;">Tendance mensuelle des attributions (top 5)</h3>
+    <div class="chart-container" style="height:350px;">
+        <canvas id="chartTendance"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var concData = {{ concurrents_json | safe }};
+var colors = ['#2563eb','#dc2626','#16a34a','#f59e0b','#8b5cf6','#ec4899','#0891b2','#84cc16','#f97316','#6366f1'];
+
+// Chart 1: Bar chart top concurrents
+var top10 = concData.slice(0, 10);
+new Chart(document.getElementById('chartConcurrents'), {
+    type: 'bar',
+    data: {
+        labels: top10.map(c => c.nom.substring(0, 25)),
+        datasets: [{
+            label: 'Nb marches',
+            data: top10.map(c => c.nb_marches),
+            backgroundColor: colors.slice(0, top10.length),
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// Chart 2: Doughnut montants
+var top7 = concData.filter(c => c.montant_total > 0).slice(0, 7);
+if (top7.length > 0) {
+    new Chart(document.getElementById('chartMontants'), {
+        type: 'doughnut',
+        data: {
+            labels: top7.map(c => c.nom.substring(0, 25)),
+            datasets: [{
+                data: top7.map(c => c.montant_total),
+                backgroundColor: colors.slice(0, top7.length),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } }
+        }
+    });
+}
+
+// Chart 3: Line chart tendance temporelle top 5
+var top5 = concData.slice(0, 5);
+var allMonths = new Set();
+top5.forEach(c => Object.keys(c.tendance || {}).forEach(m => allMonths.add(m)));
+var months = Array.from(allMonths).sort();
+if (months.length > 0) {
+    new Chart(document.getElementById('chartTendance'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: top5.map((c, i) => ({
+                label: c.nom.substring(0, 20),
+                data: months.map(m => (c.tendance || {})[m] || 0),
+                borderColor: colors[i],
+                backgroundColor: colors[i] + '20',
+                fill: true,
+                tension: 0.3
+            }))
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+</script>
+{% endblock %}

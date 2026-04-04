@@ -25,9 +25,17 @@
             <a href="{{ url_for('page_statistiques') }}" class="{% if request.endpoint == 'page_statistiques' %}active{% endif %}">Statistiques</a>
             <a href="{{ url_for('objectifs_view') }}" class="{% if request.endpoint == 'objectifs_view' %}active{% endif %}">Objectifs</a>
             <a href="{{ url_for('crm_view') }}" class="{% if request.endpoint == 'crm_view' %}active{% endif %}">CRM</a>
+            <a href="{{ url_for('page_concurrence') }}" class="{% if request.endpoint == 'page_concurrence' %}active{% endif %}">Concurrence</a>
         </div>
         <div class="nav-actions">
-            <button id="darkModeToggle" class="btn-icon" title="Mode sombre">
+            {% if auth_enabled and current_user.is_authenticated %}
+            <div class="nav-user">
+                <span class="user-badge">{{ current_user.role }}</span>
+                <span>{{ current_user.nom }}</span>
+                <a href="{{ url_for('logout') }}">[Deconnexion]</a>
+            </div>
+            {% endif %}
+            <button id="darkModeToggle" class="btn-icon" title="Mode sombre" onclick="toggleDarkMode()">
                 <span class="icon-sun">&#9728;</span>
                 <span class="icon-moon" style="display:none;">&#9790;</span>
             </button>
@@ -110,6 +118,34 @@
             toast.className = 'notif-toast notif-' + (type || 'info');
             toast.style.display = 'block';
             setTimeout(function() { toast.style.display = 'none'; }, 5000);
+        }
+    })();
+
+    // --- Dark mode toggle ---
+    function toggleDarkMode() {
+        var html = document.documentElement;
+        var current = html.getAttribute('data-theme');
+        var next = (current === 'dark') ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('ao-hunter-theme', next);
+        var sun = document.querySelector('.icon-sun');
+        var moon = document.querySelector('.icon-moon');
+        if (sun && moon) {
+            sun.style.display = (next === 'dark') ? 'none' : '';
+            moon.style.display = (next === 'dark') ? '' : 'none';
+        }
+    }
+    // Restore saved theme
+    (function() {
+        var saved = localStorage.getItem('ao-hunter-theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+            var sun = document.querySelector('.icon-sun');
+            var moon = document.querySelector('.icon-moon');
+            if (sun && moon && saved === 'dark') {
+                sun.style.display = 'none';
+                moon.style.display = '';
+            }
         }
     })();
     </script>

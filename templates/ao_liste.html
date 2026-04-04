@@ -48,10 +48,27 @@
             <option value="score" {% if filtre_tri == 'score' %}selected{% endif %}>Score</option>
             <option value="date" {% if filtre_tri == 'date' %}selected{% endif %}>Date limite</option>
             <option value="titre" {% if filtre_tri == 'titre' %}selected{% endif %}>Titre</option>
+            <option value="acheteur" {% if filtre_tri == 'acheteur' %}selected{% endif %}>Acheteur</option>
+            <option value="budget" {% if filtre_tri == 'budget' %}selected{% endif %}>Budget</option>
         </select>
+    </div>
+    <div>
+        <label>Deadline</label><br>
+        <select name="deadline">
+            <option value="">Toutes</option>
+            <option value="7" {% if request.args.get('deadline') == '7' %}selected{% endif %}>< 7 jours</option>
+            <option value="14" {% if request.args.get('deadline') == '14' %}selected{% endif %}>< 14 jours</option>
+            <option value="30" {% if request.args.get('deadline') == '30' %}selected{% endif %}>< 30 jours</option>
+            <option value="expired" {% if request.args.get('deadline') == 'expired' %}selected{% endif %}>Expirees</option>
+        </select>
+    </div>
+    <div>
+        <label>Region</label><br>
+        <input type="text" name="region" value="{{ request.args.get('region', '') }}" placeholder="75, IDF..." style="width:80px;">
     </div>
     <div style="align-self: flex-end;">
         <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+        <a href="{{ url_for('liste_ao') }}" class="btn btn-sm btn-outline" style="margin-left:4px;">Reset</a>
     </div>
 </form>
 
