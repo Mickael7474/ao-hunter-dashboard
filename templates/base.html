@@ -9,9 +9,9 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="nav-brand">
+        <a href="{{ url_for('index') }}" class="nav-brand" style="text-decoration:none;color:inherit;">
             <span class="logo">AO</span> Hunter
-        </div>
+        </a>
         <div class="nav-links">
             <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('liste_ao') }}" class="{% if request.endpoint == 'liste_ao' %}active{% endif %}">Appels d'offres</a>

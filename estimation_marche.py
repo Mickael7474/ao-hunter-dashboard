@@ -32,7 +32,10 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from decp_data import rechercher_marches_similaires
+try:
+    from decp_data import rechercher_marches_similaires
+except Exception:
+    rechercher_marches_similaires = None
 
 logger = logging.getLogger("ao_hunter.estimation_marche")
 
@@ -615,39 +618,60 @@ def estimer_marche(ao: dict) -> dict:
         dict avec: budget, concurrence, accessibilite (chacun est un dict)
     """
     # --- Tentative donnees reelles DECP ---
-    try:
-        decp = rechercher_marches_similaires(ao)
-        if decp and decp.get("nb_marches_trouves", 0) >= 5:
-            return {
-                "budget": {
-                    "montant": decp["budget"]["median"],
-                    "fourchette": decp["budget"]["fourchette_recommandee"],
-                    "confiance": decp["budget"]["confiance"],
-                    "source": "DECP - {} marches similaires".format(decp["nb_marches_trouves"]),
-                    "details": decp["budget"],
-                },
-                "concurrence": {
-                    "niveau": decp["concurrence"]["niveau"],
-                    "concurrence_score": decp["concurrence"]["score"],
-                    "nb_offres_median": decp["concurrence"]["nb_offres_median"],
-                    "description": decp["concurrence"]["description"],
-                    "titulaires_frequents": decp.get("titulaires_frequents", [])[:5],
-                    "source": "DECP",
-                },
-                "accessibilite": _calcul_accessibilite(decp),
-                "recommandation_prix": decp.get("recommandation_prix", {}),
-                "source": "DECP data.gouv.fr ({} marches)".format(decp["nb_marches_trouves"]),
-            }
-    except Exception as e:
-        logger.warning(f"DECP indisponible, fallback heuristique: {e}")
+    if rechercher_marches_similaires is not None:
+        try:
+            decp = rechercher_marches_similaires(ao)
+            if decp and decp.get("nb_marches_trouves", 0) >= 5:
+                acc = _calcul_accessibilite(decp)
+                conc_data = decp.get("concurrence", {})
+                budget_data = decp.get("budget", {})
+                return {
+                    "budget": {
+                        "montant": budget_data.get("median", 20_000),
+                        "fourchette": budget_data.get("fourchette_recommandee", [10_000, 40_000]),
+                        "confiance": budget_data.get("confiance", "moyen"),
+                        "source": "DECP - {} marches similaires".format(decp["nb_marches_trouves"]),
+                        "details": budget_data,
+                    },
+                    "concurrence": {
+                        "niveau": conc_data.get("niveau", "Moderee"),
+                        "score": conc_data.get("score", 50),
+                        "nb_candidats_estime": conc_data.get("nb_offres_median", "5-10"),
+                        "facteurs": [conc_data.get("description", "")] if conc_data.get("description") else [],
+                        "titulaires_frequents": decp.get("titulaires_frequents", [])[:5],
+                        "source": "DECP",
+                    },
+                    "accessibilite": acc,
+                    "recommandation_prix": decp.get("recommandation_prix", {}),
+                    "source": "DECP data.gouv.fr ({} marches)".format(decp["nb_marches_trouves"]),
+                }
+        except Exception as e:
+            logger.warning(f"DECP indisponible, fallback heuristique: {e}")
 
     # --- Fallback : estimation heuristique ---
     budget = estimer_budget(ao)
     concurrence = estimer_concurrence(ao)
     accessibilite = calculer_accessibilite(budget, concurrence, ao)
 
+    # Normaliser la structure pour le template
+    budget_normalise = {
+        "montant": budget.get("montant", 20_000),
+        "fourchette": [budget.get("fourchette_basse", 5_000), budget.get("fourchette_haute", 50_000)],
+        "confiance": budget.get("confiance", "faible"),
+        "methode": budget.get("methode", ""),
+        "details": budget.get("details", []),
+    }
+
+    concurrence_normalise = {
+        "niveau": concurrence.get("niveau", "Moderee"),
+        "score": concurrence.get("score", concurrence.get("concurrence_score", 50)),
+        "nb_candidats_estime": concurrence.get("nb_concurrents_estime", "5-10"),
+        "facteurs": concurrence.get("facteurs_hausse", []) + concurrence.get("avantages_almera", []),
+        "source": "heuristique",
+    }
+
     return {
-        "budget": budget,
-        "concurrence": concurrence,
+        "budget": budget_normalise,
+        "concurrence": concurrence_normalise,
         "accessibilite": accessibilite,
     }

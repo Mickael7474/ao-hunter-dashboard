@@ -1315,22 +1315,187 @@ def review_dossier(nom):
 
 @app.route("/dossiers/<path:nom>/fichier/<path:fichier>")
 def servir_fichier(nom, fichier):
-    """Sert un fichier du dossier pour le preview."""
+    """Sert un fichier du dossier - rendu HTML pour .md/.json, download sinon."""
     from flask import send_file
     # Chercher dans les deux emplacements possibles
+    fichier_path = None
     for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
         dossier_path = base / nom
         if not dossier_path.exists():
             continue
-        fichier_path = dossier_path / fichier
-        if not fichier_path.exists() or not fichier_path.is_file():
+        candidate = dossier_path / fichier
+        if not candidate.exists() or not candidate.is_file():
             continue
         # Securite : verifier que le chemin reste dans le base dir
         try:
-            fichier_path.resolve().relative_to(base.resolve())
+            candidate.resolve().relative_to(base.resolve())
         except ValueError:
             return "Acces refuse", 403
-        return send_file(str(fichier_path), as_attachment=False)
+        fichier_path = candidate
+        break
+
+    if not fichier_path:
+        return "Fichier non trouve", 404
+
+    ext = fichier_path.suffix.lower()
+
+    # Pour .md et .json : rendu dans un template HTML
+    if ext in (".md", ".json"):
+        contenu_brut = fichier_path.read_text(encoding="utf-8", errors="replace")
+        if ext == ".md":
+            contenu_html = _convertir_md_en_html(contenu_brut)
+            mode = "markdown"
+        else:
+            try:
+                data = json.loads(contenu_brut)
+                contenu_html = json.dumps(data, indent=2, ensure_ascii=False)
+            except Exception:
+                contenu_html = contenu_brut
+            mode = "json"
+        return render_template(
+            "fichier_view.html",
+            nom_dossier=nom,
+            nom_fichier=fichier,
+            contenu_html=contenu_html,
+            mode=mode,
+        )
+
+    # Pour les autres formats : servir directement (download pour docx/xlsx)
+    as_attachment = ext in (".docx", ".doc", ".xlsx", ".xls")
+    return send_file(str(fichier_path), as_attachment=as_attachment)
+
+
+def _convertir_md_en_html(texte: str) -> str:
+    """Conversion basique Markdown -> HTML (regex, sans librairie externe)."""
+    import re
+
+    # Proteger les blocs de code d'abord
+    code_blocks = []
+    def _save_code_block(m):
+        code_blocks.append(m.group(1))
+        return f"__CODE_BLOCK_{len(code_blocks) - 1}__"
+
+    texte = re.sub(r"```(?:\w*)\n(.*?)```", _save_code_block, texte, flags=re.DOTALL)
+
+    # Tableaux markdown
+    lines = texte.split("\n")
+    result_lines = []
+    in_table = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("|") and stripped.endswith("|"):
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            # Ligne separateur (---|---|---) -> skip
+            if all(set(c.strip()) <= {"-", ":"} for c in cells):
+                continue
+            if not in_table:
+                result_lines.append("<table class='md-table'>")
+                result_lines.append("<thead><tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr></thead><tbody>")
+                in_table = True
+            else:
+                result_lines.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+        else:
+            if in_table:
+                result_lines.append("</tbody></table>")
+                in_table = False
+            result_lines.append(line)
+    if in_table:
+        result_lines.append("</tbody></table>")
+    texte = "\n".join(result_lines)
+
+    # Headings (ordre decroissant)
+    texte = re.sub(r"^######\s+(.+)$", r"<h6>\1</h6>", texte, flags=re.MULTILINE)
+    texte = re.sub(r"^#####\s+(.+)$", r"<h5>\1</h5>", texte, flags=re.MULTILINE)
+    texte = re.sub(r"^####\s+(.+)$", r"<h4>\1</h4>", texte, flags=re.MULTILINE)
+    texte = re.sub(r"^###\s+(.+)$", r"<h3>\1</h3>", texte, flags=re.MULTILINE)
+    texte = re.sub(r"^##\s+(.+)$", r"<h2>\1</h2>", texte, flags=re.MULTILINE)
+    texte = re.sub(r"^#\s+(.+)$", r"<h1>\1</h1>", texte, flags=re.MULTILINE)
+
+    # Horizontal rules
+    texte = re.sub(r"^---+$", "<hr>", texte, flags=re.MULTILINE)
+
+    # Bold et italic
+    texte = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texte)
+    texte = re.sub(r"\*(.+?)\*", r"<em>\1</em>", texte)
+
+    # Listes a puces
+    lines = texte.split("\n")
+    result_lines = []
+    in_list = False
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r"^[-*]\s+", stripped):
+            if not in_list:
+                result_lines.append("<ul>")
+                in_list = True
+            item = re.sub(r"^[-*]\s+", "", stripped)
+            result_lines.append(f"<li>{item}</li>")
+        else:
+            if in_list:
+                result_lines.append("</ul>")
+                in_list = False
+            result_lines.append(line)
+    if in_list:
+        result_lines.append("</ul>")
+    texte = "\n".join(result_lines)
+
+    # Listes numerotees
+    lines = texte.split("\n")
+    result_lines = []
+    in_ol = False
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r"^\d+\.\s+", stripped):
+            if not in_ol:
+                result_lines.append("<ol>")
+                in_ol = True
+            item = re.sub(r"^\d+\.\s+", "", stripped)
+            result_lines.append(f"<li>{item}</li>")
+        else:
+            if in_ol:
+                result_lines.append("</ol>")
+                in_ol = False
+            result_lines.append(line)
+    if in_ol:
+        result_lines.append("</ol>")
+    texte = "\n".join(result_lines)
+
+    # Restaurer les blocs de code
+    for i, block in enumerate(code_blocks):
+        escaped = block.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        texte = texte.replace(f"__CODE_BLOCK_{i}__", f"<pre><code>{escaped}</code></pre>")
+
+    # Paragraphes : lignes non-vides non-HTML -> <p>
+    lines = texte.split("\n")
+    result_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("<"):
+            result_lines.append(f"<p>{stripped}</p>")
+        elif stripped == "":
+            result_lines.append("")
+        else:
+            result_lines.append(line)
+
+    return "\n".join(result_lines)
+
+
+@app.route("/dossiers/<path:nom>/fichier/<path:fichier>/raw")
+def servir_fichier_raw(nom, fichier):
+    """Telecharge le fichier brut (sans rendu HTML)."""
+    from flask import send_file
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        dossier_path = base / nom
+        if not dossier_path.exists():
+            continue
+        candidate = dossier_path / fichier
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        try:
+            candidate.resolve().relative_to(base.resolve())
+        except ValueError:
+            return "Acces refuse", 403
+        return send_file(str(candidate), as_attachment=True)
     return "Fichier non trouve", 404
 
 
@@ -1916,7 +2081,7 @@ def crm_view():
 def crm_fiche_view(nom):
     """Fiche detaillee d'un acheteur."""
     from crm_acheteurs import get_fiche
-    fiche = get_fiche(nom)
+    fiche = get_fiche(nom, is_cle=True)
     if not fiche:
         return redirect(url_for("crm_view"))
     return render_template("crm_fiche.html", fiche=fiche, cle=nom)

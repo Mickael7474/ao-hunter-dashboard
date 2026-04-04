@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ nom_fichier }} - {{ nom_dossier }}{% endblock %}
+
+{% block head %}
+<style>
+    .fichier-viewer {
+        max-width: 960px;
+        margin: 0 auto;
+    }
+    .fichier-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .fichier-header h1 {
+        font-size: 1.3rem;
+        margin: 0;
+    }
+    .fichier-header .breadcrumb {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        margin: 0;
+    }
+    .fichier-header .breadcrumb a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+    .fichier-header .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    .fichier-actions-bar {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    /* Contenu markdown */
+    .md-content {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem 2.5rem;
+        line-height: 1.7;
+        font-size: 0.95rem;
+        color: var(--text);
+    }
+    .md-content h1 { font-size: 1.6rem; margin: 1.5rem 0 0.75rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--primary); color: var(--text); }
+    .md-content h2 { font-size: 1.3rem; margin: 1.3rem 0 0.6rem; padding-bottom: 0.2rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    .md-content h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; color: var(--text); }
+    .md-content h4, .md-content h5, .md-content h6 { font-size: 1rem; margin: 0.8rem 0 0.4rem; color: var(--text-light); }
+    .md-content p { margin: 0.5rem 0; }
+    .md-content ul, .md-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .md-content li { margin: 0.25rem 0; }
+    .md-content strong { color: var(--text); }
+    .md-content hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .md-content pre {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1rem 1.25rem;
+        border-radius: var(--radius);
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin: 1rem 0;
+    }
+    .md-content code {
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .md-content .md-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+    }
+    .md-content .md-table th {
+        background: var(--primary);
+        color: #fff;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    .md-content .md-table td {
+        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .md-content .md-table tr:nth-child(even) td {
+        background: rgba(0,0,0,0.02);
+    }
+
+    /* Contenu JSON */
+    .json-content {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        overflow-x: auto;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        white-space: pre;
+        border: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+        .md-content { padding: 1rem 1.25rem; }
+        .fichier-header { flex-direction: column; align-items: flex-start; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fichier-viewer">
+    <div class="fichier-header">
+        <div>
+            <p class="breadcrumb">
+                <a href="{{ url_for('liste_dossiers') }}">Dossiers</a> /
+                <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}">{{ nom_dossier }}</a> /
+                {{ nom_fichier }}
+            </p>
+            <h1>{{ nom_fichier }}</h1>
+        </div>
+        <div class="fichier-actions-bar">
+            <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}" class="btn btn-sm btn-outline">&larr; Retour au dossier</a>
+            <a href="{{ url_for('servir_fichier_raw', nom=nom_dossier, fichier=nom_fichier) }}" download class="btn btn-sm btn-primary">Telecharger</a>
+        </div>
+    </div>
+
+    {% if mode == 'markdown' %}
+    <div class="md-content">
+        {{ contenu_html | safe }}
+    </div>
+    {% elif mode == 'json' %}
+    <div class="json-content">{{ contenu_html }}</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -177,10 +177,15 @@ def _calculer_score_relation(fiche: dict) -> int:
     return min(score, 100)
 
 
-def get_fiche(nom_acheteur: str) -> dict:
-    """Retourne la fiche complete d'un acheteur."""
+def get_fiche(nom_acheteur: str, is_cle: bool = False) -> dict:
+    """Retourne la fiche complete d'un acheteur.
+
+    Args:
+        nom_acheteur: Nom ou cle normalisee de l'acheteur.
+        is_cle: Si True, nom_acheteur est deja une cle normalisee (pas de re-normalisation).
+    """
     crm = _charger_crm()
-    cle = _normaliser_nom(nom_acheteur)
+    cle = nom_acheteur if is_cle else _normaliser_nom(nom_acheteur)
 
     # Recherche exacte
     if cle in crm:

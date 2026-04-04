@@ -184,6 +184,7 @@ Toutes les infos Almera sont dans `config.yaml` :
 
 | Date | Fichier concerné | Description | Statut |
 |---|---|---|---|
-| - | - | Aucun bug documenté pour l'instant | - |
+| 2026-04-04 | crm_acheteurs.py, app.py | CRM fiches acheteurs ne s'ouvraient pas au clic : double normalisation de la cle dans get_fiche(). Ajout param is_cle=True. | Resolu |
+| 2026-04-04 | estimation_marche.py | Internal Server Error sur detail AO : import top-level de decp_data crashait si module indisponible + structure retournee (fourchette_basse/haute, nb_concurrents_estime, facteurs_hausse) ne matchait pas le template (fourchette[], nb_candidats_estime, facteurs). Normalise les deux chemins DECP et heuristique. | Resolu |
 
 > Cette section est maintenue par Claude au fil des sessions. Ajouter une ligne à chaque bug résolu ou comportement inattendu découvert en prod ou en développement.

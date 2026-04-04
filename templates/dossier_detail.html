@@ -49,7 +49,7 @@
                 <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" target="_blank" class="btn btn-sm btn-outline">
                     Ouvrir
                 </a>
-                <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=f) }}" download class="btn btn-sm btn-outline">
+                <a href="{{ url_for('servir_fichier_raw', nom=dossier.nom, fichier=f) }}" download class="btn btn-sm btn-outline">
                     Telecharger
                 </a>
             </div>

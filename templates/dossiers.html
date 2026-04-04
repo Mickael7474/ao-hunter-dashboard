@@ -19,7 +19,12 @@
             <p>{{ d.nb_fichiers }} fichier(s) - Cree le {{ d.date_creation }}</p>
             <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
                 {% for f in d.fichiers | sort %}
-                <span class="badge" style="background:#f1f5f9; color:#334155; padding:3px 8px; font-size:0.7rem;">{{ f }}</span>
+                {% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
+                <a href="{{ url_for('servir_fichier', nom=d.nom, fichier=f) }}"
+                   {% if ext in ['md', 'json'] %}target="_blank"{% endif %}
+                   {% if ext in ['docx', 'doc', 'xlsx', 'xls'] %}download{% endif %}
+                   class="badge" style="background:#f1f5f9; color:#334155; padding:3px 8px; font-size:0.7rem; text-decoration:none; cursor:pointer; transition:background 0.15s;"
+                   onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#f1f5f9'">{{ f }}</a>
                 {% endfor %}
             </div>
         </div>
