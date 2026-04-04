@@ -604,7 +604,7 @@ def _calcul_accessibilite(decp: dict) -> dict:
 # FONCTION PRINCIPALE
 # ============================================================
 
-def estimer_marche(ao: dict) -> dict:
+def estimer_marche(ao: dict, light: bool = False) -> dict:
     """Estimation complete d'un AO : budget, concurrence, accessibilite.
 
     Tente d'abord d'utiliser les donnees reelles DECP (data.gouv.fr).
@@ -613,12 +613,14 @@ def estimer_marche(ao: dict) -> dict:
 
     Args:
         ao: Dictionnaire de l'appel d'offres
+        light: Si True, utilise uniquement l'heuristique (pas d'appel API DECP).
+               A utiliser pour les vues liste/kanban qui appellent en boucle.
 
     Returns:
         dict avec: budget, concurrence, accessibilite (chacun est un dict)
     """
-    # --- Tentative donnees reelles DECP ---
-    if rechercher_marches_similaires is not None:
+    # --- Tentative donnees reelles DECP (seulement en mode complet) ---
+    if not light and rechercher_marches_similaires is not None:
         try:
             decp = rechercher_marches_similaires(ao)
             if decp and decp.get("nb_marches_trouves", 0) >= 5:

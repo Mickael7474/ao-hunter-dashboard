@@ -40,8 +40,8 @@ DECP_API_URL = (
     "22847056-61df-452d-837d-8b8ceadbfc52/data/"
 )
 TIMEOUT = 15  # secondes
-PAGE_SIZE = 100  # max par requete
-MAX_PAGES = 10  # 1000 resultats max par recherche
+PAGE_SIZE = 50  # max par requete (reduit pour economiser la memoire)
+MAX_PAGES = 3  # 150 resultats max par recherche (suffisant pour les stats)
 
 DASHBOARD_DIR = Path(__file__).parent
 CACHE_FILE = DASHBOARD_DIR / "decp_cache.json"

@@ -147,7 +147,7 @@ def generer_rapport_hebdo() -> dict:
         if estimer_marche is None:
             return None, None, None
         try:
-            est = estimer_marche(ao)
+            est = estimer_marche(ao, light=True)
             budget_info = est.get("budget", {})
             concurrence_info = est.get("concurrence", {})
             accessibilite_info = est.get("accessibilite", {})

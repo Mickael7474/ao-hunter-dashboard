@@ -499,9 +499,9 @@ def _calculer_top_opportunites(appels: list[dict], top_n: int = 5) -> list[dict]
         if jours_restants < 7 or jours_restants > 45:
             continue
 
-        # Estimation marche (rapide, calcul local)
+        # Estimation marche (mode light = pas d'appel API DECP)
         try:
-            estimation = estimer_marche(ao)
+            estimation = estimer_marche(ao, light=True)
         except Exception:
             continue
 
@@ -655,13 +655,13 @@ def liste_ao():
     sources = sorted(set(a.get("source", "") for a in appels))
     statuts = sorted(set(a.get("statut", "") for a in appels))
 
-    # Pre-calculer estimations pour la page courante
+    # Pre-calculer estimations pour la page courante (light=True, pas d'API DECP)
     estimations = {}
     try:
         from estimation_marche import estimer_marche
         for ao in page_appels:
             try:
-                estimations[ao.get("id")] = estimer_marche(ao)
+                estimations[ao.get("id")] = estimer_marche(ao, light=True)
             except Exception:
                 pass
     except ImportError:
@@ -893,13 +893,13 @@ def kanban():
     taux_conversion = (gagnes / total_soumis * 100) if total_soumis > 0 else 0
     sources = sorted(set(a.get("source", "") for a in appels if a.get("source")))
 
-    # Pre-calculer estimations pour le kanban
+    # Pre-calculer estimations pour le kanban (light=True, pas d'API DECP)
     estimations_kanban = {}
     try:
         from estimation_marche import estimer_marche
         for ao in appels:
             try:
-                estimations_kanban[ao.get("id")] = estimer_marche(ao)
+                estimations_kanban[ao.get("id")] = estimer_marche(ao, light=True)
             except Exception:
                 pass
     except ImportError:
@@ -1360,9 +1360,114 @@ def servir_fichier(nom, fichier):
             mode=mode,
         )
 
-    # Pour les autres formats : servir directement (download pour docx/xlsx)
-    as_attachment = ext in (".docx", ".doc", ".xlsx", ".xls")
-    return send_file(str(fichier_path), as_attachment=as_attachment)
+    # Pour .docx : convertir en HTML lisible
+    if ext == ".docx":
+        try:
+            contenu_html = _convertir_docx_en_html(fichier_path)
+            return render_template(
+                "fichier_view.html",
+                nom_dossier=nom,
+                nom_fichier=fichier,
+                contenu_html=contenu_html,
+                mode="docx",
+            )
+        except Exception as e:
+            logger.warning("Erreur conversion DOCX %s: %s", fichier, e)
+            return send_file(str(fichier_path), as_attachment=True)
+
+    # Pour .xlsx : convertir en tableau HTML
+    if ext == ".xlsx":
+        try:
+            contenu_html = _convertir_xlsx_en_html(fichier_path)
+            return render_template(
+                "fichier_view.html",
+                nom_dossier=nom,
+                nom_fichier=fichier,
+                contenu_html=contenu_html,
+                mode="xlsx",
+            )
+        except Exception as e:
+            logger.warning("Erreur conversion XLSX %s: %s", fichier, e)
+            return send_file(str(fichier_path), as_attachment=True)
+
+    # Pour les autres formats : servir directement
+    return send_file(str(fichier_path), as_attachment=True)
+
+
+def _convertir_docx_en_html(filepath) -> str:
+    """Convertit un fichier DOCX en HTML basique pour affichage navigateur."""
+    from docx import Document
+    doc = Document(str(filepath))
+    html_parts = []
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+        style = (para.style.name or "").lower()
+        if "heading 1" in style or "titre 1" in style:
+            html_parts.append(f"<h1>{text}</h1>")
+        elif "heading 2" in style or "titre 2" in style:
+            html_parts.append(f"<h2>{text}</h2>")
+        elif "heading 3" in style or "titre 3" in style:
+            html_parts.append(f"<h3>{text}</h3>")
+        elif "heading" in style or "titre" in style:
+            html_parts.append(f"<h4>{text}</h4>")
+        else:
+            # Gras / italique inline
+            runs_html = []
+            for run in para.runs:
+                t = run.text
+                if not t:
+                    continue
+                if run.bold and run.italic:
+                    t = f"<strong><em>{t}</em></strong>"
+                elif run.bold:
+                    t = f"<strong>{t}</strong>"
+                elif run.italic:
+                    t = f"<em>{t}</em>"
+                runs_html.append(t)
+            html_parts.append(f"<p>{''.join(runs_html)}</p>")
+
+    # Tables
+    for table in doc.tables:
+        html_parts.append("<table class='docx-table'>")
+        for i, row in enumerate(table.rows):
+            html_parts.append("<tr>")
+            tag = "th" if i == 0 else "td"
+            for cell in row.cells:
+                html_parts.append(f"<{tag}>{cell.text.strip()}</{tag}>")
+            html_parts.append("</tr>")
+        html_parts.append("</table>")
+
+    return "\n".join(html_parts)
+
+
+def _convertir_xlsx_en_html(filepath) -> str:
+    """Convertit un fichier XLSX en tableau HTML."""
+    from openpyxl import load_workbook
+    wb = load_workbook(str(filepath), read_only=True, data_only=True)
+    html_parts = []
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        if len(wb.sheetnames) > 1:
+            html_parts.append(f"<h3>{sheet_name}</h3>")
+        html_parts.append("<table class='xlsx-table'>")
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            html_parts.append("<tr>")
+            tag = "th" if i == 0 else "td"
+            for cell in row:
+                val = str(cell) if cell is not None else ""
+                # Formater les nombres
+                if isinstance(cell, (int, float)):
+                    try:
+                        val = f"{cell:,.2f}".replace(",", " ").replace(".00", "")
+                    except (ValueError, TypeError):
+                        pass
+                html_parts.append(f"<{tag}>{val}</{tag}>")
+            html_parts.append("</tr>")
+        html_parts.append("</table>")
+    wb.close()
+    return "\n".join(html_parts)
 
 
 def _convertir_md_en_html(texte: str) -> str:

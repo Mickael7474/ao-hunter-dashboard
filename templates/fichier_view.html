@@ -90,6 +90,41 @@
         background: rgba(0,0,0,0.02);
     }
 
+    /* Contenu DOCX / XLSX */
+    .docx-content, .xlsx-content {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem 2.5rem;
+        line-height: 1.7;
+        font-size: 0.95rem;
+        color: var(--text);
+    }
+    .docx-content h1 { font-size: 1.6rem; margin: 1.5rem 0 0.75rem; border-bottom: 2px solid var(--primary); padding-bottom: 0.3rem; }
+    .docx-content h2 { font-size: 1.3rem; margin: 1.3rem 0 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.2rem; }
+    .docx-content h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+    .docx-content p { margin: 0.5rem 0; }
+    .docx-table, .xlsx-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+    }
+    .docx-table th, .xlsx-table th {
+        background: var(--primary);
+        color: #fff;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    .docx-table td, .xlsx-table td {
+        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .docx-table tr:nth-child(even) td, .xlsx-table tr:nth-child(even) td {
+        background: rgba(0,0,0,0.02);
+    }
+
     /* Contenu JSON */
     .json-content {
         background: #1e293b;
@@ -134,6 +169,14 @@
     </div>
     {% elif mode == 'json' %}
     <div class="json-content">{{ contenu_html }}</div>
+    {% elif mode == 'docx' %}
+    <div class="docx-content">
+        {{ contenu_html | safe }}
+    </div>
+    {% elif mode == 'xlsx' %}
+    <div class="xlsx-content">
+        {{ contenu_html | safe }}
+    </div>
     {% endif %}
 </div>
 {% endblock %}
