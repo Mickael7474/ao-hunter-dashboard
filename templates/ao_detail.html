@@ -1061,10 +1061,31 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
             <div class="meta-value">{{ "{:,.0f}".format(ao.attribution_montant) }} EUR</div>
         </div>
         {% endif %}
+        {% if ao.attribution_nb_offres is defined and ao.attribution_nb_offres %}
+        <div class="meta-item">
+            <div class="meta-label">Nombre d'offres</div>
+            <div class="meta-value">{{ ao.attribution_nb_offres }}</div>
+        </div>
+        {% endif %}
         {% if ao.attribution_date %}
         <div class="meta-item">
             <div class="meta-label">Date d'attribution</div>
             <div class="meta-value">{{ ao.attribution_date }}</div>
+        </div>
+        {% endif %}
+        {% if ao.attribution_ecart_prix is defined and ao.attribution_ecart_prix is not none %}
+        <div class="meta-item">
+            <div class="meta-label">Ecart avec notre estimation</div>
+            <div class="meta-value">
+                <span style="font-weight:600; {% if ao.attribution_ecart_prix > 0 %}color:#dc2626;{% elif ao.attribution_ecart_prix < 0 %}color:#16a34a;{% endif %}">
+                    {{ "%+,.0f"|format(ao.attribution_ecart_prix) }} EUR
+                </span>
+                {% if ao.attribution_ecart_prix > 0 %}
+                <span style="font-size:0.75rem; color:var(--text-light);">(notre estimation plus elevee)</span>
+                {% elif ao.attribution_ecart_prix < 0 %}
+                <span style="font-size:0.75rem; color:var(--text-light);">(notre estimation plus basse)</span>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
     </div>

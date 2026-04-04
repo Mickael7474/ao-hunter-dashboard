@@ -90,6 +90,30 @@ def _veille_auto():
             "total": result["total"],
             "auto": True,
         })
+
+        # Alertes instantanees pour les AO a fort potentiel
+        if result.get("nouveaux", 0) > 0:
+            try:
+                from alertes_instantanees import traiter_alertes_batch
+                ao_list = charger_ao()
+                # Filtrer les AO ajoutes lors de ce cycle (derniere heure)
+                from datetime import datetime, timedelta
+                seuil = (datetime.now() - timedelta(hours=1)).isoformat()
+                nouveaux_ao = [
+                    a for a in ao_list
+                    if (a.get("date_detection") or a.get("date_ajout") or a.get("date_publication", "")) >= seuil
+                ]
+                if nouveaux_ao:
+                    alertes = traiter_alertes_batch(nouveaux_ao)
+                    if alertes:
+                        logger.info(f"Alertes instantanees: {len(alertes)} brouillon(s) cree(s)")
+                        socketio.emit("alertes_instantanees", {
+                            "nb_alertes": len(alertes),
+                            "ao_ids": [a.get("ao_id") for a in alertes],
+                        })
+            except Exception as e:
+                logger.error(f"Erreur alertes instantanees: {e}")
+
     except Exception as e:
         logger.error(f"Erreur veille auto: {e}")
 
@@ -103,12 +127,15 @@ def _veille_auto():
     except Exception as e:
         logger.error(f"Erreur rappels: {e}")
 
-    # Veille attributions (AO soumis -> gagne/perdu)
+    # Veille attributions (AO soumis -> gagne/perdu) + post-mortem auto
     try:
-        from veille_attributions import verifier_attributions
-        attr_result = verifier_attributions()
+        from veille_attributions import routine_suivi
+        attr_result = routine_suivi()
         if attr_result["trouves"] > 0:
-            logger.info(f"Attributions: {attr_result['trouves']} trouvees ({attr_result['gagnes']} gagnes)")
+            logger.info(
+                f"Attributions: {attr_result['trouves']} trouvees "
+                f"({attr_result['gagnes']} gagnes, {attr_result.get('post_mortem_declenches', 0)} post-mortem)"
+            )
     except Exception as e:
         logger.error(f"Erreur veille attributions: {e}")
 
@@ -1638,6 +1665,114 @@ def export_dossier_zip(nom):
     )
 
 
+# --- Export PDF (vue impression navigateur) ---
+
+ORDRE_FICHIERS = [
+    ("analyse", "Analyse Go/No-Go"),
+    ("memoire_technique", "Memoire Technique"),
+    ("lettre_candidature", "Lettre de Candidature"),
+    ("programme", "Programme de Formation"),
+    ("bpu", "Bordereau de Prix"),
+    ("dpgf", "Bordereau de Prix"),
+    ("planning", "Planning Previsionnel"),
+    ("cv", "CV des Formateurs"),
+    ("references", "References Clients"),
+    ("dc1", "Formulaires DC1/DC2"),
+    ("dc2", "Formulaires DC1/DC2"),
+    ("moyens", "Moyens Techniques"),
+    ("acte_engagement", "Acte d'Engagement"),
+    ("dume", "DUME"),
+    ("checklist", "Checklist de Soumission"),
+]
+
+
+def _ordre_fichier(nom_fichier: str) -> int:
+    """Retourne un index de tri pour ordonner les fichiers du dossier."""
+    nom_lower = nom_fichier.lower()
+    for i, (prefix, _) in enumerate(ORDRE_FICHIERS):
+        if prefix in nom_lower:
+            return i
+    return 999
+
+
+def _titre_fichier(nom_fichier: str) -> str:
+    """Retourne un titre lisible a partir du nom de fichier."""
+    nom_lower = nom_fichier.lower()
+    for prefix, titre in ORDRE_FICHIERS:
+        if prefix in nom_lower:
+            return titre
+    # Fallback : nettoyer le nom
+    base = Path(nom_fichier).stem
+    return base.replace("_", " ").replace("-", " ").title()
+
+
+@app.route("/dossiers/<path:nom>/print")
+def dossier_print_view(nom):
+    """Vue d'impression complete du dossier - tous les fichiers concatenes."""
+    # Trouver le dossier
+    dossier_path = None
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        candidate = base / nom
+        if candidate.exists() and candidate.is_dir():
+            dossier_path = candidate
+            break
+
+    if not dossier_path:
+        return "Dossier non trouve", 404
+
+    # Collecter et trier les fichiers
+    fichiers = sorted(
+        [f for f in dossier_path.iterdir() if f.is_file()],
+        key=lambda f: _ordre_fichier(f.name),
+    )
+
+    # Convertir chaque fichier en HTML
+    documents = []
+    for f in fichiers:
+        ext = f.suffix.lower()
+        titre = _titre_fichier(f.name)
+        contenu_html = None
+
+        if ext == ".md":
+            contenu_brut = f.read_text(encoding="utf-8", errors="replace")
+            contenu_html = _convertir_md_en_html(contenu_brut)
+        elif ext == ".docx":
+            try:
+                contenu_html = _convertir_docx_en_html(f)
+            except Exception as e:
+                logger.warning("Erreur conversion DOCX pour print %s: %s", f.name, e)
+                contenu_html = f"<p><em>Fichier DOCX non convertible : {f.name}</em></p>"
+        elif ext == ".xlsx":
+            try:
+                contenu_html = _convertir_xlsx_en_html(f)
+            except Exception as e:
+                logger.warning("Erreur conversion XLSX pour print %s: %s", f.name, e)
+                contenu_html = f"<p><em>Fichier Excel non convertible : {f.name}</em></p>"
+        elif ext == ".json":
+            try:
+                data = json.loads(f.read_text(encoding="utf-8", errors="replace"))
+                contenu_html = f"<pre>{json.dumps(data, indent=2, ensure_ascii=False)}</pre>"
+            except Exception:
+                pass
+        elif ext == ".txt":
+            contenu_brut = f.read_text(encoding="utf-8", errors="replace")
+            contenu_html = f"<pre>{contenu_brut}</pre>"
+
+        if contenu_html:
+            documents.append({"titre": titre, "nom_fichier": f.name, "contenu_html": contenu_html})
+
+    # Extraire le titre de l'AO depuis le nom du dossier
+    titre_ao = nom.replace("AO_", "").replace("_", " ")
+
+    return render_template(
+        "dossier_print.html",
+        nom=nom,
+        titre_ao=titre_ao,
+        documents=documents,
+        now=datetime.now().strftime("%d/%m/%Y"),
+    )
+
+
 @app.route("/export/csv")
 def export_csv():
     """Exporte les AO filtres en CSV."""
@@ -2373,6 +2508,20 @@ def api_rapport_hebdo_dernier():
         if not rapports:
             return jsonify({"erreur": "Aucun rapport disponible"}), 404
         return jsonify(rapports[-1])
+    except Exception as e:
+        return jsonify({"erreur": str(e)}), 500
+
+
+# --- Alertes instantanees ---
+
+@app.route("/api/alertes")
+def api_alertes():
+    """GET /api/alertes - Alertes instantanees recentes (AO a fort potentiel)."""
+    try:
+        from alertes_instantanees import get_alertes_recentes
+        nb = request.args.get("nb", 20, type=int)
+        alertes = get_alertes_recentes(nb)
+        return jsonify({"alertes": alertes, "total": len(alertes)})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
 

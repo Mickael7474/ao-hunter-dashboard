@@ -1,7 +1,7 @@
 """
 Veille resultats d'attribution - Feature 4
 Surveille les avis d'attribution BOAMP pour les AO soumis par Almera.
-Met a jour le statut (gagne/perdu) et sauvegarde un historique.
+Met a jour le statut (gagne/perdu), enrichit le post-mortem et sauvegarde un historique.
 """
 
 import json
@@ -109,12 +109,33 @@ def _extraire_attribution_boamp(record: dict) -> dict | None:
                     except (ValueError, TypeError):
                         pass
 
+    # Extraire le nombre d'offres recues
+    nb_offres = None
+    nb_raw = attribution.get("nbOffres", attribution.get("nombreOffres", "")) if isinstance(attribution, dict) else ""
+    if nb_raw:
+        try:
+            nb_offres = int(str(nb_raw).strip())
+        except (ValueError, TypeError):
+            pass
+    # Chercher aussi dans les lots
+    if nb_offres is None and isinstance(lots, list):
+        for lot in lots:
+            if isinstance(lot, dict):
+                n = lot.get("nbOffres", lot.get("nombreOffres", ""))
+                if n:
+                    try:
+                        nb_offres = int(str(n).strip())
+                        break
+                    except (ValueError, TypeError):
+                        pass
+
     if not titulaire:
         return None
 
     return {
         "titulaire": titulaire,
         "montant": montant,
+        "nb_offres": nb_offres,
         "date": record.get("dateparution", ""),
         "objet": record.get("objet", ""),
         "acheteur": record.get("nomacheteur", ""),
@@ -208,6 +229,16 @@ def verifier_attributions() -> dict:
             ao["attribution_titulaire"] = attrib["titulaire"]
             ao["attribution_montant"] = attrib["montant"]
             ao["attribution_date"] = attrib["date"]
+            ao["attribution_nb_offres"] = attrib.get("nb_offres")
+
+            # Calculer l'ecart de prix avec notre estimation
+            ecart_prix = None
+            if attrib["montant"] and ao.get("budget_estime"):
+                try:
+                    ecart_prix = round(ao["budget_estime"] - attrib["montant"], 2)
+                except (TypeError, ValueError):
+                    pass
+            ao["attribution_ecart_prix"] = ecart_prix
 
             # Ajouter a l'historique
             attributions_hist.append({
@@ -216,6 +247,8 @@ def verifier_attributions() -> dict:
                 "acheteur": ao.get("acheteur", ""),
                 "titulaire": attrib["titulaire"],
                 "montant": attrib["montant"],
+                "nb_offres": attrib.get("nb_offres"),
+                "ecart_prix": ecart_prix,
                 "date": attrib["date"],
                 "notre_statut": notre_statut,
                 "date_verification": datetime.now().isoformat(),
@@ -238,6 +271,109 @@ def verifier_attributions() -> dict:
     logger.info(
         f"Veille attributions: {stats['verifies']} verifies, "
         f"{stats['trouves']} trouves ({stats['gagnes']} gagnes, {stats['perdus']} perdus)"
+    )
+    return stats
+
+
+def enrichir_post_mortem(ao: dict, attribution: dict) -> dict:
+    """Enrichit un AO perdu avec les donnees d'attribution pour capitalisation.
+
+    Args:
+        ao: dict de l'AO (avec attribution_titulaire, etc.)
+        attribution: dict de l'historique d'attribution
+
+    Returns:
+        dict avec titulaire, montant_gagne, ecart_prix, nb_offres,
+        date_attribution, analyse, lecons
+    """
+    titulaire = ao.get("attribution_titulaire", attribution.get("titulaire", "Inconnu"))
+    montant_gagne = ao.get("attribution_montant", attribution.get("montant"))
+    nb_offres = ao.get("attribution_nb_offres", attribution.get("nb_offres"))
+    ecart_prix = ao.get("attribution_ecart_prix", attribution.get("ecart_prix"))
+    date_attr = ao.get("attribution_date", attribution.get("date", ""))
+
+    # Construire une analyse basique a partir des donnees disponibles
+    analyse_parts = []
+    lecons = []
+
+    if titulaire and titulaire != "Inconnu":
+        analyse_parts.append(f"Marche attribue a {titulaire}.")
+
+    if ecart_prix is not None:
+        if ecart_prix > 0:
+            analyse_parts.append(f"Notre estimation etait superieure de {ecart_prix:,.0f} EUR.")
+            lecons.append("Revoir le positionnement tarifaire a la baisse")
+        elif ecart_prix < 0:
+            analyse_parts.append(f"Notre estimation etait inferieure de {abs(ecart_prix):,.0f} EUR.")
+            lecons.append("Le prix n'etait pas le facteur determinant")
+
+    if nb_offres:
+        analyse_parts.append(f"{nb_offres} offre(s) recue(s).")
+        if nb_offres >= 5:
+            lecons.append("Forte concurrence - se differencier sur la valeur technique")
+        elif nb_offres <= 2:
+            lecons.append("Peu de concurrents - opportunite pour les prochains marches similaires")
+
+    if not lecons:
+        lecons.append("Analyser en detail le rapport d'attribution quand disponible")
+
+    return {
+        "titulaire": titulaire,
+        "montant_gagne": montant_gagne,
+        "ecart_prix": ecart_prix,
+        "nb_offres": nb_offres,
+        "date_attribution": date_attr,
+        "analyse": " ".join(analyse_parts) if analyse_parts else "Donnees insuffisantes.",
+        "lecons": lecons,
+    }
+
+
+def routine_suivi() -> dict:
+    """Routine de suivi des attributions, a appeler periodiquement.
+
+    1. Verifie les attributions pour les AO soumis
+    2. Pour chaque AO perdu, enrichit le post-mortem automatiquement
+    3. Retourne un resume
+
+    Returns:
+        dict avec stats verification + post-mortem declenches
+    """
+    # Etape 1 : verifier les attributions
+    stats = verifier_attributions()
+
+    # Etape 2 : declencher le post-mortem pour les AO perdus fraichement detectes
+    post_mortem_declenches = 0
+    if stats["perdus"] > 0:
+        try:
+            from post_mortem import analyser_defaite
+            appels = _charger_ao()
+            attributions_hist = _charger_attributions()
+
+            # Trouver les AO perdus qui viennent d'etre detectes
+            for ao in appels:
+                if ao.get("statut") != "perdu":
+                    continue
+                if not ao.get("attribution_titulaire"):
+                    continue
+
+                # Verifier si le post-mortem a deja ete fait
+                # (analyser_defaite retourne l'existant s'il y a deja un resultat)
+                try:
+                    analyser_defaite(ao)
+                    post_mortem_declenches += 1
+                except Exception as e:
+                    logger.warning(f"Erreur post-mortem auto pour {ao.get('id')}: {e}")
+
+        except ImportError:
+            logger.warning("Module post_mortem non disponible, analyse differee")
+        except Exception as e:
+            logger.error(f"Erreur enrichissement post-mortem: {e}")
+
+    stats["post_mortem_declenches"] = post_mortem_declenches
+
+    logger.info(
+        f"Routine suivi: {stats['trouves']} attributions, "
+        f"{stats['perdus']} perdus, {post_mortem_declenches} post-mortem declenches"
     )
     return stats
 

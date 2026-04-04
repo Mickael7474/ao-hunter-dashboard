@@ -62,7 +62,7 @@
 
 <!-- Table -->
 <div class="card">
-    <div class="table-wrapper">
+    <div class="table-wrapper table-responsive">
         <table id="aoTable">
             <thead>
                 <tr>
@@ -70,13 +70,13 @@
                         <input type="checkbox" id="selectAll" onclick="toggleSelectAll(event)" title="Tout selectionner">
                     </th>
                     <th>Score</th>
-                    <th>Source</th>
+                    <th class="hide-mobile">Source</th>
                     <th>Titre</th>
                     <th>Acheteur</th>
                     <th>Date limite</th>
-                    <th>Budget estime</th>
-                    <th>Concurrence</th>
-                    <th>Region</th>
+                    <th class="hide-mobile">Budget estime</th>
+                    <th class="hide-mobile">Concurrence</th>
+                    <th class="hide-mobile">Region</th>
                     <th>Statut</th>
                 </tr>
             </thead>
@@ -92,7 +92,7 @@
                             {{ score_pct }}%
                         </span>
                     </td>
-                    <td>
+                    <td class="hide-mobile">
                         <span class="badge badge-{{ ao.source | lower }}">{{ ao.source }}</span>
                     </td>
                     <td class="table-title">
@@ -117,7 +117,7 @@
                         {% endif %}
                     </td>
                     <!-- Budget estime -->
-                    <td style="font-size:0.8rem; white-space:nowrap;">
+                    <td class="hide-mobile" style="font-size:0.8rem; white-space:nowrap;">
                         {% set est = estimations.get(ao.id) if estimations is defined else None %}
                         {% if est and est.budget %}
                             <span style="font-weight:600;">{{ "{:,.0f}".format(est.budget.montant).replace(",", " ") }} &euro;</span>
@@ -129,7 +129,7 @@
                         {% endif %}
                     </td>
                     <!-- Concurrence -->
-                    <td style="font-size:0.8rem; text-align:center;">
+                    <td class="hide-mobile" style="font-size:0.8rem; text-align:center;">
                         {% if est and est.concurrence %}
                             {% if est.concurrence.niveau == 'faible' %}
                                 <span class="badge" style="background:#dcfce7; color:#166534; padding:2px 8px; font-size:0.7rem;">Faible</span>
@@ -142,7 +142,7 @@
                             <span style="color:var(--text-light);">-</span>
                         {% endif %}
                     </td>
-                    <td style="font-size:0.8rem;">{{ (ao.region|as_str)[:20] }}</td>
+                    <td class="hide-mobile" style="font-size:0.8rem;">{{ (ao.region|as_str)[:20] }}</td>
                     <td>
                         <span class="statut statut-{{ ao.statut }}">{{ ao.statut }}</span>
                     </td>

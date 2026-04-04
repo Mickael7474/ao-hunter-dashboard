@@ -36,6 +36,7 @@
             {% else %}
                 <span class="statut statut-nouveau">En attente</span>
             {% endif %}
+            <a href="{{ url_for('dossier_print_view', nom=d.nom) }}" target="_blank" class="btn btn-sm btn-outline" title="Exporter PDF">PDF</a>
             <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-primary">Ouvrir</a>
         </div>
     </div>

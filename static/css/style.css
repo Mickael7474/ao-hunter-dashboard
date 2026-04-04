@@ -1615,3 +1615,121 @@ tr:hover { background: var(--table-hover); }
     .opp-action { width: 100%; }
     .opp-action .btn { width: 100%; text-align: center; }
 }
+
+/* ============================================
+   RESPONSIVE - Mobile & Tablet
+   ============================================ */
+
+/* Hamburger button - hidden on desktop */
+.hamburger {
+    display: none;
+    background: none;
+    border: 1px solid #475569;
+    color: #94a3b8;
+    font-size: 1.4rem;
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.2s;
+}
+.hamburger:hover {
+    color: white;
+    border-color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+    /* Container */
+    .container { padding: 0.75rem; }
+
+    /* Nav - hamburger toggle */
+    .navbar { flex-wrap: wrap; padding: 0 1rem; }
+    .hamburger { display: block; order: 1; }
+    .nav-brand { order: 0; }
+    .nav-actions { order: 2; margin-left: auto; }
+    .nav-links {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        gap: 0;
+        order: 3;
+    }
+    .nav-links.active { display: flex; }
+    .nav-links a {
+        padding: 0.75rem 1rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        border-radius: 0;
+        font-size: 0.85rem;
+    }
+
+    /* Stats grid */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .stat-card { padding: 0.75rem; }
+    .stat-card .stat-value { font-size: 1.5rem; }
+    .stat-card .stat-label { font-size: 0.7rem; }
+
+    /* Cards */
+    .card { padding: 0.75rem; }
+    .card-header h2 { font-size: 0.9rem; }
+
+    /* Tables */
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .hide-mobile { display: none !important; }
+
+    /* Filters */
+    .filters { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    .filters > div { width: 100%; }
+    .filters input, .filters select { width: 100%; }
+
+    /* Kanban - already handled above but reinforce */
+    .kanban-board { flex-direction: column; min-height: auto; }
+    .kanban-col { min-width: 100%; }
+
+    /* Dossiers */
+    .dossier-card { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+
+    /* Page headers */
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .page-header h1 { font-size: 1.3rem; }
+
+    /* Grid 2 columns -> 1 */
+    .grid-2 { grid-template-columns: 1fr; }
+
+    /* Detail page */
+    .detail-header { flex-direction: column; }
+    .detail-meta { grid-template-columns: 1fr; }
+
+    /* Font sizes */
+    body { font-size: 0.9rem; }
+
+    /* Batch bar */
+    #batchBar { flex-direction: column; gap: 0.5rem; padding: 0.5rem 1rem !important; }
+
+    /* Objectifs */
+    .objectif-kpis { grid-template-columns: repeat(2, 1fr); }
+
+    /* Urgents */
+    .urgent-title { font-size: 0.8rem; }
+}
+
+@media (max-width: 480px) {
+    /* Single column stats */
+    .stats-grid { grid-template-columns: 1fr; }
+
+    /* Nav brand smaller */
+    .nav-brand { font-size: 0.9rem; }
+
+    /* Even smaller values */
+    .stat-card .stat-value { font-size: 1.25rem; }
+
+    /* Table titles */
+    .table-title { max-width: 150px; }
+
+    /* ROI */
+    .roi-kpis-6 { grid-template-columns: 1fr; }
+    .objectif-kpis { grid-template-columns: 1fr; }
+
+    /* Opportunites */
+    .opp-score-badge { width: 40px; height: 40px; font-size: 0.75rem; }
+    .opp-title { font-size: 0.8rem; }
+}

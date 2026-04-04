@@ -318,6 +318,16 @@ Le volume de chaque section doit etre proportionnel a son poids dans la notation
     except Exception as e:
         logger.warning(f"Memoire adaptative: erreur recherche modeles: {e}")
 
+    # Feature : Lecons des AO gagnes (intelligence adaptative)
+    lecons_bloc = ""
+    try:
+        from memoire_adaptative import appliquer_lecons
+        lecons_bloc = appliquer_lecons(ao)
+        if lecons_bloc:
+            logger.info("Memoire adaptative: lecons d'AO gagnes injectees dans le prompt")
+    except Exception as e:
+        logger.warning(f"Memoire adaptative: erreur lecons: {e}")
+
     # Contexte DECP (données marché réelles)
     decp_bloc = ""
     if decp and decp.get("nb_marches_trouves", 0) > 0:
@@ -341,7 +351,7 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
 ## ENTREPRISE CANDIDATE
 {_bloc_infos_entreprise()}
-{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{decp_bloc}
+{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{lecons_bloc}{decp_bloc}
 
 ## INSTRUCTIONS
 1. Redige un memoire technique COMPLET en francais (minimum 3000 mots)
@@ -1705,6 +1715,53 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         erreurs.append(f"Auto-review: {e}")
         logger.error(f"Erreur auto-review: {e}")
 
+    # Feature : Verification conformite RC (si donnees RC disponibles)
+    conformite_rc_result = None
+    logger.info("Verification conformite RC...")
+    try:
+        from auto_review import verifier_conformite_rc
+        from extraction_rc import extraire_rc
+
+        # Chercher le dossier DCE pour en extraire le RC
+        clean_id_rc = ao.get("id", "inconnu").replace("/", "_").replace("\\", "_")
+        dossier_dce_rc = DOSSIERS_DIR / f"DCE_{clean_id_rc}"
+        rc_data = {}
+        if dossier_dce_rc.exists():
+            rc_data = extraire_rc(dossier_dce_rc)
+        else:
+            # Construire un rc_data minimal a partir des infos AO disponibles
+            rc_data = {
+                "pieces_exigees": ao.get("pieces_exigees", []),
+                "criteres_attribution": ao.get("criteres_attribution", []),
+                "conditions_participation": ao.get("conditions_participation", []),
+            }
+
+        if rc_data.get("pieces_exigees") or rc_data.get("criteres_attribution"):
+            # Charger les fichiers du dossier
+            fichiers_pour_rc = {}
+            for f_nom in fichiers_generes:
+                if f_nom.endswith(".md"):
+                    f_path = dossier_path / f_nom
+                    if f_path.exists():
+                        fichiers_pour_rc[f_nom] = f_path.read_text(encoding="utf-8")
+
+            conformite_rc_result = verifier_conformite_rc(fichiers_pour_rc, rc_data)
+
+            # Sauvegarder
+            conformite_path = dossier_path / "conformite_rc.json"
+            conformite_path.write_text(json.dumps(conformite_rc_result, ensure_ascii=False, indent=2), encoding="utf-8")
+            fichiers_generes.append("conformite_rc.json")
+            logger.info(
+                f"Conformite RC: score={conformite_rc_result.get('score', '?')}/100, "
+                f"conforme={conformite_rc_result.get('conforme', '?')}, "
+                f"{len(conformite_rc_result.get('pieces_manquantes', []))} piece(s) manquante(s)"
+            )
+        else:
+            logger.info("Conformite RC: pas de donnees RC disponibles, verification ignoree")
+    except Exception as e:
+        erreurs.append(f"Conformite RC: {e}")
+        logger.error(f"Erreur conformite RC: {e}")
+
     # Mettre a jour l'index
     _maj_index(dossier_nom, ao, dossier_path)
 
@@ -1718,9 +1775,11 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         "erreurs": erreurs,
     }
 
-    # Ajouter les infos de review et personnalisation au resultat
+    # Ajouter les infos de review, conformite RC et personnalisation au resultat
     if review_result:
         result["review"] = review_result
+    if conformite_rc_result:
+        result["conformite_rc"] = conformite_rc_result
     if personnalisation:
         result["personnalisation"] = {
             "type_acheteur": personnalisation["type_acheteur"],

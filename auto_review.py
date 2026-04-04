@@ -5,6 +5,7 @@ du dossier complet genere.
 """
 
 import os
+import re
 import json
 import logging
 
@@ -179,6 +180,253 @@ Sois strict mais juste. Ne signale que les vrais problemes."""
             "conforme": False,
             "resume": f"Erreur lors de la review automatique: {e}",
         }
+
+
+def verifier_conformite_rc(dossier: dict, rc_data: dict) -> dict:
+    """Verifie la conformite d'un dossier genere par rapport aux exigences du RC.
+
+    Args:
+        dossier: dict {nom_fichier: contenu_markdown} des pieces du dossier
+        rc_data: dict retourne par extraction_rc.extraire_rc() ou adapter_dossier()
+            Champs utilises: pieces_exigees, criteres_attribution, conditions_participation,
+            lots, variantes_autorisees, duree_marche
+
+    Returns:
+        dict {conforme, score, pieces_manquantes, pieces_presentes, alertes, suggestions}
+    """
+    pieces_presentes = []
+    pieces_manquantes = []
+    alertes = []
+    suggestions = []
+    score = 100
+
+    noms_fichiers = set(dossier.keys())
+    contenu_complet = " ".join(dossier.values())
+    contenu_lower = contenu_complet.lower()
+
+    # --- 1. Verification des pieces exigees par le RC ---
+    # Mapping entre pieces RC et fichiers du dossier
+    MAPPING_PIECES = {
+        "memoire technique": ["memoire_technique", "memoire"],
+        "lettre de candidature": ["lettre_candidature", "lettre"],
+        "bpu": ["bpu", "dpgf", "bordereau"],
+        "bordereau de prix unitaires": ["bpu", "dpgf", "bordereau"],
+        "dpgf": ["bpu", "dpgf"],
+        "dc1": ["dc1_dc2", "dc1"],
+        "dc2": ["dc1_dc2", "dc2"],
+        "dume": ["dume"],
+        "acte d'engagement": ["acte_engagement"],
+        "planning": ["planning"],
+        "cv": ["cv_formateur", "cv"],
+        "curriculum": ["cv_formateur", "cv"],
+        "references": ["references_client", "references"],
+        "programme de formation": ["programme_formation", "programme"],
+        "moyens techniques": ["moyens_techniques", "moyens"],
+        "attestation d'assurance": ["attestation_assurance", "assurance"],
+        "attestation assurance": ["attestation_assurance", "assurance"],
+        "rib": ["rib"],
+        "kbis": ["kbis"],
+        "extrait k": ["kbis"],
+        "qualiopi": ["qualiopi"],
+        "certificat qualiopi": ["qualiopi"],
+        "attestations fiscales": ["attestation_fiscale", "urssaf"],
+        "attestations sociales": ["attestation_sociale", "urssaf"],
+    }
+
+    pieces_exigees = rc_data.get("pieces_exigees", [])
+    for piece_rc in pieces_exigees:
+        piece_lower = piece_rc.lower()
+        trouvee = False
+
+        # Verifier dans les noms de fichiers du dossier
+        for cle_mapping, patterns in MAPPING_PIECES.items():
+            if cle_mapping in piece_lower:
+                for pattern in patterns:
+                    for nom_fich in noms_fichiers:
+                        if pattern in nom_fich.lower():
+                            trouvee = True
+                            break
+                    if trouvee:
+                        break
+            if trouvee:
+                break
+
+        # Fallback : chercher dans le contenu du dossier
+        if not trouvee:
+            mots_cles = [m for m in piece_lower.split() if len(m) > 3]
+            if mots_cles and all(m in contenu_lower for m in mots_cles[:2]):
+                trouvee = True
+
+        if trouvee:
+            pieces_presentes.append(piece_rc)
+        else:
+            pieces_manquantes.append(piece_rc)
+
+    # Penaliser les pieces manquantes
+    if pieces_manquantes:
+        # Pieces admin (assurance, kbis, rib) = moins critique (l'utilisateur les ajoute manuellement)
+        pieces_admin = {"attestation", "assurance", "rib", "kbis", "extrait", "fiscale", "sociale", "urssaf"}
+        critiques = [p for p in pieces_manquantes if not any(a in p.lower() for a in pieces_admin)]
+        admin_manquantes = [p for p in pieces_manquantes if any(a in p.lower() for a in pieces_admin)]
+
+        if critiques:
+            score -= len(critiques) * 15
+            alertes.append({
+                "niveau": "critique",
+                "message": f"Piece(s) technique(s) exigee(s) manquante(s): {', '.join(critiques)}"
+            })
+        if admin_manquantes:
+            score -= len(admin_manquantes) * 5
+            alertes.append({
+                "niveau": "attention",
+                "message": f"Piece(s) admin a ajouter manuellement: {', '.join(admin_manquantes)}"
+            })
+
+    # --- 2. Verification du nombre de mots du memoire technique ---
+    memoire_contenu = ""
+    for nom, contenu in dossier.items():
+        if "memoire" in nom.lower():
+            memoire_contenu = contenu
+            break
+
+    if memoire_contenu:
+        nb_mots = len(memoire_contenu.split())
+        if nb_mots < 1500:
+            score -= 20
+            alertes.append({
+                "niveau": "critique",
+                "message": f"Le memoire technique est trop court ({nb_mots} mots, minimum recommande: 3000)"
+            })
+        elif nb_mots < 3000:
+            score -= 10
+            alertes.append({
+                "niveau": "attention",
+                "message": f"Le memoire fait {nb_mots} mots, le RC suggere 3000+"
+            })
+    else:
+        score -= 25
+        alertes.append({
+            "niveau": "critique",
+            "message": "Aucun memoire technique detecte dans le dossier"
+        })
+
+    # --- 3. Detection de texte placeholder / generique ---
+    placeholders = [
+        "[a completer]", "[a renseigner]", "[nom du]", "[votre ",
+        "lorem ipsum", "xxx", "[date]", "[montant]", "[a definir]",
+        "[inserez", "[ajoutez", "TODO", "FIXME",
+    ]
+    for nom, contenu in dossier.items():
+        contenu_l = contenu.lower()
+        for ph in placeholders:
+            if ph.lower() in contenu_l:
+                score -= 5
+                alertes.append({
+                    "niveau": "attention",
+                    "message": f"Texte placeholder detecte dans {nom}: '{ph}'"
+                })
+                break  # Un seul placeholder par fichier suffit
+
+    # --- 4. Coherence des prix (BPU vs memoire) ---
+    bpu_contenu = ""
+    for nom, contenu in dossier.items():
+        if "bpu" in nom.lower() or "dpgf" in nom.lower():
+            bpu_contenu = contenu
+            break
+
+    if bpu_contenu and memoire_contenu:
+        # Extraire les montants du BPU
+        montants_bpu = re.findall(r"(\d[\d\s]*(?:[.,]\d+)?)\s*(?:EUR|€|euros?)\s*(?:HT|TTC)?", bpu_contenu, re.IGNORECASE)
+        montants_memoire = re.findall(r"(\d[\d\s]*(?:[.,]\d+)?)\s*(?:EUR|€|euros?)\s*(?:HT|TTC)?", memoire_contenu, re.IGNORECASE)
+        if montants_bpu and not montants_memoire:
+            suggestions.append("Le memoire ne mentionne aucun montant alors que le BPU en contient - verifier la coherence")
+    elif not bpu_contenu:
+        # Verifier si le RC exige un BPU
+        for piece in pieces_exigees:
+            if "bpu" in piece.lower() or "bordereau" in piece.lower() or "dpgf" in piece.lower():
+                score -= 10
+                alertes.append({
+                    "niveau": "critique",
+                    "message": "Le RC exige un BPU/DPGF mais aucun n'est present dans le dossier"
+                })
+                break
+
+    # --- 5. Verification des criteres d'attribution couverts dans le memoire ---
+    criteres = rc_data.get("criteres_attribution", [])
+    if criteres and memoire_contenu:
+        memoire_lower = memoire_contenu.lower()
+        for critere in criteres:
+            nom_critere = critere.get("nom", "")
+            poids = critere.get("poids", critere.get("poids_pct", 0))
+            # Verifier que le critere est au moins mentionne
+            mots_critere = [m for m in nom_critere.lower().split() if len(m) > 3]
+            couvert = any(m in memoire_lower for m in mots_critere) if mots_critere else True
+            if not couvert and poids >= 10:
+                score -= 8
+                alertes.append({
+                    "niveau": "critique" if poids >= 30 else "attention",
+                    "message": f"Le critere '{nom_critere}' ({poids}%) ne semble pas traite dans le memoire"
+                })
+
+    # --- 6. Conditions de participation ---
+    conditions = rc_data.get("conditions_participation", [])
+    for cond in conditions:
+        cond_lower = cond.lower()
+        if "qualiopi" in cond_lower and "qualiopi" not in contenu_lower:
+            score -= 10
+            alertes.append({
+                "niveau": "critique",
+                "message": "Qualiopi exige par le RC mais non mentionne dans le dossier"
+            })
+        if "experience" in cond_lower or "reference" in cond_lower:
+            refs_present = any("reference" in nom.lower() for nom in noms_fichiers)
+            if not refs_present:
+                score -= 5
+                alertes.append({
+                    "niveau": "attention",
+                    "message": f"Condition '{cond}' - pas de fiche references detectee"
+                })
+
+    # --- 7. CV formateurs vs exigences RC ---
+    cv_contenu = ""
+    for nom, contenu in dossier.items():
+        if "cv" in nom.lower():
+            cv_contenu = contenu
+            break
+
+    if cv_contenu:
+        # Compter le nombre de CV (heuristique: chercher les separateurs)
+        nb_cv = max(1, len(re.findall(r"(?:^|\n)#+ .+(?:formateur|formatrice|intervenant|consultant)", cv_contenu, re.IGNORECASE)))
+        for piece in pieces_exigees:
+            if "cv" in piece.lower():
+                # Si le RC mentionne "CV par formateur" ou similaire
+                if "par" in piece.lower() or "chaque" in piece.lower():
+                    if nb_cv < 2:
+                        score -= 5
+                        alertes.append({
+                            "niveau": "attention",
+                            "message": f"Le RC exige un CV par formateur, seul {nb_cv} CV fourni"
+                        })
+                break
+
+    # Suggestions generales
+    if not any("reference" in nom.lower() for nom in noms_fichiers):
+        suggestions.append("Ajouter les references clients specifiques au secteur de l'acheteur")
+    if not any("planning" in nom.lower() for nom in noms_fichiers):
+        suggestions.append("Ajouter un planning previsionnel detaille")
+
+    # Borner le score
+    score = max(0, min(100, score))
+    conforme = score >= 50 and not any(a["niveau"] == "critique" for a in alertes)
+
+    return {
+        "conforme": conforme,
+        "score": score,
+        "pieces_manquantes": pieces_manquantes,
+        "pieces_presentes": pieces_presentes,
+        "alertes": alertes,
+        "suggestions": suggestions,
+    }
 
 
 def _extraire_json(texte: str) -> str | None:

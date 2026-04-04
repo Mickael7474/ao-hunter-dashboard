@@ -9,6 +9,7 @@
         <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}</p>
     </div>
     <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a href="{{ url_for('dossier_print_view', nom=dossier.nom) }}" target="_blank" class="btn btn-sm btn-outline" style="white-space:nowrap;">Exporter PDF</a>
         <a href="{{ url_for('export_dossier_zip', nom=dossier.nom) }}" class="btn btn-sm btn-primary" style="white-space:nowrap;">Telecharger ZIP</a>
         {% if review.statut == 'valide' %}
             <span class="statut statut-gagne" style="font-size:1rem; padding:6px 16px;">Valide</span>
