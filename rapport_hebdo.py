@@ -14,6 +14,11 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from pathlib import Path
 
+try:
+    from estimation_marche import estimer_marche
+except ImportError:
+    estimer_marche = None
+
 logger = logging.getLogger("ao_hunter.rapport_hebdo")
 
 DASHBOARD_DIR = Path(__file__).parent
@@ -136,6 +141,29 @@ def generer_rapport_hebdo() -> dict:
 
     total_pipeline = sum(pipeline_actif.values())
 
+    # --- Estimations budget/concurrence ---
+    def _estimation_ao(ao):
+        """Calcule l'estimation pour un AO, retourne (budget_estime, concurrence_niveau, accessibilite)."""
+        if estimer_marche is None:
+            return None, None, None
+        try:
+            est = estimer_marche(ao)
+            return (
+                est.get("budget_estime"),
+                est.get("concurrence_niveau", ""),
+                est.get("accessibilite"),
+            )
+        except Exception:
+            return None, None, None
+
+    # Enrichir les AO avec estimations (pour le rapport HTML)
+    for ao in nouveaux_ao + deadlines_semaine:
+        if "estimation" not in ao:
+            budget, concurrence, accessibilite = _estimation_ao(ao)
+            ao["_est_budget"] = budget
+            ao["_est_concurrence"] = concurrence
+            ao["_est_accessibilite"] = accessibilite
+
     # --- KPIs ---
     nb_gagnes = sum(1 for ao in ao_data if ao.get("statut") == "gagne")
     nb_soumis = sum(1 for ao in ao_data if ao.get("statut") in ("soumis", "gagne", "perdu"))
@@ -179,9 +207,9 @@ def generer_rapport_hebdo() -> dict:
         "date_generation": maintenant.isoformat(),
         "semaine_du": il_y_a_7j.strftime("%d/%m/%Y"),
         "semaine_au": maintenant.strftime("%d/%m/%Y"),
-        "nouveaux_ao": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "score": a.get("score_pertinence", 0)} for a in nouveaux_ao],
+        "nouveaux_ao": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "score": a.get("score_pertinence", 0), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence"), "accessibilite": a.get("_est_accessibilite")} for a in nouveaux_ao],
         "nb_nouveaux_ao": len(nouveaux_ao),
-        "deadlines_semaine": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "date_limite": a.get("date_limite", ""), "statut": a.get("statut", "")} for a in deadlines_semaine],
+        "deadlines_semaine": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "date_limite": a.get("date_limite", ""), "statut": a.get("statut", ""), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence")} for a in deadlines_semaine],
         "nb_deadlines": len(deadlines_semaine),
         "dossiers_generes": dossiers_generes,
         "nb_dossiers_generes": len(dossiers_generes),
@@ -253,11 +281,23 @@ def formater_rapport_html(rapport: dict) -> str:
             if "T" in str(dl):
                 dl = dl.split("T")[0]
             statut_color = {"nouveau": "#3b82f6", "analyse": "#f59e0b", "candidature": "#8b5cf6", "soumis": "#16a34a"}.get(d.get("statut", ""), "#64748b")
+            # Budget estime
+            budget = d.get("budget_estime")
+            budget_str = f"{int(budget):,} EUR".replace(",", " ") if budget else "-"
+            # Concurrence
+            conc = d.get("concurrence", "")
+            conc_colors = {"faible": "#16a34a", "moderee": "#f59e0b", "forte": "#dc2626", "tres forte": "#991b1b"}
+            conc_color = conc_colors.get(conc, "#64748b")
+            conc_str = conc.capitalize() if conc else "-"
             rows += f"""
             <tr>
-                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{d.get('titre', '')[:60]}</td>
-                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{d.get('acheteur', '')[:40]}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{d.get('titre', '')[:55]}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{d.get('acheteur', '')[:35]}</td>
                 <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#dc2626;">{dl}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">{budget_str}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">
+                    <span style="color:{conc_color};font-weight:600;">{conc_str}</span>
+                </td>
                 <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">
                     <span style="background:{statut_color};color:white;padding:2px 8px;border-radius:4px;font-size:0.8em;">{d.get('statut', 'nouveau')}</span>
                 </td>
@@ -270,6 +310,8 @@ def formater_rapport_html(rapport: dict) -> str:
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Titre</th>
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Acheteur</th>
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Deadline</th>
+                <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Budget est.</th>
+                <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Concurrence</th>
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Statut</th>
             </tr>
             {rows}
@@ -289,13 +331,30 @@ def formater_rapport_html(rapport: dict) -> str:
             score_pct = int(ao.get("score", 0) * 100) if ao.get("score", 0) <= 1 else int(ao.get("score", 0))
             score_color = "#16a34a" if score_pct >= 70 else "#f59e0b" if score_pct >= 50 else "#64748b"
             ao_url = f"{DASHBOARD_URL}/ao/{ao.get('id', '')}"
+            # Budget estime
+            budget = ao.get("budget_estime")
+            budget_str = f"{int(budget):,} EUR".replace(",", " ") if budget else "-"
+            # Concurrence
+            conc = ao.get("concurrence", "")
+            conc_colors = {"faible": "#16a34a", "moderee": "#f59e0b", "forte": "#dc2626", "tres forte": "#991b1b"}
+            conc_color = conc_colors.get(conc, "#64748b")
+            conc_str = conc.capitalize() if conc else "-"
+            # Accessibilite
+            acc = ao.get("accessibilite")
+            acc_str = f"{acc}/100" if acc is not None else "-"
+            acc_color = "#16a34a" if acc and acc >= 70 else "#f59e0b" if acc and acc >= 40 else "#64748b"
             rows += f"""
             <tr>
                 <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">
-                    <a href="{ao_url}" style="color:#2563eb;text-decoration:none;">{ao.get('titre', '')[:55]}</a>
+                    <a href="{ao_url}" style="color:#2563eb;text-decoration:none;">{ao.get('titre', '')[:50]}</a>
                 </td>
-                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{ao.get('acheteur', '')[:35]}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{ao.get('acheteur', '')[:30]}</td>
                 <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:{score_color};">{score_pct}%</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">{budget_str}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">
+                    <span style="color:{conc_color};font-weight:600;">{conc_str}</span>
+                </td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;color:{acc_color};">{acc_str}</td>
             </tr>
             """
         nouveaux_html = f"""
@@ -305,6 +364,9 @@ def formater_rapport_html(rapport: dict) -> str:
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Titre</th>
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Acheteur</th>
                 <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Score</th>
+                <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Budget est.</th>
+                <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Concurrence</th>
+                <th style="padding:8px 12px;text-align:left;font-size:0.85em;color:#64748b;">Accessibilite</th>
             </tr>
             {rows}
         </table>
