@@ -276,9 +276,9 @@ FACTEURS_CONCURRENCE_HAUTE = {
 
 # Facteurs qui reduisent la concurrence (niche Almera)
 FACTEURS_CONCURRENCE_BASSE = {
-    "intelligence artificielle": -20,
-    "IA generative": -25,
-    "ChatGPT": -25,
+    "intelligence artificielle": -25,
+    "IA generative": -30,
+    "ChatGPT": -30,
     "copilot": -20,
     "midjourney": -30,
     "prompt": -20,
@@ -288,8 +288,8 @@ FACTEURS_CONCURRENCE_BASSE = {
     "automatisation IA": -20,
     "acculturation IA": -15,
     "deploiement IA": -15,
-    "RS6776": -30,       # Tres peu d'organismes certifies
-    "Qualiopi": -5,       # Requis = filtre les non-certifies
+    "RS6776": -35,       # Tres peu d'organismes certifies
+    "Qualiopi": -10,      # Beaucoup de concurrents ne l'ont pas
 }
 
 # Facteurs structurels
@@ -298,9 +298,9 @@ FACTEURS_STRUCTURE = {
     "boamp": 0,              # National = standard
     "mapa": -10,             # Souvent petits acheteurs, moins de visibilite
     "procedure adaptee": -10,
-    "appel d'offres ouvert": 10,
+    "appel d'offres ouvert": 5,
     "appel d'offres restreint": 5,  # Pre-selection mais concurrence qualifiee
-    "accord-cadre": 15,      # Attire les gros
+    "accord-cadre": 10,      # Attire les gros
     "multi-attributaire": 5,  # Plusieurs gagnants = plus de candidats
 }
 
@@ -309,7 +309,8 @@ def estimer_concurrence(ao: dict) -> dict:
     """Estime le niveau de concurrence pour un AO.
 
     Returns:
-        dict avec: niveau (faible/moyen/fort/tres_fort), score (0-100),
+        dict avec: niveau (Tres faible/Faible/Moderee/Forte/Tres forte),
+                   score (0-100), concurrence_score (0-100),
                    facteurs, nb_concurrents_estime, avantages_almera
     """
     titre = (ao.get("titre") or "").lower()
@@ -318,7 +319,7 @@ def estimer_concurrence(ao: dict) -> dict:
     source = (ao.get("source") or "").lower()
     procedure = (ao.get("type_procedure") or "").lower()
 
-    score_concurrence = 50  # Base : concurrence moyenne
+    score_concurrence = 40  # Base : optimiste pour acteur de niche
     facteurs = []
     avantages = []
 
@@ -388,22 +389,26 @@ def estimer_concurrence(ao: dict) -> dict:
     # Borner le score
     score_concurrence = max(5, min(95, score_concurrence))
 
-    # Niveau
-    if score_concurrence < 25:
-        niveau = "faible"
-        nb_concurrents = "2-4"
-    elif score_concurrence < 45:
-        niveau = "moyen"
-        nb_concurrents = "4-8"
-    elif score_concurrence < 70:
-        niveau = "fort"
-        nb_concurrents = "8-15"
+    # Niveau avec descriptions claires
+    if score_concurrence < 20:
+        niveau = "Tres faible"
+        nb_concurrents = "2-3 candidats probables"
+    elif score_concurrence < 40:
+        niveau = "Faible"
+        nb_concurrents = "3-5 candidats probables"
+    elif score_concurrence < 60:
+        niveau = "Moderee"
+        nb_concurrents = "5-10 candidats probables"
+    elif score_concurrence < 80:
+        niveau = "Forte"
+        nb_concurrents = "10-20 candidats probables"
     else:
-        niveau = "tres_fort"
-        nb_concurrents = "15+"
+        niveau = "Tres forte"
+        nb_concurrents = "20+ candidats probables"
 
     return {
         "niveau": niveau,
+        "concurrence_score": score_concurrence,
         "score": score_concurrence,
         "nb_concurrents_estime": nb_concurrents_historique or nb_concurrents,
         "facteurs_hausse": facteurs,

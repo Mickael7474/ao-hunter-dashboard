@@ -143,15 +143,18 @@ def generer_rapport_hebdo() -> dict:
 
     # --- Estimations budget/concurrence ---
     def _estimation_ao(ao):
-        """Calcule l'estimation pour un AO, retourne (budget_estime, concurrence_niveau, accessibilite)."""
+        """Calcule l'estimation pour un AO, retourne (budget_estime, concurrence_dict, accessibilite)."""
         if estimer_marche is None:
             return None, None, None
         try:
             est = estimer_marche(ao)
+            budget_info = est.get("budget", {})
+            concurrence_info = est.get("concurrence", {})
+            accessibilite_info = est.get("accessibilite", {})
             return (
-                est.get("budget_estime"),
-                est.get("concurrence_niveau", ""),
-                est.get("accessibilite"),
+                budget_info.get("montant"),
+                concurrence_info,
+                accessibilite_info.get("score"),
             )
         except Exception:
             return None, None, None
@@ -161,7 +164,8 @@ def generer_rapport_hebdo() -> dict:
         if "estimation" not in ao:
             budget, concurrence, accessibilite = _estimation_ao(ao)
             ao["_est_budget"] = budget
-            ao["_est_concurrence"] = concurrence
+            ao["_est_concurrence"] = concurrence.get("niveau", "") if isinstance(concurrence, dict) else ""
+            ao["_est_concurrence_score"] = concurrence.get("concurrence_score") if isinstance(concurrence, dict) else None
             ao["_est_accessibilite"] = accessibilite
 
     # --- KPIs ---
@@ -207,9 +211,9 @@ def generer_rapport_hebdo() -> dict:
         "date_generation": maintenant.isoformat(),
         "semaine_du": il_y_a_7j.strftime("%d/%m/%Y"),
         "semaine_au": maintenant.strftime("%d/%m/%Y"),
-        "nouveaux_ao": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "score": a.get("score_pertinence", 0), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence"), "accessibilite": a.get("_est_accessibilite")} for a in nouveaux_ao],
+        "nouveaux_ao": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "score": a.get("score_pertinence", 0), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence"), "concurrence_score": a.get("_est_concurrence_score"), "accessibilite": a.get("_est_accessibilite")} for a in nouveaux_ao],
         "nb_nouveaux_ao": len(nouveaux_ao),
-        "deadlines_semaine": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "date_limite": a.get("date_limite", ""), "statut": a.get("statut", ""), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence")} for a in deadlines_semaine],
+        "deadlines_semaine": [{"id": a.get("id"), "titre": a.get("titre", ""), "acheteur": a.get("acheteur", ""), "date_limite": a.get("date_limite", ""), "statut": a.get("statut", ""), "budget_estime": a.get("_est_budget"), "concurrence": a.get("_est_concurrence"), "concurrence_score": a.get("_est_concurrence_score")} for a in deadlines_semaine],
         "nb_deadlines": len(deadlines_semaine),
         "dossiers_generes": dossiers_generes,
         "nb_dossiers_generes": len(dossiers_generes),
@@ -284,11 +288,14 @@ def formater_rapport_html(rapport: dict) -> str:
             # Budget estime
             budget = d.get("budget_estime")
             budget_str = f"{int(budget):,} EUR".replace(",", " ") if budget else "-"
-            # Concurrence
-            conc = d.get("concurrence", "")
-            conc_colors = {"faible": "#16a34a", "moderee": "#f59e0b", "forte": "#dc2626", "tres forte": "#991b1b"}
-            conc_color = conc_colors.get(conc, "#64748b")
-            conc_str = conc.capitalize() if conc else "-"
+            # Concurrence (score-based coloring)
+            conc_score = d.get("concurrence_score")
+            if conc_score is not None:
+                conc_color = "#16a34a" if conc_score < 30 else "#f59e0b" if conc_score < 60 else "#dc2626"
+                conc_str = f"{conc_score}/100"
+            else:
+                conc_color = "#64748b"
+                conc_str = "-"
             rows += f"""
             <tr>
                 <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{d.get('titre', '')[:55]}</td>
@@ -334,11 +341,14 @@ def formater_rapport_html(rapport: dict) -> str:
             # Budget estime
             budget = ao.get("budget_estime")
             budget_str = f"{int(budget):,} EUR".replace(",", " ") if budget else "-"
-            # Concurrence
-            conc = ao.get("concurrence", "")
-            conc_colors = {"faible": "#16a34a", "moderee": "#f59e0b", "forte": "#dc2626", "tres forte": "#991b1b"}
-            conc_color = conc_colors.get(conc, "#64748b")
-            conc_str = conc.capitalize() if conc else "-"
+            # Concurrence (score-based coloring)
+            conc_score = ao.get("concurrence_score")
+            if conc_score is not None:
+                conc_color = "#16a34a" if conc_score < 30 else "#f59e0b" if conc_score < 60 else "#dc2626"
+                conc_str = f"{conc_score}/100"
+            else:
+                conc_color = "#64748b"
+                conc_str = "-"
             # Accessibilite
             acc = ao.get("accessibilite")
             acc_str = f"{acc}/100" if acc is not None else "-"
