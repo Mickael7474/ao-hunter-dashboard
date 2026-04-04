@@ -998,6 +998,13 @@ def detail_ao(ao_id):
     except Exception:
         estimation = None
 
+    # Données DECP réelles
+    try:
+        from decp_data import rechercher_marches_similaires
+        decp = rechercher_marches_similaires(ao)
+    except Exception:
+        decp = None
+
     # Score acheteur
     try:
         from score_acheteur import scorer_acheteur
@@ -1083,7 +1090,8 @@ def detail_ao(ao_id):
                            groupement=groupement_eval,
                            analyse_dce_complete=analyse_dce_complete,
                            prediction=prediction_data,
-                           dossiers_similaires=dossiers_similaires)
+                           dossiers_similaires=dossiers_similaires,
+                           decp=decp)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])

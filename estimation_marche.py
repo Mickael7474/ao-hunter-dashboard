@@ -32,6 +32,8 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+from decp_data import rechercher_marches_similaires
+
 logger = logging.getLogger("ao_hunter.estimation_marche")
 
 DASHBOARD_DIR = Path(__file__).parent
@@ -536,11 +538,75 @@ def calculer_accessibilite(budget_est: dict, concurrence_est: dict, ao: dict) ->
 
 
 # ============================================================
+# ACCESSIBILITE DEPUIS DONNEES DECP
+# ============================================================
+
+def _calcul_accessibilite(decp: dict) -> dict:
+    """Calcule le score d'accessibilite a partir des donnees DECP reelles.
+
+    Formule : accessibilite = 100 - (nb_offres_median * 12) + bonus_niche
+    Peu d'offres + budget raisonnable = haute accessibilite.
+    """
+    concurrence = decp.get("concurrence", {})
+    budget = decp.get("budget", {})
+    nb_offres_median = concurrence.get("nb_offres_median", 5)
+    montant_median = budget.get("median", 20_000)
+
+    # Bonus niche : petits budgets sont moins contestes
+    if montant_median < 15_000:
+        bonus_niche = 15
+    elif montant_median < 40_000:
+        bonus_niche = 10
+    elif montant_median < 80_000:
+        bonus_niche = 5
+    else:
+        bonus_niche = 0
+
+    score = max(10, min(95, 100 - (nb_offres_median * 12) + bonus_niche))
+
+    if score >= 70:
+        phase = "Phase 1 - Construction references"
+        recommandation = "AO ideal pour construire vos references. Budget accessible, " \
+                        "peu de concurrence d'apres les donnees DECP. Foncez !"
+        priorite = "haute"
+    elif score >= 50:
+        phase = "Phase 2 - Croissance"
+        recommandation = "AO de niveau intermediaire. Concurrence moderee " \
+                        "d'apres les marches similaires passes."
+        priorite = "moyenne"
+    elif score >= 30:
+        phase = "Phase 3 - Maturite"
+        recommandation = "AO competitif d'apres l'historique DECP. " \
+                        "Necessit des references solides."
+        priorite = "faible"
+    else:
+        phase = "Hors cible"
+        recommandation = "Forte concurrence historique. A eviter sauf enjeu strategique."
+        priorite = "tres_faible"
+
+    return {
+        "score": score,
+        "phase": phase,
+        "recommandation": recommandation,
+        "priorite": priorite,
+        "detail_scores": {
+            "nb_offres_median": nb_offres_median,
+            "bonus_niche": bonus_niche,
+            "montant_median": montant_median,
+        },
+    }
+
+
+# ============================================================
 # FONCTION PRINCIPALE
 # ============================================================
 
 def estimer_marche(ao: dict) -> dict:
     """Estimation complete d'un AO : budget, concurrence, accessibilite.
+
+    Tente d'abord d'utiliser les donnees reelles DECP (data.gouv.fr).
+    Si l'API est indisponible ou retourne moins de 5 marches similaires,
+    retombe sur l'estimation heuristique existante.
 
     Args:
         ao: Dictionnaire de l'appel d'offres
@@ -548,6 +614,34 @@ def estimer_marche(ao: dict) -> dict:
     Returns:
         dict avec: budget, concurrence, accessibilite (chacun est un dict)
     """
+    # --- Tentative donnees reelles DECP ---
+    try:
+        decp = rechercher_marches_similaires(ao)
+        if decp and decp.get("nb_marches_trouves", 0) >= 5:
+            return {
+                "budget": {
+                    "montant": decp["budget"]["median"],
+                    "fourchette": decp["budget"]["fourchette_recommandee"],
+                    "confiance": decp["budget"]["confiance"],
+                    "source": "DECP - {} marches similaires".format(decp["nb_marches_trouves"]),
+                    "details": decp["budget"],
+                },
+                "concurrence": {
+                    "niveau": decp["concurrence"]["niveau"],
+                    "concurrence_score": decp["concurrence"]["score"],
+                    "nb_offres_median": decp["concurrence"]["nb_offres_median"],
+                    "description": decp["concurrence"]["description"],
+                    "titulaires_frequents": decp.get("titulaires_frequents", [])[:5],
+                    "source": "DECP",
+                },
+                "accessibilite": _calcul_accessibilite(decp),
+                "recommandation_prix": decp.get("recommandation_prix", {}),
+                "source": "DECP data.gouv.fr ({} marches)".format(decp["nb_marches_trouves"]),
+            }
+    except Exception as e:
+        logger.warning(f"DECP indisponible, fallback heuristique: {e}")
+
+    # --- Fallback : estimation heuristique ---
     budget = estimer_budget(ao)
     concurrence = estimer_concurrence(ao)
     accessibilite = calculer_accessibilite(budget, concurrence, ao)

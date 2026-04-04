@@ -248,7 +248,7 @@ def _extraire_criteres_attribution(ao: dict, dce_texte: str = "") -> list[dict]:
 
 # --- Generation de chaque piece du dossier ---
 
-def _generer_memoire(ao: dict, type_presta: str, dce_texte: str = "", personnalisation: dict = None) -> str:
+def _generer_memoire(ao: dict, type_presta: str, dce_texte: str = "", personnalisation: dict = None, decp: dict = None) -> str:
     """Genere le memoire technique (piece maitresse)."""
     dce_bloc = ""
     if dce_texte:
@@ -318,6 +318,19 @@ Le volume de chaque section doit etre proportionnel a son poids dans la notation
     except Exception as e:
         logger.warning(f"Memoire adaptative: erreur recherche modeles: {e}")
 
+    # Contexte DECP (données marché réelles)
+    decp_bloc = ""
+    if decp and decp.get("nb_marches_trouves", 0) > 0:
+        decp_bloc = f"""
+
+=== DONNEES MARCHE REELLES (source: DECP data.gouv.fr, {decp['nb_marches_trouves']} marches similaires) ===
+- Prix median des marches similaires: {decp['budget']['median']} EUR
+- Fourchette de prix: {decp['budget']['fourchette_recommandee'][0]} - {decp['budget']['fourchette_recommandee'][1]} EUR
+- Nombre median de candidats: {decp['concurrence']['nb_offres_median']}
+- Concurrents frequents: {', '.join(t['nom'] for t in decp.get('titulaires_frequents', [])[:5])}
+Utilisez ces donnees pour calibrer le positionnement tarifaire et les arguments differenciants.
+==="""
+
     prompt = f"""Tu es un expert en reponse aux appels d'offres publics francais.
 Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
@@ -328,7 +341,7 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 
 ## ENTREPRISE CANDIDATE
 {_bloc_infos_entreprise()}
-{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}
+{dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{decp_bloc}
 
 ## INSTRUCTIONS
 1. Redige un memoire technique COMPLET en francais (minimum 3000 mots)
@@ -387,7 +400,7 @@ Format : Lettre professionnelle formelle, prete a imprimer."""
     return _appel_claude(prompt, max_tokens=2000)
 
 
-def _generer_bpu(ao: dict, dce_texte: str = "") -> str:
+def _generer_bpu(ao: dict, dce_texte: str = "", decp: dict = None) -> str:
     """Genere le BPU/DPGF avec recommandation de prix dynamique."""
     ent = ENTREPRISE
     grille = "\n".join(f"- {k.replace('_', ' ').title()}: {v}" for k, v in ent["grille_tarifaire"].items())
@@ -428,6 +441,19 @@ aux exigences exactes du cahier des charges :
 {dce_texte[:8000]}
 ==="""
 
+    # Contexte DECP (données marché réelles)
+    decp_bloc = ""
+    if decp and decp.get("nb_marches_trouves", 0) > 0:
+        decp_bloc = f"""
+
+=== DONNEES MARCHE REELLES (source: DECP data.gouv.fr, {decp['nb_marches_trouves']} marches similaires) ===
+- Prix median des marches similaires: {decp['budget']['median']} EUR
+- Fourchette de prix: {decp['budget']['fourchette_recommandee'][0]} - {decp['budget']['fourchette_recommandee'][1]} EUR
+- Nombre median de candidats: {decp['concurrence']['nb_offres_median']}
+- Concurrents frequents: {', '.join(t['nom'] for t in decp.get('titulaires_frequents', [])[:5])}
+IMPORTANT : Calibrez les prix en tenant compte de ces donnees marche reelles.
+==="""
+
     prompt = f"""Genere un BORDEREAU DE PRIX UNITAIRES (BPU) et une DECOMPOSITION DU PRIX GLOBAL FORFAITAIRE (DPGF).
 
 === APPEL D'OFFRES ===
@@ -440,7 +466,7 @@ aux exigences exactes du cahier des charges :
 Raison sociale : {ent['raison_sociale']}
 SIRET : {ent['siret']}
 TVA : Exoneree (article 261-4-4 du CGI)
-{reco_bloc}{dce_bloc}
+{reco_bloc}{dce_bloc}{decp_bloc}
 
 === STRUCTURE ===
 
@@ -1444,6 +1470,18 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     except Exception as e:
         logger.warning(f"Personnalisation acheteur non disponible: {e}")
 
+    # Données DECP réelles (intelligence concurrentielle)
+    decp = None
+    try:
+        from decp_data import rechercher_marches_similaires
+        decp = rechercher_marches_similaires(ao)
+        if decp and decp.get("nb_marches_trouves", 0) > 0:
+            logger.info(f"DECP: {decp['nb_marches_trouves']} marches similaires trouves")
+        else:
+            logger.info("DECP: aucun marche similaire trouve")
+    except Exception as e:
+        logger.warning(f"DECP data non disponible: {e}")
+
     # 1. Analyse Go/No-Go (pas d'appel API)
     logger.info("1/7 - Analyse Go/No-Go...")
     try:
@@ -1462,7 +1500,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 2. Memoire technique (appel API principal)
     logger.info("2/7 - Memoire technique...")
     try:
-        memoire = _generer_memoire(ao, type_presta, dce_texte=dce_texte, personnalisation=personnalisation)
+        memoire = _generer_memoire(ao, type_presta, dce_texte=dce_texte, personnalisation=personnalisation, decp=decp)
         _sauvegarder(dossier_path, "02_memoire_technique.md", memoire)
         fichiers_generes.append("02_memoire_technique.md")
         nb_mots_total += len(memoire.split())
@@ -1485,7 +1523,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
     # 4. BPU / DPGF (appel API)
     logger.info("4/7 - BPU / DPGF...")
     try:
-        bpu = _generer_bpu(ao, dce_texte=dce_texte)
+        bpu = _generer_bpu(ao, dce_texte=dce_texte, decp=decp)
         _sauvegarder(dossier_path, "04_bpu_dpgf.md", bpu)
         fichiers_generes.append("04_bpu_dpgf.md")
         nb_mots_total += len(bpu.split())

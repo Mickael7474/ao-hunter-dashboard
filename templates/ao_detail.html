@@ -536,6 +536,70 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Données marché réelles (DECP) -->
+{% if decp and decp.nb_marches_trouves > 0 %}
+<div class="card">
+    <div class="card-header">
+        <h2>Donnees marche reelles (DECP)</h2>
+        <span style="font-size:0.7rem; color:var(--text-light);">{{ decp.nb_marches_trouves }} marches similaires - source data.gouv.fr</span>
+    </div>
+
+    {% if decp.titulaires_frequents %}
+    <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:0.5rem;">Top concurrents frequents</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:1rem;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border); text-align:left;">
+                <th style="padding:6px 8px;">Nom</th>
+                <th style="padding:6px 8px; text-align:center;">Nb marches</th>
+                <th style="padding:6px 8px; text-align:right;">Montant moyen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in decp.titulaires_frequents[:5] %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 8px;">{{ t.nom }}</td>
+                <td style="padding:6px 8px; text-align:center;">{{ t.nb_marches }}</td>
+                <td style="padding:6px 8px; text-align:right;">{{ "{:,.0f}".format(t.montant_moyen).replace(",", " ") }} EUR</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+        {% if decp.budget %}
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-light); margin-bottom:2px;">Prix de reference</div>
+            <div style="font-size:1.1rem; font-weight:700; color:var(--primary);">
+                {{ "{:,.0f}".format(decp.budget.median).replace(",", " ") }} EUR
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-light);">
+                Fourchette P25-P75 : {{ "{:,.0f}".format(decp.budget.fourchette_recommandee[0]).replace(",", " ") }} - {{ "{:,.0f}".format(decp.budget.fourchette_recommandee[1]).replace(",", " ") }} EUR
+            </div>
+        </div>
+        {% endif %}
+
+        {% if decp.concurrence %}
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-light); margin-bottom:2px;">Nb offres median</div>
+            <div style="font-size:1.1rem; font-weight:700;">
+                {{ decp.concurrence.nb_offres_median }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if decp.recommandation_tarifaire %}
+        <div>
+            <div style="font-size:0.75rem; color:var(--text-light); margin-bottom:2px;">Recommandation tarifaire</div>
+            <div style="font-size:0.85rem; font-weight:600; color:#16a34a;">
+                {{ decp.recommandation_tarifaire }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Prediction de victoire -->
 {% if prediction %}
 <div class="card">
