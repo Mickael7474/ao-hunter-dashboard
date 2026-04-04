@@ -82,7 +82,7 @@ def _appel_claude(prompt: str, max_tokens: int = 4000, modele: str = None) -> st
 
     model = modele or MODELE_PRINCIPAL
 
-    with httpx.Client(timeout=120) as client:
+    with httpx.Client(timeout=300) as client:
         resp = client.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -419,11 +419,12 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 10. Sois precis, concret, quantifie. Pas de phrases generiques. Chaque argument doit etre illustre par un exemple reel.
 11. Format Markdown avec titres # ## ###
 12. Pour chaque section, inclus au moins une reference client pertinente avec resultats chiffres
-{"13. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}"""
+{"13. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}
+14. IMPORTANT : Le memoire DOIT se terminer proprement avec une conclusion. Ne depasse pas {_objectif_mots(criteres) + 1500} mots. Termine TOUJOURS par une section "CONCLUSION" de 3-5 phrases resumant les points forts de la candidature."""
 
     # Adapter max_tokens a l'objectif de mots (1 mot ~ 1.5 tokens en francais)
     objectif = _objectif_mots(criteres)
-    max_tok = max(8000, int(objectif * 1.8))
+    max_tok = max(16000, int(objectif * 3.0))
     return _appel_claude(prompt, max_tokens=max_tok)
 
 
@@ -2058,7 +2059,7 @@ def regenerer_piece(dossier_nom: str, fichier: str, ao: dict = None, type_presta
                 docx_name = fichier.replace(".md", ".docx")
                 titre_ao = ao.get("titre", "Appel d'offres")
                 titre_doc = fichier.replace(".md", "").split("_", 1)[-1].replace("_", " ").title()
-                markdown_to_docx(contenu, str(dossier_path / docx_name), titre_ao=titre_ao, titre_doc=titre_doc)
+                markdown_to_docx(contenu, str(dossier_path / docx_name), titre_document=titre_ao, sous_titre=titre_doc)
                 logger.info(f"DOCX re-genere: {docx_name}")
         except Exception as e:
             logger.warning(f"Erreur re-conversion DOCX: {e}")
