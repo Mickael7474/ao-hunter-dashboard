@@ -578,42 +578,100 @@ Format Markdown."""
 
 
 def _generer_cv_formateurs(ao: dict) -> str:
-    """Genere les fiches CV des formateurs pertinents."""
-    formateurs_txt = ""
+    """Genere les fiches CV des formateurs pertinents (template, sans appel API)."""
+
+    # --- 1. Extraire les mots-cles de l'AO (titre + description) ---
+    texte_ao = (ao.get('titre', '') + ' ' + ao.get('description', '')).lower()
+    # Nettoyer : retirer accents simples, ponctuation
+    for c in ".,;:!?()[]{}\"'-/\\":
+        texte_ao = texte_ao.replace(c, ' ')
+    mots_ao = set(texte_ao.split())
+    # Retirer les mots vides courants
+    mots_vides = {'de', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'et', 'en',
+                  'a', 'au', 'aux', 'pour', 'par', 'sur', 'dans', 'avec', 'qui',
+                  'que', 'est', 'sont', 'ce', 'cette', 'ces', 'ou', 'son', 'sa',
+                  'ses', 'se', 'ne', 'pas', 'plus', 'tout', 'tous', 'etre', 'avoir',
+                  'd', 'l', 'n', 'qu', 'il', 'elle', 'on', 'nous', 'vous', 'leur',
+                  'leurs', 'y', 'si', 'mais', 'donc', 'ni', 'car', 'entre', 'comme',
+                  'the', 'of', 'and', 'for', 'to', 'in', 'marche', 'public', 'lot',
+                  'accord', 'cadre', 'prestations', 'services'}
+    mots_ao -= mots_vides
+
+    # --- 2. Scorer chaque formateur par correspondance mots-cles ---
+    scores = []
     for f in ENTREPRISE["formateurs"]:
-        formateurs_txt += f"""
-- {f['nom']} ({f['role']})
-  Specialites : {f['specialites']}
-  Formation : {f['formation']}
-  Experience : {f['experience']}
+        spec_txt = (f.get('specialites', '') + ' ' + f.get('role', '') + ' ' + f.get('experience', '')).lower()
+        for c in ".,;:!?()[]{}\"'-/\\":
+            spec_txt = spec_txt.replace(c, ' ')
+        mots_formateur = set(spec_txt.split()) - mots_vides
+        matches = mots_ao & mots_formateur
+        scores.append((len(matches), matches, f))
+
+    # Trier par score decroissant
+    scores.sort(key=lambda x: x[0], reverse=True)
+
+    # Toujours inclure Mickael Bertolla en premier (formateur principal)
+    selectionnes = []
+    reste = []
+    for score, matches, f in scores:
+        if f['nom'] == 'Mickael Bertolla':
+            selectionnes.insert(0, (score, matches, f))
+        else:
+            reste.append((score, matches, f))
+
+    # Ajouter 1-3 autres formateurs (ceux avec le meilleur score, min 1 match)
+    nb_autres = min(3, len([r for r in reste if r[0] > 0]))
+    nb_autres = max(1, nb_autres)  # Au moins 1 autre formateur
+    for i in range(min(nb_autres, len(reste))):
+        selectionnes.append(reste[i])
+
+    # --- 3. Generer le markdown ---
+    titre_ao = ao.get('titre', 'cet appel d\'offres')
+    md = f"""# FICHES CV - EQUIPE PEDAGOGIQUE MOBILISEE
+
+**Appel d'offres** : {titre_ao}
+**Candidat** : {ENTREPRISE['nom']} ({ENTREPRISE['raison_sociale']})
+**Nombre de formateurs mobilises** : {len(selectionnes)}
+
+---
+
 """
 
-    prompt = f"""Genere les FICHES CV PROFESSIONNELLES des formateurs mobilises pour cet appel d'offres.
+    for score, matches, f in selectionnes:
+        # Construire la liste de mots-cles matches pour la pertinence
+        if matches:
+            mots_pertinents = ", ".join(sorted(matches)[:8])
+        else:
+            mots_pertinents = "direction pedagogique et coordination generale"
 
-=== APPEL D'OFFRES ===
-Titre : {ao.get('titre', 'Non precise')}
-Description : {ao.get('description', '')[:500]}
+        md += f"""## {f['nom']} - {f['role']}
 
-=== EQUIPE ALMERA DISPONIBLE ===
-{formateurs_txt}
+### Formation et diplomes
+{f['formation']}
 
-=== INSTRUCTIONS ===
-1. Selectionne les 2-4 formateurs les plus pertinents pour cet AO
-2. Pour chaque formateur selectionne, genere une fiche CV avec :
-   - Nom et role (titre ##)
-   - Formation / Diplomes
-   - Competences cles (en lien avec l'AO)
-   - Experience professionnelle pertinente
-   - Domaines d'intervention
-3. INTERDIT ABSOLU : N'invente AUCUN nom, AUCUN diplome, AUCUNE reference qui ne figure pas dans la liste ci-dessus
-4. Utilise UNIQUEMENT les noms, formations et experiences indiques dans "EQUIPE ALMERA DISPONIBLE"
-5. Ne modifie pas les noms de famille ni les ecoles/diplomes
-6. Pas de balises HTML (<br> etc.) dans le markdown
-7. Explique brievement pourquoi chaque formateur est pertinent pour cet AO
+### Specialites et competences cles
+{f['specialites']}
 
-Format Markdown avec titres ## par formateur (ex: ## Mickael Bertolla - President & Formateur principal)."""
+### Experience professionnelle
+{f['experience']}
 
-    return _appel_claude(prompt, max_tokens=4000, modele=MODELE_LEGER)
+### Pertinence pour cet AO
+{f['nom']} est mobilise(e) sur cette mission en raison de son expertise en lien direct avec les besoins identifies : {mots_pertinents}. Son profil repond aux exigences de l'appel d'offres par ses competences en {f['specialites'].split(',')[0].strip()}.
+
+---
+
+"""
+
+    md += f"""## Organisation de l'equipe
+
+L'equipe proposee est coordonnee par **{ENTREPRISE['formateurs'][0]['nom']}** ({ENTREPRISE['formateurs'][0]['role']}), garant de la qualite pedagogique et de la coherence de l'intervention.
+
+Chaque formateur dispose d'une expertise complementaire permettant de couvrir l'ensemble des besoins exprimes dans le cahier des charges.
+
+**Certifications de l'organisme** : {', '.join(ENTREPRISE.get('certifications', []))}
+"""
+
+    return md
 
 
 def _generer_dc1_dc2(ao: dict) -> str:
@@ -1829,6 +1887,35 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         erreurs.append(f"Conformite RC: {e}")
         logger.error(f"Erreur conformite RC: {e}")
 
+    # Feature : Coherence inter-documents (regex, pas d'appel API)
+    coherence_result = None
+    logger.info("Verification coherence inter-documents...")
+    try:
+        from auto_review import verifier_coherence_inter_documents
+
+        # Charger tous les fichiers markdown generes
+        fichiers_pour_coherence = {}
+        for f_nom in fichiers_generes:
+            if f_nom.endswith(".md"):
+                f_path = dossier_path / f_nom
+                if f_path.exists():
+                    fichiers_pour_coherence[f_nom] = f_path.read_text(encoding="utf-8")
+
+        if fichiers_pour_coherence:
+            coherence_result = verifier_coherence_inter_documents(fichiers_pour_coherence)
+
+            # Sauvegarder
+            coherence_path = dossier_path / "coherence_check.json"
+            coherence_path.write_text(json.dumps(coherence_result, ensure_ascii=False, indent=2), encoding="utf-8")
+            fichiers_generes.append("coherence_check.json")
+            logger.info(
+                f"Coherence inter-documents: score={coherence_result.get('score', '?')}/100, "
+                f"{len(coherence_result.get('incoherences', []))} incoherence(s)"
+            )
+    except Exception as e:
+        erreurs.append(f"Coherence inter-documents: {e}")
+        logger.error(f"Erreur coherence inter-documents: {e}")
+
     # Mettre a jour l'index
     _maj_index(dossier_nom, ao, dossier_path)
 
@@ -1847,6 +1934,8 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         result["review"] = review_result
     if conformite_rc_result:
         result["conformite_rc"] = conformite_rc_result
+    if coherence_result:
+        result["coherence_inter_documents"] = coherence_result
     if personnalisation:
         result["personnalisation"] = {
             "type_acheteur": personnalisation["type_acheteur"],

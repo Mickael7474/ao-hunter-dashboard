@@ -458,6 +458,235 @@ def verifier_conformite_rc(dossier: dict, rc_data: dict) -> dict:
     }
 
 
+def verifier_coherence_inter_documents(fichiers: dict) -> dict:
+    """Verifie la coherence croisee entre les documents du dossier (regex, pas d'appel API).
+
+    Args:
+        fichiers: dict {nom_fichier: contenu_markdown} de tous les .md du dossier
+
+    Returns:
+        dict {score: 0-100, incoherences: [{documents, champ, valeurs, message}]}
+    """
+    incoherences = []
+
+    # --- Identifier les fichiers par role ---
+    memoire = ""
+    memoire_nom = ""
+    bpu = ""
+    bpu_nom = ""
+    acte = ""
+    acte_nom = ""
+    planning = ""
+    planning_nom = ""
+    cv = ""
+    cv_nom = ""
+    references = ""
+    references_nom = ""
+
+    for nom, contenu in fichiers.items():
+        nom_lower = nom.lower()
+        if "memoire" in nom_lower:
+            memoire = contenu
+            memoire_nom = nom
+        elif "bpu" in nom_lower or "dpgf" in nom_lower:
+            bpu = contenu
+            bpu_nom = nom
+        elif "acte" in nom_lower and "engagement" in nom_lower:
+            acte = contenu
+            acte_nom = nom
+        elif "planning" in nom_lower:
+            planning = contenu
+            planning_nom = nom
+        elif "cv" in nom_lower:
+            cv = contenu
+            cv_nom = nom
+        elif "reference" in nom_lower:
+            references = contenu
+            references_nom = nom
+
+    # --- a. Nombre de personnes formees (memoire vs references) ---
+    if memoire and references:
+        pattern_personnes = re.compile(
+            r"(\d+)\s*(?:personnes?\s*form[ée]e?s?|stagiaires?\s*form[ée]e?s?|apprenants?\s*form[ée]e?s?|participants?\s*form[ée]e?s?)",
+            re.IGNORECASE,
+        )
+        nb_memoire = pattern_personnes.findall(memoire)
+        nb_refs = pattern_personnes.findall(references)
+        if nb_memoire and nb_refs:
+            # Comparer le nombre le plus grand cite dans chaque document
+            max_memoire = max(int(n) for n in nb_memoire)
+            max_refs = max(int(n) for n in nb_refs)
+            if max_memoire != max_refs and abs(max_memoire - max_refs) > 50:
+                incoherences.append({
+                    "documents": [memoire_nom, references_nom],
+                    "champ": "nombre_personnes_formees",
+                    "valeurs": [str(max_memoire), str(max_refs)],
+                    "message": f"Le memoire mentionne {max_memoire} personnes formees mais les references indiquent {max_refs}",
+                })
+
+    # --- b. Budget/montant (BPU total vs acte d'engagement) ---
+    if bpu and acte:
+        pattern_montant = re.compile(
+            r"(?:total|montant\s*global|montant\s*total|prix\s*total)[^\d]{0,30}?"
+            r"(\d[\d\s]*(?:[.,]\d{1,2})?)\s*(?:EUR|€|euros?)",
+            re.IGNORECASE,
+        )
+        # Aussi chercher les montants avec label "HT" ou "TTC"
+        pattern_montant_ht = re.compile(
+            r"(\d[\d\s]*(?:[.,]\d{1,2})?)\s*(?:EUR|€|euros?)\s*(?:HT|TTC)",
+            re.IGNORECASE,
+        )
+
+        def _extraire_montant_principal(texte, nom_doc):
+            """Extrait le montant total le plus probable d'un document."""
+            # Priorite aux montants explicitement "total"
+            totaux = pattern_montant.findall(texte)
+            if totaux:
+                return totaux[-1]  # Dernier "total" = souvent le grand total
+            # Sinon chercher les montants HT/TTC
+            ht = pattern_montant_ht.findall(texte)
+            if ht:
+                return ht[-1]
+            return None
+
+        montant_bpu = _extraire_montant_principal(bpu, bpu_nom)
+        montant_acte = _extraire_montant_principal(acte, acte_nom)
+
+        if montant_bpu and montant_acte:
+            # Normaliser pour comparer
+            def _normaliser(m):
+                return float(m.replace(" ", "").replace(",", "."))
+
+            try:
+                v_bpu = _normaliser(montant_bpu)
+                v_acte = _normaliser(montant_acte)
+                if v_bpu > 0 and v_acte > 0 and abs(v_bpu - v_acte) / max(v_bpu, v_acte) > 0.01:
+                    incoherences.append({
+                        "documents": [bpu_nom, acte_nom],
+                        "champ": "montant_total",
+                        "valeurs": [montant_bpu.strip(), montant_acte.strip()],
+                        "message": f"Le BPU indique un total de {montant_bpu.strip()} EUR mais l'acte d'engagement mentionne {montant_acte.strip()} EUR",
+                    })
+            except (ValueError, ZeroDivisionError):
+                pass
+
+    # --- c. Duree (planning vs memoire) ---
+    if planning and memoire:
+        pattern_duree = re.compile(
+            r"(\d+)\s*(?:jours?|heures?|h|j|semaines?|mois)",
+            re.IGNORECASE,
+        )
+        durees_planning = pattern_duree.findall(planning)
+        durees_memoire = pattern_duree.findall(memoire)
+
+        if durees_planning and durees_memoire:
+            # Chercher specifiquement la duree totale (pattern "duree totale : X jours")
+            pattern_duree_totale = re.compile(
+                r"(?:dur[ée]e\s*(?:totale|globale|de\s*la\s*formation)?)\s*[:\-]?\s*(\d+)\s*(jours?|heures?|h|j)",
+                re.IGNORECASE,
+            )
+            total_planning = pattern_duree_totale.findall(planning)
+            total_memoire = pattern_duree_totale.findall(memoire)
+
+            if total_planning and total_memoire:
+                val_p = int(total_planning[0][0])
+                unite_p = total_planning[0][1].lower().rstrip("s")
+                val_m = int(total_memoire[0][0])
+                unite_m = total_memoire[0][1].lower().rstrip("s")
+
+                # Comparer seulement si meme unite
+                if unite_p == unite_m and val_p != val_m:
+                    incoherences.append({
+                        "documents": [planning_nom, memoire_nom],
+                        "champ": "duree",
+                        "valeurs": [f"{val_p} {total_planning[0][1]}", f"{val_m} {total_memoire[0][1]}"],
+                        "message": f"Le planning indique une duree de {val_p} {total_planning[0][1]} mais le memoire mentionne {val_m} {total_memoire[0][1]}",
+                    })
+
+    # --- d. Noms formateurs (CV vs memoire) ---
+    if cv and memoire:
+        # Extraire les noms des formateurs depuis les CV (titres de sections ou "Nom : ...")
+        pattern_nom_cv = re.compile(
+            r"(?:^#+\s*(?:CV\s*(?:de|:)?\s*)?|(?:Nom|Formateur|Formatrice|Intervenant)\s*[:\-]\s*)"
+            r"([A-Z][a-zéèêëàâäùûüôöîïç]+(?:\s+[A-Z][a-zéèêëàâäùûüôöîïç]+)?(?:\s+[A-Z]{2,})?)",
+            re.MULTILINE,
+        )
+        noms_cv = pattern_nom_cv.findall(cv)
+        # Nettoyer : garder seulement les noms plausibles (2+ mots ou au moins 4 chars)
+        noms_cv = [n.strip() for n in noms_cv if len(n.strip()) >= 4]
+
+        if noms_cv:
+            memoire_lower = memoire.lower()
+            noms_absents = []
+            for nom in noms_cv:
+                # Chercher au moins le nom de famille (dernier mot)
+                parties = nom.split()
+                nom_famille = parties[-1] if len(parties) > 1 else parties[0]
+                if nom_famille.lower() not in memoire_lower and nom.lower() not in memoire_lower:
+                    noms_absents.append(nom)
+
+            if noms_absents:
+                incoherences.append({
+                    "documents": [cv_nom, memoire_nom],
+                    "champ": "noms_formateurs",
+                    "valeurs": noms_absents,
+                    "message": f"Formateur(s) present(s) dans les CV mais absent(s) du memoire technique: {', '.join(noms_absents)}",
+                })
+
+    # --- e. Certifications (Qualiopi/RS6776 coherentes entre documents) ---
+    certifications_a_verifier = [
+        ("Qualiopi", re.compile(r"qualiopi", re.IGNORECASE)),
+        ("RS6776", re.compile(r"RS\s*6776", re.IGNORECASE)),
+    ]
+
+    for cert_nom, cert_pattern in certifications_a_verifier:
+        docs_avec = []
+        docs_sans = []
+        # Verifier dans les documents cles (memoire, lettre, dc1_dc2, references)
+        docs_cles = {}
+        for nom, contenu in fichiers.items():
+            nom_lower = nom.lower()
+            if any(k in nom_lower for k in ["memoire", "lettre", "dc1", "dc2", "reference", "dume"]):
+                docs_cles[nom] = contenu
+
+        for nom, contenu in docs_cles.items():
+            if cert_pattern.search(contenu):
+                docs_avec.append(nom)
+            else:
+                docs_sans.append(nom)
+
+        # Incoherence seulement si certains documents la mentionnent et d'autres non
+        if docs_avec and docs_sans and len(docs_avec) >= 1:
+            incoherences.append({
+                "documents": docs_avec + docs_sans,
+                "champ": f"certification_{cert_nom}",
+                "valeurs": [f"present dans {', '.join(docs_avec)}", f"absent de {', '.join(docs_sans)}"],
+                "message": f"{cert_nom} est mentionne dans {', '.join(docs_avec)} mais pas dans {', '.join(docs_sans)}",
+            })
+
+    # --- Calcul du score ---
+    # Chaque incoherence coute des points selon la gravite
+    poids_champs = {
+        "montant_total": 25,
+        "nombre_personnes_formees": 15,
+        "duree": 20,
+        "noms_formateurs": 15,
+        "certification_Qualiopi": 10,
+        "certification_RS6776": 5,
+    }
+    penalite = 0
+    for inc in incoherences:
+        penalite += poids_champs.get(inc["champ"], 10)
+
+    score = max(0, min(100, 100 - penalite))
+
+    logger.info(f"Coherence inter-documents: score={score}/100, {len(incoherences)} incoherence(s)")
+    return {
+        "score": score,
+        "incoherences": incoherences,
+    }
+
+
 def _extraire_json(texte: str) -> str | None:
     """Extrait le premier bloc JSON valide d'un texte."""
     # Essayer de trouver un bloc JSON entre accolades

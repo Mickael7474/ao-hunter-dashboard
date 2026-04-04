@@ -881,6 +881,53 @@ def roi():
     return render_template("roi.html", **stats)
 
 
+@app.route("/statistiques")
+def page_statistiques():
+    """Page statistiques avancees (funnel, win rate, sources, acheteurs, ROI)."""
+    return render_template("statistiques.html")
+
+
+@app.route("/upload-gagnant", methods=["GET", "POST"])
+def page_upload_gagnant():
+    """Page pour importer un dossier gagnant (fichiers .md/.docx/.pdf)."""
+    if request.method == "POST":
+        import shutil
+        from memoire_adaptative import sauvegarder_memoire_gagnant
+
+        titre = request.form.get("titre", "Dossier gagnant")
+        acheteur = request.form.get("acheteur", "")
+        fichiers = request.files.getlist("fichiers")
+
+        if not fichiers:
+            return render_template("upload_gagnant.html", erreur="Aucun fichier selectionne")
+
+        # Creer un dossier pour stocker les fichiers
+        clean_titre = re.sub(r"[^a-zA-Z0-9_-]", "_", titre)[:50]
+        dossier_nom = f"GAGNANT_{clean_titre}_{datetime.now().strftime('%Y%m%d')}"
+        dossier_path = DOSSIERS_DIR / dossier_nom
+        dossier_path.mkdir(parents=True, exist_ok=True)
+
+        fichiers_sauves = []
+        for f in fichiers:
+            if f.filename:
+                safe_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", f.filename)
+                f.save(str(dossier_path / safe_name))
+                fichiers_sauves.append(safe_name)
+
+        # Indexer comme memoire gagnant
+        ao_fictif = {"id": dossier_nom, "titre": titre, "acheteur": acheteur, "statut": "gagne"}
+        try:
+            sauvegarder_memoire_gagnant(ao_fictif)
+        except Exception as e:
+            logger.warning(f"Erreur indexation memoire gagnant: {e}")
+
+        return render_template("upload_gagnant.html",
+                               succes=f"{len(fichiers_sauves)} fichier(s) importe(s) dans {dossier_nom}",
+                               fichiers=fichiers_sauves)
+
+    return render_template("upload_gagnant.html")
+
+
 @app.route("/brouillons")
 def page_brouillons():
     """Page listant les brouillons Gmail (pipeline auto)."""

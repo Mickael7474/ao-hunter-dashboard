@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Importer dossier gagnant{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Importer un dossier gagnant</h1>
+    <p>Importez un dossier d'AO gagne pour enrichir les futures generations</p>
+</div>
+
+{% if succes %}
+<div class="card" style="border-left:4px solid #16a34a; margin-bottom:1rem;">
+    <p style="color:#16a34a; font-weight:600;">{{ succes }}</p>
+    {% if fichiers %}
+    <ul style="margin-top:0.5rem; font-size:0.85rem;">
+        {% for f in fichiers %}
+        <li>{{ f }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if erreur %}
+<div class="card" style="border-left:4px solid #dc2626; margin-bottom:1rem;">
+    <p style="color:#dc2626;">{{ erreur }}</p>
+</div>
+{% endif %}
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div style="margin-bottom:1rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Titre de l'AO gagne</label>
+            <input type="text" name="titre" required placeholder="Ex: Formation IA pour la Region IDF"
+                   style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Acheteur</label>
+            <input type="text" name="acheteur" placeholder="Ex: Region Ile-de-France"
+                   style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px;">
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="font-weight:600; display:block; margin-bottom:0.3rem;">Fichiers du dossier (.md, .docx, .pdf)</label>
+            <input type="file" name="fichiers" multiple accept=".md,.docx,.pdf,.doc,.xlsx,.xls,.txt"
+                   style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px;">
+            <p style="font-size:0.75rem; color:#64748b; margin-top:0.3rem;">
+                Importez le memoire technique, la lettre de candidature, le BPU et autres pieces du dossier gagnant.
+                Ces documents seront analyses pour ameliorer les futures generations.
+            </p>
+        </div>
+        <button type="submit" class="btn btn-primary">Importer</button>
+        <a href="{{ url_for('page_dossiers') }}" class="btn btn-outline" style="margin-left:0.5rem;">Retour</a>
+    </form>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+    <h3>Comment ca marche ?</h3>
+    <ol style="font-size:0.85rem; line-height:1.8; padding-left:1.2rem;">
+        <li>Importez les fichiers d'un dossier qui a remporte un appel d'offres</li>
+        <li>Le systeme analyse la structure, le vocabulaire et les arguments gagnants</li>
+        <li>Lors des prochaines generations, ces patterns sont injectes dans les prompts</li>
+        <li>Plus vous importez de dossiers gagnants, meilleures seront les generations</li>
+    </ol>
+</div>
+{% endblock %}

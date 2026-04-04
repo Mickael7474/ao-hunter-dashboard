@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Statistiques{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Statistiques</h1>
+    <p>Pipeline, performances et ROI</p>
+</div>
+
+<!-- Funnel Pipeline -->
+<div class="card" id="funnelCard">
+    <div class="card-header">
+        <h2>Pipeline / Funnel</h2>
+    </div>
+    <div class="funnel-container" id="funnel">
+        <div class="funnel-step" style="--funnel-color:#3b82f6">
+            <div class="funnel-bar" id="f-detectes" style="width:100%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">AO detectes</span>
+                <span class="funnel-value" id="fv-detectes">-</span>
+            </div>
+        </div>
+        <div class="funnel-step" style="--funnel-color:#8b5cf6">
+            <div class="funnel-bar" id="f-analyses" style="width:80%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">Analyses</span>
+                <span class="funnel-value" id="fv-analyses">-</span>
+            </div>
+        </div>
+        <div class="funnel-step" style="--funnel-color:#f59e0b">
+            <div class="funnel-bar" id="f-dossiers" style="width:50%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">Dossiers generes</span>
+                <span class="funnel-value" id="fv-dossiers">-</span>
+            </div>
+        </div>
+        <div class="funnel-step" style="--funnel-color:#06b6d4">
+            <div class="funnel-bar" id="f-soumis" style="width:30%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">Soumis</span>
+                <span class="funnel-value" id="fv-soumis">-</span>
+            </div>
+        </div>
+        <div class="funnel-step" style="--funnel-color:#22c55e">
+            <div class="funnel-bar" id="f-gagnes" style="width:15%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">Gagnes</span>
+                <span class="funnel-value" id="fv-gagnes">-</span>
+            </div>
+        </div>
+        <div class="funnel-step" style="--funnel-color:#ef4444">
+            <div class="funnel-bar" id="f-perdus" style="width:10%"></div>
+            <div class="funnel-info">
+                <span class="funnel-label">Perdus</span>
+                <span class="funnel-value" id="fv-perdus">-</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stats-grid" id="kpiGrid">
+    <div class="stat-card success">
+        <div class="stat-value" id="kpi-winrate">-</div>
+        <div class="stat-label">Win rate</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-value" id="kpi-score">-</div>
+        <div class="stat-label">Score moyen</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="kpi-total">-</div>
+        <div class="stat-label">AO detectes</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value" id="kpi-deadline">-</div>
+        <div class="stat-label">Deadline &lt; 7j</div>
+    </div>
+</div>
+
+<!-- Sources + Acheteurs -->
+<div class="grid-2">
+    <!-- Top Sources (CSS bars) -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Top sources</h2>
+        </div>
+        <div id="sourcesChart" class="css-bar-chart"></div>
+    </div>
+
+    <!-- Top Acheteurs -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Top acheteurs</h2>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Acheteur</th><th>Nb AO</th></tr>
+                </thead>
+                <tbody id="topAcheteurs"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ROI Estimation -->
+<div class="card" id="roiCard">
+    <div class="card-header">
+        <h2>Estimation ROI</h2>
+    </div>
+    <div class="stats-grid" id="roiGrid">
+        <div class="stat-card">
+            <div class="stat-value" id="roi-cout">-</div>
+            <div class="stat-label">Cout generation (estime)</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value" id="roi-valeur">-</div>
+            <div class="stat-label">Valeur AO gagnes</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-value" id="roi-ratio">-</div>
+            <div class="stat-label">Ratio ROI</div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Regions -->
+<div class="card" id="regionsCard" style="display:none;">
+    <div class="card-header">
+        <h2>Top regions</h2>
+    </div>
+    <div id="regionsChart" class="css-bar-chart"></div>
+</div>
+
+<style>
+/* Funnel */
+.funnel-container { display:flex; flex-direction:column; gap:6px; }
+.funnel-step { display:flex; align-items:center; gap:12px; }
+.funnel-bar {
+    height:32px;
+    background: var(--funnel-color, #3b82f6);
+    border-radius: 4px;
+    min-width: 24px;
+    transition: width 0.6s ease;
+    opacity: 0.85;
+}
+.funnel-info { display:flex; gap:8px; align-items:baseline; min-width:180px; }
+.funnel-label { font-size:0.85rem; color:var(--text-light); }
+.funnel-value { font-weight:700; font-size:1.1rem; }
+
+/* CSS bar chart */
+.css-bar-chart { display:flex; flex-direction:column; gap:8px; padding:8px 0; }
+.bar-row { display:flex; align-items:center; gap:10px; }
+.bar-label { min-width:100px; font-size:0.85rem; text-align:right; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bar-track { flex:1; background:var(--bg-secondary, #f1f5f9); border-radius:4px; height:22px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; transition:width 0.5s ease; display:flex; align-items:center; padding-left:6px; font-size:0.75rem; color:#fff; font-weight:600; min-width:24px; }
+.bar-fill.src-BOAMP  { background:#3b82f6; }
+.bar-fill.src-TED    { background:#8b5cf6; }
+.bar-fill.src-AWS    { background:#ec4899; }
+.bar-fill.src-RSS    { background:#f97316; }
+.bar-fill.src-PLACE  { background:#06b6d4; }
+.bar-fill.src-default{ background:#64748b; }
+.bar-fill.region     { background:#3b82f6; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch all data
+    Promise.all([
+        fetch('/api/stats').then(r => r.json()),
+        fetch('/api/ao').then(r => r.json()),
+        fetch('/api/dossiers').then(r => r.json())
+    ]).then(([stats, aoList, dossiers]) => {
+        renderFunnel(stats, dossiers);
+        renderKPI(stats);
+        renderSources(stats.sources || {});
+        renderAcheteurs(aoList);
+        renderROI(stats, aoList, dossiers);
+        renderRegions(stats.top_regions || {});
+    }).catch(err => console.error('Statistiques: erreur chargement', err));
+});
+
+function renderFunnel(stats, dossiers) {
+    const ps = stats.par_statut || {};
+    const total = stats.total || 0;
+    const analyses = (ps.analyse || 0) + (ps.candidature || 0) + (ps.dossier_genere || 0) + (ps.soumis || 0) + (ps.gagne || 0) + (ps.perdu || 0);
+    const nbDossiers = Array.isArray(dossiers) ? dossiers.length : 0;
+    const soumis = (ps.soumis || 0) + (ps.gagne || 0) + (ps.perdu || 0);
+    const gagnes = ps.gagne || 0;
+    const perdus = ps.perdu || 0;
+
+    const vals = { detectes: total, analyses, dossiers: nbDossiers, soumis, gagnes, perdus };
+    const maxVal = Math.max(total, 1);
+
+    Object.entries(vals).forEach(([key, val]) => {
+        document.getElementById('fv-' + key).textContent = val;
+        const pct = Math.max((val / maxVal) * 100, 3);
+        document.getElementById('f-' + key).style.width = pct + '%';
+    });
+}
+
+function renderKPI(stats) {
+    const ps = stats.par_statut || {};
+    const soumis = (ps.soumis || 0) + (ps.gagne || 0) + (ps.perdu || 0);
+    const gagnes = ps.gagne || 0;
+    const winrate = soumis > 0 ? Math.round((gagnes / soumis) * 100) : 0;
+
+    document.getElementById('kpi-winrate').textContent = winrate + '%';
+    document.getElementById('kpi-score').textContent = Math.round((stats.score_moyen || 0) * 100) + '%';
+    document.getElementById('kpi-total').textContent = stats.total || 0;
+    document.getElementById('kpi-deadline').textContent = stats.deadline_proche || 0;
+}
+
+function renderSources(sources) {
+    const container = document.getElementById('sourcesChart');
+    const entries = Object.entries(sources).sort((a, b) => b[1] - a[1]);
+    const maxVal = entries.length > 0 ? entries[0][1] : 1;
+
+    container.innerHTML = entries.map(([name, count]) => {
+        const pct = Math.max((count / maxVal) * 100, 5);
+        const cls = ['BOAMP','TED','AWS','RSS','PLACE'].includes(name) ? 'src-' + name : 'src-default';
+        return `<div class="bar-row">
+            <span class="bar-label">${name}</span>
+            <div class="bar-track">
+                <div class="bar-fill ${cls}" style="width:${pct}%">${count}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderAcheteurs(aoList) {
+    // Count acheteurs
+    const counts = {};
+    (Array.isArray(aoList) ? aoList : []).forEach(ao => {
+        const a = (ao.acheteur || 'Inconnu').substring(0, 50);
+        counts[a] = (counts[a] || 0) + 1;
+    });
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    const tbody = document.getElementById('topAcheteurs');
+    tbody.innerHTML = top.map(([name, count]) =>
+        `<tr><td>${name}</td><td><strong>${count}</strong></td></tr>`
+    ).join('');
+}
+
+function renderROI(stats, aoList, dossiers) {
+    const nbDossiers = Array.isArray(dossiers) ? dossiers.length : 0;
+    // Estimation : ~5 appels API par dossier, ~0.15 EUR par appel = ~0.75 EUR/dossier
+    const coutParDossier = 0.75;
+    const coutTotal = nbDossiers * coutParDossier;
+
+    const ps = stats.par_statut || {};
+    // Valeur des AO gagnes
+    let valeurGagnes = 0;
+    (Array.isArray(aoList) ? aoList : []).forEach(ao => {
+        if (ao.statut === 'gagne') {
+            valeurGagnes += (ao.budget_estime || ao.montant || 0);
+        }
+    });
+
+    const ratio = coutTotal > 0 ? Math.round(valeurGagnes / coutTotal) : 0;
+
+    document.getElementById('roi-cout').textContent = coutTotal.toFixed(0) + ' EUR';
+    document.getElementById('roi-valeur').textContent = valeurGagnes > 0
+        ? new Intl.NumberFormat('fr-FR').format(valeurGagnes) + ' EUR'
+        : '0 EUR';
+    document.getElementById('roi-ratio').textContent = ratio > 0 ? 'x' + ratio : '-';
+}
+
+function renderRegions(regions) {
+    const entries = Object.entries(regions).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) return;
+
+    document.getElementById('regionsCard').style.display = '';
+    const container = document.getElementById('regionsChart');
+    const maxVal = entries[0][1] || 1;
+
+    container.innerHTML = entries.map(([name, count]) => {
+        const pct = Math.max((count / maxVal) * 100, 5);
+        return `<div class="bar-row">
+            <span class="bar-label">${name}</span>
+            <div class="bar-track">
+                <div class="bar-fill region" style="width:${pct}%">${count}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+</script>
+{% endblock %}

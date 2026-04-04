@@ -3,7 +3,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Dossiers generes ({{ dossiers | length }})</h1>
+    <h1>Dossiers generes ({{ dossiers | length }})
+        <a href="{{ url_for('page_upload_gagnant') }}" class="btn btn-sm btn-outline" style="margin-left:1rem; vertical-align:middle;">Importer dossier gagnant</a>
+    </h1>
     <p>Dossiers de candidature generes automatiquement</p>
 </div>
 
@@ -44,6 +46,8 @@
                 <span class="statut statut-nouveau">En attente</span>
             {% endif %}
             <a href="{{ url_for('dossier_print_view', nom=d.nom) }}" target="_blank" class="btn btn-sm btn-outline" title="Exporter PDF">PDF</a>
+            <a href="{{ url_for('export_dossier_zip', nom=d.nom) }}" class="btn btn-sm btn-outline" title="Telecharger ZIP">ZIP</a>
+            <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-outline" title="Editer le dossier">Editer</a>
             <a href="{{ url_for('detail_dossier', nom=d.nom) }}" class="btn btn-sm btn-primary">Ouvrir</a>
         </div>
     </div>
