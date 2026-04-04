@@ -1593,22 +1593,33 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         erreurs.append(f"Moyens techniques: {e}")
         logger.error(f"Erreur moyens: {e}")
 
-    # 14. Checklist (template, pas d'appel API)
+    # 14. Annexes visuelles HTML (planning Gantt, organigramme, radar, references, fiche synthese)
+    logger.info("14/17 - Annexes visuelles...")
+    try:
+        from annexes_visuelles import generer_toutes_annexes
+        annexes = generer_toutes_annexes(ao, dossier_path)
+        fichiers_generes.extend(annexes)
+        logger.info(f"  {len(annexes)} annexe(s) visuelle(s) generee(s)")
+    except Exception as e:
+        erreurs.append(f"Annexes visuelles: {e}")
+        logger.error(f"Erreur annexes visuelles: {e}")
+
+    # 15. Checklist (template, pas d'appel API)
     try:
         checklist = _generer_checklist_soumission(ao, fichiers_generes)
-        _sauvegarder(dossier_path, "14_checklist_soumission.md", checklist)
-        fichiers_generes.append("14_checklist_soumission.md")
+        _sauvegarder(dossier_path, "15_checklist_soumission.md", checklist)
+        fichiers_generes.append("15_checklist_soumission.md")
     except Exception as e:
         erreurs.append(f"Checklist: {e}")
 
-    # 15. Conversion des documents cles en DOCX
+    # 16. Conversion des documents cles en DOCX
     try:
         _convertir_en_docx(dossier_path, ao, fichiers_generes)
     except Exception as e:
         erreurs.append(f"Conversion DOCX: {e}")
         logger.error(f"Erreur conversion DOCX globale: {e}")
 
-    # 16. Pre-remplissage formulaires natifs du DCE (DC1/DC2/DUME PDF/DOCX)
+    # 17. Pre-remplissage formulaires natifs du DCE (DC1/DC2/DUME PDF/DOCX)
     try:
         from formulaires_natifs import preremplir_formulaires
         # Chercher le dossier DCE (telecharge par dce_auto)
@@ -1625,7 +1636,7 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         erreurs.append(f"Pre-remplissage formulaires: {e}")
         logger.error(f"Erreur pre-remplissage formulaires: {e}")
 
-    # 17. Fiche AO en JSON
+    # 18. Fiche AO en JSON
     fiche_path = dossier_path / "fiche_ao.json"
     fiche_path.write_text(json.dumps(ao, ensure_ascii=False, indent=2), encoding="utf-8")
     fichiers_generes.append("fiche_ao.json")
