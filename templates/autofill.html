@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Auto-remplissage Plateformes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Auto-remplissage des plateformes de depot</h1>
+    <p class="subtitle">Remplissez automatiquement vos informations Almera sur PLACE, AWS, marches-securises et e-marchespublics.</p>
+</div>
+
+<div class="grid-2">
+    <!-- Methode 1 : UserScript (recommande) -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Methode recommandee : UserScript Tampermonkey</h2>
+        </div>
+        <div class="card-body">
+            <p>Installez une fois, ca marche automatiquement sur toutes les plateformes.</p>
+
+            <h3>1. Installer Tampermonkey</h3>
+            <p>
+                <a href="https://www.tampermonkey.net/" target="_blank" class="btn btn-sm">Tampermonkey pour Chrome</a>
+                <a href="https://addons.mozilla.org/fr/firefox/addon/tampermonkey/" target="_blank" class="btn btn-sm">Tampermonkey pour Firefox</a>
+            </p>
+
+            <h3>2. Installer le script Almera</h3>
+            <p>
+                <a href="{{ url_for('static', filename='js/almera_autofill.user.js') }}" class="btn btn-primary" id="installUserscript">
+                    Installer almera_autofill.user.js
+                </a>
+            </p>
+            <p class="text-muted">Tampermonkey detectera automatiquement le fichier .user.js et proposera l'installation.</p>
+
+            <h3>3. Utilisation</h3>
+            <ol>
+                <li>Allez sur une plateforme de depot (PLACE, AWS, marches-securises, e-marchespublics)</li>
+                <li>Un bouton <strong>"Remplir Almera"</strong> apparait en bas a droite</li>
+                <li>Cliquez dessus : tous les champs detectes sont remplis et surlignés en jaune</li>
+                <li>Relisez les champs, completez ce qui manque</li>
+                <li>Soumettez manuellement quand tout est bon</li>
+            </ol>
+
+            <h3>Plateformes supportees</h3>
+            <ul>
+                <li>PLACE (marches-publics.gouv.fr, maximilien.fr)</li>
+                <li>AWS Defense (achats.defense.gouv.fr, achatpublic.com)</li>
+                <li>marches-securises.fr</li>
+                <li>e-marchespublics.com</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Methode 2 : Bookmarklet -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Alternative : Bookmarklet</h2>
+        </div>
+        <div class="card-body">
+            <p>Pas besoin d'extension. Glissez le bouton ci-dessous dans votre barre de favoris.</p>
+
+            <div style="text-align:center;margin:20px 0;">
+                <a href="javascript:void((function(){var s=document.createElement('script');s.src='{{ url_for("static", filename="js/autofill_plateformes.js", _external=True) }}';s.onload=function(){window.almeraAutofill()};document.body.appendChild(s)})())" class="btn btn-primary" style="font-size:16px;padding:12px 24px;cursor:grab;" id="bookmarkletLink">
+                    Remplir Almera
+                </a>
+            </div>
+            <p class="text-muted" style="text-align:center;">Glissez ce bouton dans votre barre de favoris</p>
+
+            <p>
+                <button class="btn btn-sm" id="copyBookmarklet">Copier le bookmarklet</button>
+                <span id="copyConfirm" style="display:none;color:#27ae60;margin-left:8px;">Copie !</span>
+            </p>
+
+            <h3>Utilisation</h3>
+            <ol>
+                <li>Glissez le bouton "Remplir Almera" dans votre barre de favoris</li>
+                <li>Allez sur la page de depot d'une plateforme</li>
+                <li>Cliquez sur le favori "Remplir Almera"</li>
+                <li>Les champs sont remplis et surlignés en jaune</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<!-- Profil Almera -->
+<div class="card" style="margin-top:20px;">
+    <div class="card-header">
+        <h2>Profil Almera utilise pour le remplissage</h2>
+    </div>
+    <div class="card-body">
+        <div class="grid-2">
+            <div>
+                <h3>Identite</h3>
+                <table class="table-sm">
+                    <tr><td><strong>Raison sociale</strong></td><td>AI MENTOR</td></tr>
+                    <tr><td><strong>Nom commercial</strong></td><td>Almera</td></tr>
+                    <tr><td><strong>Forme juridique</strong></td><td>SASU</td></tr>
+                    <tr><td><strong>SIRET</strong></td><td>98900455100010</td></tr>
+                    <tr><td><strong>SIREN</strong></td><td>989004551</td></tr>
+                    <tr><td><strong>NDA</strong></td><td>11757431975</td></tr>
+                    <tr><td><strong>Code APE/NAF</strong></td><td>8559A</td></tr>
+                    <tr><td><strong>TVA intra</strong></td><td>FR98989004551</td></tr>
+                    <tr><td><strong>Capital social</strong></td><td>1 000 EUR</td></tr>
+                    <tr><td><strong>Certifications</strong></td><td>Qualiopi (formation), RS6776</td></tr>
+                </table>
+            </div>
+            <div>
+                <h3>Coordonnees</h3>
+                <table class="table-sm">
+                    <tr><td><strong>Adresse</strong></td><td>25 rue Campagne Premiere</td></tr>
+                    <tr><td><strong>Code postal</strong></td><td>75014</td></tr>
+                    <tr><td><strong>Ville</strong></td><td>Paris</td></tr>
+                    <tr><td><strong>Pays</strong></td><td>France</td></tr>
+                    <tr><td><strong>Representant</strong></td><td>Mickael Bertolla</td></tr>
+                    <tr><td><strong>Fonction</strong></td><td>President</td></tr>
+                    <tr><td><strong>Telephone</strong></td><td>0686680611</td></tr>
+                    <tr><td><strong>Email</strong></td><td>contact@almera.one</td></tr>
+                    <tr><td><strong>Site web</strong></td><td>almera.one</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zone de test -->
+<div class="card" style="margin-top:20px;">
+    <div class="card-header">
+        <h2>Tester le remplissage sur cette page</h2>
+    </div>
+    <div class="card-body">
+        <p>Ce formulaire simule les champs courants d'une plateforme. Cliquez "Tester" pour voir le remplissage en action.</p>
+        <form id="testForm" onsubmit="return false;" style="max-width:600px;">
+            <div style="margin-bottom:10px;">
+                <label for="test_raison_sociale">Raison sociale</label>
+                <input type="text" id="test_raison_sociale" name="raison_sociale" placeholder="Raison sociale" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_siret">SIRET</label>
+                <input type="text" id="test_siret" name="siret" placeholder="Numero SIRET" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_adresse">Adresse</label>
+                <input type="text" id="test_adresse" name="adresse" placeholder="Adresse" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_cp">Code postal</label>
+                <input type="text" id="test_cp" name="code_postal" placeholder="Code postal" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_ville">Ville</label>
+                <input type="text" id="test_ville" name="ville" placeholder="Ville" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_representant">Representant</label>
+                <input type="text" id="test_representant" name="representant" placeholder="Nom du representant" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_email">Email</label>
+                <input type="email" id="test_email" name="email" placeholder="Email" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_tel">Telephone</label>
+                <input type="tel" id="test_tel" name="telephone" placeholder="Telephone" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_tva">TVA intracommunautaire</label>
+                <input type="text" id="test_tva" name="tva_intra" placeholder="TVA intracommunautaire" style="width:100%;padding:8px;">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label for="test_ape">Code APE</label>
+                <input type="text" id="test_ape" name="code_ape" placeholder="Code APE/NAF" style="width:100%;padding:8px;">
+            </div>
+        </form>
+        <button class="btn btn-primary" id="testAutofillBtn" style="margin-top:10px;">Tester sur cette page</button>
+        <button class="btn btn-sm" id="resetTestBtn" style="margin-top:10px;margin-left:8px;">Reinitialiser</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/autofill_plateformes.js') }}"></script>
+<script>
+document.getElementById('testAutofillBtn').addEventListener('click', function() {
+    if (window.almeraAutofill) {
+        window.almeraAutofill();
+    }
+});
+
+document.getElementById('resetTestBtn').addEventListener('click', function() {
+    document.querySelectorAll('#testForm input').forEach(function(el) {
+        el.value = '';
+        el.style.backgroundColor = '';
+        el.style.border = '';
+        delete el.dataset.almeraFilled;
+    });
+});
+
+document.getElementById('copyBookmarklet').addEventListener('click', function() {
+    var link = document.getElementById('bookmarkletLink');
+    var code = link.getAttribute('href');
+    navigator.clipboard.writeText(code).then(function() {
+        document.getElementById('copyConfirm').style.display = 'inline';
+        setTimeout(function() {
+            document.getElementById('copyConfirm').style.display = 'none';
+        }, 2000);
+    });
+});
+</script>
+{% endblock %}

@@ -11,6 +11,49 @@
     <p>Vue d'ensemble des appels d'offres et dossiers</p>
 </div>
 
+<!-- Opportunites du jour -->
+{% if top_opportunites %}
+<div class="card opportunites-card">
+    <div class="card-header">
+        <h2>Opportunites du jour</h2>
+        <span class="opp-subtitle">Top {{ top_opportunites|length }} AO les plus rentables a traiter maintenant</span>
+    </div>
+    <div class="opp-grid">
+        {% for opp in top_opportunites %}
+        <div class="opp-item">
+            <div class="opp-score-badge">{{ opp.score_opportunite }}%</div>
+            <div class="opp-content">
+                <div class="opp-title">
+                    <a href="{{ url_for('detail_ao', ao_id=opp.ao.id) }}">{{ (opp.ao.titre or 'Sans titre')[:70] }}</a>
+                </div>
+                <div class="opp-meta">
+                    <span class="opp-acheteur">{{ (opp.ao.acheteur or 'Acheteur inconnu')[:40] }}</span>
+                    <span class="opp-separator">|</span>
+                    <span class="opp-budget">{{ "{:,.0f}".format(opp.budget_estime).replace(",", " ") }} EUR</span>
+                    <span class="opp-separator">|</span>
+                    <span class="badge badge-concurrence-{{ opp.concurrence_niveau }}">{{ opp.concurrence_niveau | capitalize }}</span>
+                    <span class="opp-separator">|</span>
+                    <span class="opp-deadline {% if opp.jours_restants <= 10 %}opp-deadline-urgent{% endif %}">J-{{ opp.jours_restants }}</span>
+                </div>
+            </div>
+            <div class="opp-action">
+                <a href="{{ url_for('detail_ao', ao_id=opp.ao.id) }}?action=generer" class="btn btn-sm btn-primary">Lancer le dossier</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="card opportunites-card opportunites-empty">
+    <div class="card-header">
+        <h2>Opportunites du jour</h2>
+    </div>
+    <div class="empty">
+        <p>Aucune opportunite urgente - pipeline sous controle</p>
+    </div>
+</div>
+{% endif %}
+
 <!-- Stats -->
 <div class="stats-grid">
     <div class="stat-card">

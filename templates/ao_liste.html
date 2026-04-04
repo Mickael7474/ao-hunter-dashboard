@@ -66,6 +66,9 @@
         <table id="aoTable">
             <thead>
                 <tr>
+                    <th style="width:40px; text-align:center;">
+                        <input type="checkbox" id="selectAll" onclick="toggleSelectAll(event)" title="Tout selectionner">
+                    </th>
                     <th>Score</th>
                     <th>Source</th>
                     <th>Titre</th>
@@ -80,6 +83,9 @@
             <tbody>
                 {% for ao in appels %}
                 <tr class="clickable-row" onclick="window.location='{{ url_for('detail_ao', ao_id=ao.id) }}'">
+                    <td style="text-align:center;" onclick="event.stopPropagation();">
+                        <input type="checkbox" class="ao-checkbox" data-ao-id="{{ ao.id }}" data-ao-titre="{{ ao.titre[:60] }}" onchange="updateBatchBar()">
+                    </td>
                     <td>
                         {% set score_pct = (ao.score_pertinence * 100) | int %}
                         <span class="score {% if score_pct >= 70 %}score-high{% elif score_pct >= 40 %}score-mid{% else %}score-low{% endif %}">
@@ -175,4 +181,207 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Barre d'actions batch (sticky bottom) -->
+<div id="batchBar" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999;
+    background:var(--card-bg, #fff); border-top:2px solid var(--primary, #2563eb);
+    padding:0.75rem 1.5rem; box-shadow:0 -4px 12px rgba(0,0,0,0.15);
+    align-items:center; justify-content:space-between; gap:1rem;">
+    <div style="display:flex; align-items:center; gap:1rem;">
+        <strong id="batchCount" style="color:var(--primary, #2563eb);">0 AO selectionne(s)</strong>
+        <button class="btn btn-primary btn-sm" onclick="lancerBatchGeneration()">Generer les dossiers</button>
+        <div style="position:relative; display:inline-block;">
+            <button class="btn btn-sm btn-outline" onclick="toggleStatutDropdown(event)" id="btnStatutDropdown">Changer statut &#9660;</button>
+            <div id="statutDropdown" style="display:none; position:absolute; bottom:100%; left:0; margin-bottom:4px;
+                background:var(--card-bg, #fff); border:1px solid var(--border, #e2e8f0); border-radius:6px;
+                box-shadow:0 4px 12px rgba(0,0,0,0.15); min-width:160px; z-index:10000;">
+                <a href="#" onclick="batchStatut('analyse'); return false;" style="display:block; padding:8px 16px; text-decoration:none; color:var(--text);">Analyse</a>
+                <a href="#" onclick="batchStatut('candidature'); return false;" style="display:block; padding:8px 16px; text-decoration:none; color:var(--text);">Candidature</a>
+                <a href="#" onclick="batchStatut('soumis'); return false;" style="display:block; padding:8px 16px; text-decoration:none; color:var(--text);">Soumis</a>
+                <a href="#" onclick="batchStatut('ignore'); return false;" style="display:block; padding:8px 16px; text-decoration:none; color:var(--text);">Ignore</a>
+            </div>
+        </div>
+    </div>
+    <button class="btn btn-sm" style="background:transparent; border:1px solid var(--border, #e2e8f0);" onclick="deselectionnerTout()">Deselectionner tout</button>
+</div>
+
+<!-- Modal progression batch -->
+<div id="batchModal" style="display:none; position:fixed; inset:0; z-index:10001;
+    background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:var(--card-bg, #fff); border-radius:12px; padding:2rem; max-width:600px; width:90%;
+        max-height:80vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        <h3 style="margin-top:0;">Generation batch en cours</h3>
+        <div id="batchProgressBar" style="background:var(--border, #e2e8f0); border-radius:8px; height:8px; margin:1rem 0;">
+            <div id="batchProgressFill" style="background:var(--primary, #2563eb); height:100%; border-radius:8px; width:0%; transition:width 0.3s;"></div>
+        </div>
+        <p id="batchProgressText" style="font-size:0.9rem; color:var(--text-light);">Demarrage...</p>
+        <div id="batchLog" style="font-size:0.8rem; max-height:300px; overflow-y:auto;
+            background:var(--bg, #f8fafc); padding:0.75rem; border-radius:6px; font-family:monospace;"></div>
+        <div style="text-align:right; margin-top:1rem;">
+            <button id="batchCloseBtn" class="btn btn-sm btn-outline" onclick="fermerBatchModal()" style="display:none;">Fermer</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// --- Batch selection ---
+
+function toggleSelectAll(event) {
+    event.stopPropagation();
+    var checked = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.ao-checkbox').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    updateBatchBar();
+}
+
+function getSelectedIds() {
+    var ids = [];
+    document.querySelectorAll('.ao-checkbox:checked').forEach(function(cb) {
+        ids.push(cb.getAttribute('data-ao-id'));
+    });
+    return ids;
+}
+
+function updateBatchBar() {
+    var ids = getSelectedIds();
+    var bar = document.getElementById('batchBar');
+    var count = document.getElementById('batchCount');
+    if (ids.length > 0) {
+        bar.style.display = 'flex';
+        count.textContent = ids.length + ' AO selectionne(s)';
+    } else {
+        bar.style.display = 'none';
+    }
+    // Sync selectAll
+    var allCbs = document.querySelectorAll('.ao-checkbox');
+    var allChecked = allCbs.length > 0 && ids.length === allCbs.length;
+    document.getElementById('selectAll').checked = allChecked;
+}
+
+function deselectionnerTout() {
+    document.querySelectorAll('.ao-checkbox').forEach(function(cb) {
+        cb.checked = false;
+    });
+    document.getElementById('selectAll').checked = false;
+    updateBatchBar();
+}
+
+// --- Statut dropdown ---
+
+function toggleStatutDropdown(event) {
+    event.stopPropagation();
+    var dd = document.getElementById('statutDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function() {
+    document.getElementById('statutDropdown').style.display = 'none';
+});
+
+// --- Batch generation ---
+
+function lancerBatchGeneration() {
+    var ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    if (!confirm('Generer les dossiers pour ' + ids.length + ' AO ? Cela peut prendre plusieurs minutes.')) return;
+
+    // Afficher modal
+    var modal = document.getElementById('batchModal');
+    modal.style.display = 'flex';
+    document.getElementById('batchLog').innerHTML = '';
+    document.getElementById('batchProgressFill').style.width = '0%';
+    document.getElementById('batchProgressText').textContent = 'Demarrage pour ' + ids.length + ' AO...';
+    document.getElementById('batchCloseBtn').style.display = 'none';
+
+    fetch('/api/batch/generer', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ao_ids: ids})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) {
+            document.getElementById('batchProgressText').textContent = 'Erreur: ' + data.error;
+            document.getElementById('batchCloseBtn').style.display = 'inline-block';
+        }
+    }).catch(function(err) {
+        document.getElementById('batchProgressText').textContent = 'Erreur reseau: ' + err;
+        document.getElementById('batchCloseBtn').style.display = 'inline-block';
+    });
+}
+
+function fermerBatchModal() {
+    document.getElementById('batchModal').style.display = 'none';
+}
+
+// --- Batch statut ---
+
+function batchStatut(statut) {
+    var ids = getSelectedIds();
+    if (ids.length === 0) return;
+    document.getElementById('statutDropdown').style.display = 'none';
+
+    if (!confirm('Changer le statut de ' + ids.length + ' AO en "' + statut + '" ?')) return;
+
+    fetch('/api/batch/statut', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ao_ids: ids, statut: statut})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.status === 'ok') {
+            // Mettre a jour les badges statut dans le DOM
+            ids.forEach(function(id) {
+                var cb = document.querySelector('.ao-checkbox[data-ao-id="' + id + '"]');
+                if (cb) {
+                    var row = cb.closest('tr');
+                    var statutCell = row.querySelector('.statut');
+                    if (statutCell) {
+                        statutCell.className = 'statut statut-' + statut;
+                        statutCell.textContent = statut;
+                    }
+                }
+            });
+            deselectionnerTout();
+        } else {
+            alert('Erreur: ' + (data.error || 'inconnue'));
+        }
+    }).catch(function(err) {
+        alert('Erreur reseau: ' + err);
+    });
+}
+
+// --- WebSocket batch_progress ---
+
+if (typeof socket !== 'undefined') {
+    socket.on('batch_progress', function(data) {
+        var logDiv = document.getElementById('batchLog');
+        var progressText = document.getElementById('batchProgressText');
+        var progressFill = document.getElementById('batchProgressFill');
+
+        if (data.msg) {
+            progressText.textContent = data.msg;
+            var line = document.createElement('div');
+            line.textContent = data.msg;
+            if (data.phase === 'error') line.style.color = '#dc2626';
+            if (data.phase === 'done') line.style.color = '#16a34a';
+            if (data.phase === 'skip') line.style.color = '#d97706';
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        if (data.index && data.total) {
+            var pct = Math.round((data.index / data.total) * 100);
+            progressFill.style.width = pct + '%';
+        }
+
+        if (data.phase === 'complete') {
+            progressFill.style.width = '100%';
+            progressFill.style.background = '#16a34a';
+            document.getElementById('batchCloseBtn').style.display = 'inline-block';
+        }
+    });
+}
+</script>
 {% endblock %}

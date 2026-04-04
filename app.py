@@ -467,6 +467,112 @@ def _ao_urgents(appels: list[dict], max_days=7) -> list[dict]:
 
 STATUTS_KANBAN = ["nouveau", "analyse", "candidature", "soumis", "gagne", "perdu", "ignore"]
 
+
+def _calculer_top_opportunites(appels: list[dict], top_n: int = 5) -> list[dict]:
+    """Calcule les top AO les plus rentables a traiter maintenant.
+
+    Score d'opportunite base sur : pertinence, budget zone confort (5k-100k),
+    concurrence faible, deadline 7-45 jours, Go/No-Go, signaux faibles bas,
+    accessibilite elevee. Uniquement statut nouveau/analyse.
+    Pas d'appel API, tout est calcul local.
+    """
+    from estimation_marche import estimer_marche
+
+    now = datetime.now()
+    candidats = []
+
+    for ao in appels:
+        # Filtre statut : uniquement nouveau ou analyse
+        statut = (ao.get("statut") or "nouveau").lower()
+        if statut not in ("nouveau", "analyse"):
+            continue
+
+        # Filtre deadline : entre 7 et 45 jours
+        dl = ao.get("date_limite", "")
+        if not dl:
+            continue
+        try:
+            date_dl = datetime.fromisoformat(dl.split("T")[0])
+            jours_restants = (date_dl - now).days
+        except (ValueError, TypeError):
+            continue
+        if jours_restants < 7 or jours_restants > 45:
+            continue
+
+        # Estimation marche (rapide, calcul local)
+        try:
+            estimation = estimer_marche(ao)
+        except Exception:
+            continue
+
+        budget_montant = estimation["budget"].get("montant", 0)
+        concurrence_niveau = estimation["concurrence"].get("niveau", "moyen")
+        concurrence_score = estimation["concurrence"].get("score", 50)
+        accessibilite_score = estimation["accessibilite"].get("score", 50)
+        score_pertinence = ao.get("score_pertinence") or 0
+
+        # --- Calcul du score d'opportunite (0-100) ---
+        score_opp = 0
+
+        # 1. Pertinence (25 pts max)
+        score_opp += score_pertinence * 25
+
+        # 2. Budget dans la zone confort 5k-100k (20 pts max)
+        if 5_000 <= budget_montant <= 100_000:
+            # Maximum au sweet spot 15k-50k
+            if 15_000 <= budget_montant <= 50_000:
+                score_opp += 20
+            elif 10_000 <= budget_montant <= 70_000:
+                score_opp += 15
+            else:
+                score_opp += 10
+        elif budget_montant < 5_000:
+            score_opp += 2
+        else:
+            score_opp += 5
+
+        # 3. Concurrence faible (20 pts max)
+        # concurrence_score: 0=pas de concurrence, 95=tres forte
+        score_opp += max(0, (100 - concurrence_score) * 0.2)
+
+        # 4. Deadline ideale (10 pts max)
+        # Sweet spot : 10-30 jours
+        if 10 <= jours_restants <= 30:
+            score_opp += 10
+        elif 7 <= jours_restants < 10:
+            score_opp += 6
+        else:  # 30-45 jours
+            score_opp += 7
+
+        # 5. Accessibilite (15 pts max)
+        score_opp += accessibilite_score * 0.15
+
+        # 6. Signaux faibles bas (10 pts max)
+        try:
+            from signaux_faibles import detecter_signaux
+            signaux = detecter_signaux(ao)
+            risque = signaux.get("score_risque", 0)
+            score_opp += max(0, (100 - risque) * 0.1)
+        except (ImportError, Exception):
+            score_opp += 5  # Bonus neutre si pas dispo
+
+        score_opp = min(100, max(0, round(score_opp, 1)))
+
+        candidats.append({
+            "ao": ao,
+            "score_opportunite": score_opp,
+            "budget_estime": budget_montant,
+            "budget_confiance": estimation["budget"].get("confiance", "faible"),
+            "concurrence_niveau": concurrence_niveau,
+            "accessibilite": accessibilite_score,
+            "jours_restants": jours_restants,
+            "date_limite": dl,
+        })
+
+    # Trier par score d'opportunite decroissant
+    candidats.sort(key=lambda c: c["score_opportunite"], reverse=True)
+    return candidats[:top_n]
+
 PRESTATIONS_KEYWORDS = {
     "Formation": ["formation", "formateur", "pedagogie", "stagiaire", "apprenant",
                   "competences", "certification", "qualiopi", "cpf", "opco",
@@ -503,12 +609,21 @@ def index():
     appels = charger_ao()
     dossiers = lister_dossiers()
     statistiques = stats_ao(appels)
+
+    # Top opportunites du jour
+    try:
+        top_opportunites = _calculer_top_opportunites(appels)
+    except Exception as e:
+        logger.warning(f"Erreur calcul top opportunites: {e}")
+        top_opportunites = []
+
     return render_template(
         "index.html",
         stats=statistiques,
         nb_dossiers=len(dossiers),
         top_ao=sorted(appels, key=lambda a: a.get("score_pertinence") or 0, reverse=True)[:10],
         urgents=_ao_urgents(appels),
+        top_opportunites=top_opportunites,
     )
 
 
@@ -726,6 +841,12 @@ def _calculer_roi_stats():
     }
 
 
+@app.route("/autofill")
+def autofill_page():
+    """Page d'aide auto-remplissage plateformes de depot (bookmarklet + userscript)."""
+    return render_template("autofill.html")
+
+
 @app.route("/roi")
 def roi():
     """Tableau de bord ROI ameliore - stats avancees, funnel, evolution."""
@@ -939,6 +1060,17 @@ def detail_ao(ao_id):
     except Exception as e:
         logger.warning(f"Erreur scoring predictif pour {ao_id}: {e}")
 
+    # Dossiers similaires (si pas de dossier genere)
+    dossiers_similaires = []
+    if not dossier_genere:
+        try:
+            from duplication_dossier import lister_dossiers_existants, trouver_dossier_similaire
+            dossiers_existants = lister_dossiers_existants()
+            if dossiers_existants:
+                dossiers_similaires = trouver_dossier_similaire(ao, dossiers_existants)
+        except Exception as e:
+            logger.warning(f"Erreur dossiers similaires pour {ao_id}: {e}")
+
     return render_template("ao_detail.html", ao=ao, dossier=dossier_genere, note=note,
                            prestations=prestations, go_nogo=go_nogo,
                            type_presta=type_presta, modele=modele,
@@ -950,7 +1082,8 @@ def detail_ao(ao_id):
                            signaux_faibles=signaux_faibles_data,
                            groupement=groupement_eval,
                            analyse_dce_complete=analyse_dce_complete,
-                           prediction=prediction_data)
+                           prediction=prediction_data,
+                           dossiers_similaires=dossiers_similaires)
 
 
 @app.route("/ao/<path:ao_id>/statut", methods=["POST"])
@@ -1334,6 +1467,45 @@ def api_ao_update(ao_id):
 def api_generer(ao_id):
     """POST /api/ao/<id>/generer - Lance la generation du dossier."""
     return generer_dossier(ao_id)
+
+
+@app.route("/api/ao/<path:ao_id>/dossiers-similaires")
+def api_dossiers_similaires(ao_id):
+    """GET /api/ao/<id>/dossiers-similaires - Dossiers existants similaires."""
+    appels = charger_ao()
+    ao = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao:
+        return jsonify({"error": "AO non trouve"}), 404
+    from duplication_dossier import lister_dossiers_existants, trouver_dossier_similaire
+    dossiers = lister_dossiers_existants()
+    similaires = trouver_dossier_similaire(ao, dossiers)
+    return jsonify(similaires)
+
+
+@app.route("/api/ao/<path:ao_id>/dupliquer-dossier", methods=["POST"])
+def api_dupliquer_dossier(ao_id):
+    """POST /api/ao/<id>/dupliquer-dossier - Duplique un dossier depuis un AO source."""
+    appels = charger_ao()
+    ao_cible = next((a for a in appels if a.get("id") == ao_id), None)
+    if not ao_cible:
+        return jsonify({"error": "AO cible non trouve"}), 404
+
+    data = request.get_json()
+    if not data or "source_ao_id" not in data:
+        return jsonify({"error": "source_ao_id requis"}), 400
+
+    source_ao_id = data["source_ao_id"]
+
+    from duplication_dossier import lister_dossiers_existants, dupliquer_dossier as _dupliquer
+    dossiers = lister_dossiers_existants()
+    dossier_source = next((d for d in dossiers if d["ao_id"] == source_ao_id), None)
+    if not dossier_source:
+        return jsonify({"error": f"Aucun dossier trouve pour l'AO source {source_ao_id}"}), 404
+
+    resultat = _dupliquer(source_ao_id, ao_cible, dossier_source["dossier_path"])
+    if "error" in resultat:
+        return jsonify(resultat), 500
+    return jsonify(resultat)
 
 
 @app.route("/api/ao/<path:ao_id>/analyser-dce", methods=["POST"])
@@ -2004,6 +2176,64 @@ def api_sync_pull():
     except Exception as e:
         logger.error(f"Erreur sync pull: {e}")
         return jsonify({"status": "error", "erreur": str(e)}), 500
+
+
+# --- Batch endpoints ---
+
+@app.route("/api/batch/generer", methods=["POST"])
+def api_batch_generer():
+    """POST /api/batch/generer - Lance la generation batch en background."""
+    data = request.get_json()
+    if not data or "ao_ids" not in data:
+        return jsonify({"error": "JSON body avec ao_ids requis"}), 400
+
+    ao_ids = data["ao_ids"]
+    if not ao_ids:
+        return jsonify({"error": "Liste ao_ids vide"}), 400
+
+    def _batch_bg():
+        try:
+            from generation_batch import generer_batch
+            appels = charger_ao()
+            generer_batch(ao_ids, appels, socketio=socketio)
+        except Exception as e:
+            logger.error(f"Erreur batch generation: {e}")
+            socketio.emit("batch_progress", {"msg": f"Erreur fatale batch: {e}", "phase": "error"})
+
+    thread = threading.Thread(target=_batch_bg, daemon=True)
+    thread.start()
+    return jsonify({"status": "started", "nb": len(ao_ids)})
+
+
+@app.route("/api/batch/statut", methods=["POST"])
+def api_batch_statut():
+    """POST /api/batch/statut - Change le statut de plusieurs AO d'un coup."""
+    data = request.get_json()
+    if not data or "ao_ids" not in data or "statut" not in data:
+        return jsonify({"error": "JSON body avec ao_ids et statut requis"}), 400
+
+    ao_ids = data["ao_ids"]
+    nouveau_statut = data["statut"]
+    if nouveau_statut not in ("nouveau", "analyse", "candidature", "soumis", "ignore", "gagne", "perdu"):
+        return jsonify({"error": f"Statut invalide: {nouveau_statut}"}), 400
+
+    appels = charger_ao()
+    modifies = 0
+    for ao in appels:
+        if ao.get("id") in ao_ids:
+            ao["statut"] = nouveau_statut
+            modifies += 1
+    sauvegarder_ao(appels)
+
+    # Recalibrer scoring si gagne/perdu
+    if nouveau_statut in ("gagne", "perdu"):
+        try:
+            from scoring_predictif import calibrer_auto
+            calibrer_auto()
+        except Exception as e:
+            logger.warning(f"Scoring predictif batch: {e}")
+
+    return jsonify({"status": "ok", "modifies": modifies, "statut": nouveau_statut})
 
 
 # Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)

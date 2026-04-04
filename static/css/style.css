@@ -1514,3 +1514,104 @@ tr:hover { background: var(--table-hover); }
     .objectif-pipeline-arrow { transform: rotate(90deg); }
     .objectif-timeline { height: 100px; }
 }
+
+/* === Opportunites du jour === */
+.opportunites-card {
+    border-left: 4px solid #f59e0b;
+    margin-bottom: 1.5rem;
+}
+.opportunites-card .card-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.opp-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+.opp-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+}
+.opp-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: var(--radius);
+    background: var(--bg);
+    transition: box-shadow 0.2s;
+}
+.opp-item:hover {
+    box-shadow: var(--shadow);
+}
+.opp-score-badge {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.opp-content {
+    flex: 1;
+    min-width: 0;
+}
+.opp-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.opp-title a {
+    color: var(--text);
+    text-decoration: none;
+}
+.opp-title a:hover { color: var(--primary); }
+.opp-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    flex-wrap: wrap;
+}
+.opp-separator { color: var(--border); }
+.opp-budget { font-weight: 600; color: var(--success); }
+.opp-deadline { font-weight: 600; }
+.opp-deadline-urgent { color: var(--danger); }
+.opp-acheteur {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.opp-action {
+    flex-shrink: 0;
+}
+.badge-concurrence-faible { background: #dcfce7; color: #166534; }
+.badge-concurrence-moyen { background: #fef9c3; color: #854d0e; }
+.badge-concurrence-fort { background: #fee2e2; color: #991b1b; }
+.badge-concurrence-tres_fort { background: #fecaca; color: #7f1d1d; }
+.opportunites-empty .empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .opp-item { flex-direction: column; align-items: flex-start; }
+    .opp-action { width: 100%; }
+    .opp-action .btn { width: 100%; text-align: center; }
+}

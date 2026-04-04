@@ -19,6 +19,7 @@
             <a href="{{ url_for('preinfos_view') }}" class="{% if request.endpoint == 'preinfos_view' %}active{% endif %}">Pre-infos</a>
             <a href="{{ url_for('liste_dossiers') }}" class="{% if request.endpoint == 'liste_dossiers' %}active{% endif %}">Dossiers</a>
             <a href="{{ url_for('page_brouillons') }}" class="{% if request.endpoint == 'page_brouillons' %}active{% endif %}">Brouillons</a>
+            <a href="{{ url_for('autofill_page') }}" class="{% if request.endpoint == 'autofill_page' %}active{% endif %}">AutoFill</a>
             <a href="{{ url_for('roi') }}" class="{% if request.endpoint == 'roi' %}active{% endif %}">ROI</a>
             <a href="{{ url_for('objectifs_view') }}" class="{% if request.endpoint == 'objectifs_view' %}active{% endif %}">Objectifs</a>
             <a href="{{ url_for('crm_view') }}" class="{% if request.endpoint == 'crm_view' %}active{% endif %}">CRM</a>
