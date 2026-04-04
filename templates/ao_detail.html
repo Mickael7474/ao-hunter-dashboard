@@ -278,6 +278,25 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Import DCE drag & drop -->
+<div class="card" id="dceDropCard">
+    <div class="card-header">
+        <h2>Import DCE manuel</h2>
+        <span id="dceUploadStatus" style="font-size:0.8rem; color:var(--text-light);"></span>
+    </div>
+    <div id="dceDropZone" style="border:2px dashed var(--border); border-radius:var(--radius); padding:2rem; text-align:center; cursor:pointer; transition:all 0.2s; background:var(--card-bg);"
+         ondragover="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='rgba(59,130,246,0.05)';"
+         ondragleave="this.style.borderColor='var(--border)'; this.style.background='var(--card-bg)';"
+         ondrop="handleDCEDrop(event)"
+         onclick="document.getElementById('dceFileInput').click();">
+        <div style="font-size:2rem; margin-bottom:0.5rem; color:var(--text-light);">&#128194;</div>
+        <p style="font-weight:600; margin-bottom:0.25rem;">Glissez vos fichiers DCE ici</p>
+        <p style="font-size:0.8rem; color:var(--text-light);">ou cliquez pour parcourir (PDF, DOCX, ZIP, etc.)</p>
+    </div>
+    <input type="file" id="dceFileInput" multiple style="display:none;" onchange="uploadDCEFiles(this.files)">
+    <div id="dceUploadList" style="margin-top:0.75rem; font-size:0.8rem;"></div>
+</div>
+
 <!-- Analyse semantique DCE -->
 {% if analyse_dce_complete and not analyse_dce_complete.erreur %}
 <div class="card" id="sectionAnalyseDCE">
@@ -1622,6 +1641,51 @@ function copierQuestionsEmail() {
             }
         });
     });
+}
+
+// --- DCE Drag & Drop ---
+function handleDCEDrop(e) {
+    e.preventDefault();
+    var zone = document.getElementById('dceDropZone');
+    zone.style.borderColor = 'var(--border)';
+    zone.style.background = 'var(--card-bg)';
+    if (e.dataTransfer.files.length > 0) {
+        uploadDCEFiles(e.dataTransfer.files);
+    }
+}
+
+function uploadDCEFiles(files) {
+    if (!files || files.length === 0) return;
+    var status = document.getElementById('dceUploadStatus');
+    var listEl = document.getElementById('dceUploadList');
+    status.textContent = 'Upload en cours...';
+    status.style.color = '#f59e0b';
+
+    var formData = new FormData();
+    for (var i = 0; i < files.length; i++) {
+        formData.append('fichiers', files[i]);
+    }
+
+    listEl.innerHTML = Array.from(files).map(function(f) {
+        return '<div style="padding:3px 0; border-bottom:1px solid var(--border);">&#128196; ' + f.name + ' (' + (f.size / 1024).toFixed(0) + ' Ko)</div>';
+    }).join('');
+
+    fetch('/api/ao/{{ ao.id }}/upload-dce', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) {
+                status.textContent = 'Erreur: ' + data.error;
+                status.style.color = '#dc2626';
+                return;
+            }
+            status.textContent = data.nb_fichiers + ' fichier(s) uploade(s) - analyse en cours...';
+            status.style.color = '#16a34a';
+            listEl.innerHTML += '<div style="padding:6px 0; color:#16a34a; font-weight:600;">Upload OK. L\'analyse semantique IA se lance en arriere-plan. Rechargez la page dans ~30s.</div>';
+        })
+        .catch(function(err) {
+            status.textContent = 'Erreur: ' + err.message;
+            status.style.color = '#dc2626';
+        });
 }
 </script>
 {% endblock %}

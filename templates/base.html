@@ -47,6 +47,72 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+    // --- Notifications push navigateur ---
+    (function() {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            // Demander la permission apres une interaction
+            document.addEventListener('click', function askNotif() {
+                Notification.requestPermission();
+                document.removeEventListener('click', askNotif);
+            }, { once: true });
+        }
+        if (typeof io !== 'undefined') {
+            try {
+                var sock = io();
+                sock.on('veille_complete', function(d) {
+                    if (d.nouveaux > 0 && Notification.permission === 'granted') {
+                        new Notification('AO Hunter - Nouveaux AO', {
+                            body: d.nouveaux + ' nouvel(s) AO detecte(s)',
+                            icon: '/static/favicon.ico',
+                            tag: 'veille'
+                        });
+                    }
+                    showToast(d.nouveaux + ' nouvel(s) AO detecte(s)', 'info');
+                });
+                sock.on('generation_complete', function(d) {
+                    if (d.dossier && Notification.permission === 'granted') {
+                        new Notification('AO Hunter - Dossier genere', {
+                            body: 'Dossier pret : ' + (d.dossier || '').substring(0, 50),
+                            icon: '/static/favicon.ico',
+                            tag: 'generation'
+                        });
+                    }
+                    showToast('Dossier genere : ' + (d.dossier || ''), 'success');
+                });
+                sock.on('pipeline_complete', function(d) {
+                    if (d.generes > 0 && Notification.permission === 'granted') {
+                        new Notification('AO Hunter - Pipeline auto', {
+                            body: d.generes + ' dossier(s) genere(s), ' + d.brouillons + ' brouillon(s)',
+                            icon: '/static/favicon.ico',
+                            tag: 'pipeline'
+                        });
+                    }
+                });
+                sock.on('alertes_instantanees', function(d) {
+                    if (Notification.permission === 'granted') {
+                        new Notification('AO Hunter - Alerte AO', {
+                            body: d.nb_alertes + ' AO a fort potentiel detecte(s) !',
+                            icon: '/static/favicon.ico',
+                            tag: 'alerte',
+                            requireInteraction: true
+                        });
+                    }
+                    showToast(d.nb_alertes + ' alerte(s) AO a fort potentiel !', 'warning');
+                });
+            } catch(e) {}
+        }
+        function showToast(msg, type) {
+            var toast = document.getElementById('notifToast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.className = 'notif-toast notif-' + (type || 'info');
+            toast.style.display = 'block';
+            setTimeout(function() { toast.style.display = 'none'; }, 5000);
+        }
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

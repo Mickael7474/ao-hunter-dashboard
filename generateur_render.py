@@ -2026,6 +2026,12 @@ def regenerer_piece(dossier_nom: str, fichier: str, ao: dict = None, type_presta
         else:
             return {"success": False, "erreur": "fiche_ao.json introuvable dans le dossier"}
 
+    # Backup avant regeneration (pour diff visuel)
+    ancien_path = dossier_path / fichier
+    if ancien_path.exists():
+        backup_path = ancien_path.with_suffix(".md.bak")
+        backup_path.write_text(ancien_path.read_text(encoding="utf-8"), encoding="utf-8")
+
     try:
         generateurs = {
             "memoire": lambda: _generer_memoire(ao, type_presta),

@@ -24,6 +24,7 @@
         <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}</p>
     </div>
     <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a href="{{ url_for('revision_guidee', nom=dossier.nom) }}" class="btn btn-sm btn-outline" style="white-space:nowrap; border-color:#8b5cf6; color:#8b5cf6;">Revision</a>
         <a href="{{ url_for('export_dossier_pdf', nom=dossier.nom) }}" class="btn btn-sm btn-outline" style="white-space:nowrap;">PDF</a>
         <a href="{{ url_for('dossier_print_view', nom=dossier.nom) }}" target="_blank" class="btn btn-sm btn-outline" style="white-space:nowrap;">Imprimer</a>
         <a href="{{ url_for('export_dossier_zip', nom=dossier.nom) }}" class="btn btn-sm btn-primary" style="white-space:nowrap;">ZIP</a>
@@ -84,12 +85,9 @@
                     Ouvrir
                 </a>
                 {% if ext == 'md' %}
-                <a href="{{ url_for('editer_fichier', nom=dossier.nom, fichier=f) }}" class="btn btn-sm btn-outline" title="Editer">
-                    Editer
-                </a>
-                <button class="regen-btn" onclick="regenerer('{{ f }}')" title="Regenerer cette piece">
-                    Regenerer
-                </button>
+                <a href="{{ url_for('editer_fichier', nom=dossier.nom, fichier=f) }}" class="btn btn-sm btn-outline" title="Editer">Editer</a>
+                <a href="{{ url_for('diff_fichier', nom=dossier.nom, fichier=f) }}" class="btn btn-sm btn-outline" title="Voir les modifications" style="font-size:0.7rem;">Diff</a>
+                <button class="regen-btn" onclick="regenerer('{{ f }}')" title="Regenerer cette piece">Regenerer</button>
                 {% endif %}
                 <a href="{{ url_for('servir_fichier_raw', nom=dossier.nom, fichier=f) }}" download class="btn btn-sm btn-outline">
                     DL

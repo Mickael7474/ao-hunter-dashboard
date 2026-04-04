@@ -126,4 +126,66 @@
         </form>
     </div>
 </div>
+
+<!-- Stats enrichies (chargees via API) -->
+<div class="card" id="crmStatsCard" style="padding:1rem; display:none; margin-top:1rem;">
+    <h3 style="margin-top:0;">Statistiques enrichies</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:1rem; margin-bottom:1rem;" id="crmKpis"></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <h4 style="font-size:0.85rem; margin-bottom:0.5rem;">Concurrents frequents</h4>
+            <div id="crmConcurrents" style="font-size:0.8rem;"></div>
+        </div>
+        <div>
+            <h4 style="font-size:0.85rem; margin-bottom:0.5rem;">Mots-cles recurrents</h4>
+            <div id="crmMotsCles" style="display:flex; flex-wrap:wrap; gap:0.3rem;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const cle = {{ cle | tojson }};
+    fetch('/api/crm/' + encodeURIComponent(cle) + '/stats')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return;
+            const card = document.getElementById('crmStatsCard');
+            card.style.display = '';
+
+            const kpis = [
+                {label: 'Taux de gain', value: (data.win_rate || 0).toFixed(0) + '%', color: data.win_rate >= 50 ? '#16a34a' : '#f59e0b'},
+                {label: 'AO total', value: data.nb_ao_total || 0, color: '#3b82f6'},
+                {label: 'Montant moyen', value: data.montant_moyen ? Math.round(data.montant_moyen).toLocaleString('fr-FR') + ' EUR' : '-', color: '#8b5cf6'},
+                {label: 'Gagnes', value: data.nb_gagnes || 0, color: '#16a34a'},
+                {label: 'Perdus', value: data.nb_perdus || 0, color: '#dc2626'}
+            ];
+            document.getElementById('crmKpis').innerHTML = kpis.map(k =>
+                '<div style="text-align:center; padding:0.75rem; background:var(--meta-bg); border-radius:var(--radius);">' +
+                '<div style="font-size:0.7rem; color:var(--text-light); text-transform:uppercase;">' + k.label + '</div>' +
+                '<div style="font-size:1.3rem; font-weight:700; color:' + k.color + ';">' + k.value + '</div></div>'
+            ).join('');
+
+            if (data.concurrents_frequents && data.concurrents_frequents.length > 0) {
+                document.getElementById('crmConcurrents').innerHTML = data.concurrents_frequents.slice(0, 8).map(c =>
+                    '<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border);">' +
+                    '<span>' + c.nom + '</span><span style="color:var(--text-light);">' + c.nb + 'x</span></div>'
+                ).join('');
+            } else {
+                document.getElementById('crmConcurrents').innerHTML = '<span style="color:var(--text-light);">Aucune donnee</span>';
+            }
+
+            if (data.mots_cles && data.mots_cles.length > 0) {
+                document.getElementById('crmMotsCles').innerHTML = data.mots_cles.slice(0, 15).map(m =>
+                    '<span class="badge" style="font-size:0.7rem;">' + m + '</span>'
+                ).join('');
+            } else {
+                document.getElementById('crmMotsCles').innerHTML = '<span style="color:var(--text-light);">Aucune donnee</span>';
+            }
+        })
+        .catch(() => {});
+})();
+</script>
 {% endblock %}

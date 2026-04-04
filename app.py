@@ -2751,6 +2751,13 @@ def editer_fichier(nom, fichier):
 
     if request.method == "POST":
         contenu = request.form.get("contenu", "")
+
+        # Sauvegarder une copie de backup avant modification
+        import shutil
+        backup_path = fichier_path.with_suffix(".md.bak")
+        if fichier_path.exists():
+            shutil.copy2(str(fichier_path), str(backup_path))
+
         fichier_path.write_text(contenu, encoding="utf-8")
 
         # Re-convertir en DOCX si possible
@@ -2920,6 +2927,262 @@ def api_qualite_dossier(nom):
             return jsonify(result)
 
     return jsonify({"error": "Dossier introuvable"}), 404
+
+
+# --- Feature : Diff visuel avant/apres ---
+
+@app.route("/dossiers/<path:nom>/diff/<path:fichier>")
+def diff_fichier(nom, fichier):
+    """Affiche le diff entre la version actuelle et le backup (.bak)."""
+    fichier_path = None
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        candidate = base / nom / fichier
+        if candidate.exists():
+            fichier_path = candidate
+            break
+
+    if not fichier_path:
+        return redirect(url_for("detail_dossier", nom=nom))
+
+    backup_path = fichier_path.with_suffix(".md.bak")
+    if not backup_path.exists():
+        return render_template("diff_view.html", nom_dossier=nom, nom_fichier=fichier,
+                               ancien="", nouveau=fichier_path.read_text(encoding="utf-8"),
+                               has_diff=False)
+
+    ancien = backup_path.read_text(encoding="utf-8")
+    nouveau = fichier_path.read_text(encoding="utf-8")
+
+    # Calculer les lignes de diff
+    import difflib
+    diff_lines = list(difflib.unified_diff(
+        ancien.splitlines(keepends=True),
+        nouveau.splitlines(keepends=True),
+        fromfile="Avant",
+        tofile="Apres",
+        lineterm=""
+    ))
+
+    return render_template("diff_view.html", nom_dossier=nom, nom_fichier=fichier,
+                           ancien=ancien, nouveau=nouveau,
+                           diff_lines=diff_lines, has_diff=True)
+
+
+@app.route("/dossiers/<path:nom>/diff/<path:fichier>/restaurer", methods=["POST"])
+def restaurer_fichier(nom, fichier):
+    """Restaure le fichier depuis le backup."""
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        fichier_path = base / nom / fichier
+        backup_path = fichier_path.with_suffix(".md.bak")
+        if backup_path.exists():
+            import shutil
+            shutil.copy2(str(backup_path), str(fichier_path))
+            backup_path.unlink()
+            break
+    return redirect(url_for("detail_dossier", nom=nom))
+
+
+# --- Feature : Mode revision guidee ---
+
+REVISION_FILE = DASHBOARD_DIR / "revisions_guidees.json"
+
+
+def _charger_revisions() -> dict:
+    if REVISION_FILE.exists():
+        try:
+            return json.loads(REVISION_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+
+def _sauvegarder_revisions(data: dict):
+    REVISION_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.route("/dossiers/<path:nom>/revision")
+def revision_guidee(nom):
+    """Page de revision guidee du dossier."""
+    dossiers = lister_dossiers()
+    dossier = next((d for d in dossiers if d["nom"] == nom), None)
+    if not dossier:
+        return redirect(url_for("liste_dossiers"))
+
+    # Charger l'etat de revision
+    revisions = _charger_revisions()
+    etat = revisions.get(nom, {})
+
+    # Construire la checklist a partir des fichiers
+    checklist = []
+    for f in sorted(dossier["fichiers"]):
+        if not f.endswith(".md"):
+            continue
+        base_name = f.replace(".md", "").split("_", 1)[-1].replace("_", " ").title()
+        checklist.append({
+            "fichier": f,
+            "label": base_name,
+            "valide": etat.get(f, {}).get("valide", False),
+            "commentaire": etat.get(f, {}).get("commentaire", ""),
+            "date_revision": etat.get(f, {}).get("date_revision", ""),
+        })
+
+    # Charger la qualite si dispo
+    qualite = {}
+    for base in [RESULTATS_DIR, DOSSIERS_GENERES_DIR]:
+        review_path = base / nom / "review_auto.json"
+        if review_path.exists():
+            try:
+                qualite = json.loads(review_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+            break
+
+    return render_template("revision_guidee.html", dossier=dossier, checklist=checklist,
+                           qualite=qualite, etat=etat)
+
+
+@app.route("/dossiers/<path:nom>/revision", methods=["POST"])
+def revision_guidee_post(nom):
+    """Enregistre l'etat de la revision guidee."""
+    revisions = _charger_revisions()
+    if nom not in revisions:
+        revisions[nom] = {}
+
+    fichier = request.form.get("fichier", "")
+    action = request.form.get("action", "")
+
+    if action == "valider":
+        revisions[nom][fichier] = {
+            "valide": True,
+            "commentaire": request.form.get("commentaire", ""),
+            "date_revision": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+    elif action == "rejeter":
+        revisions[nom][fichier] = {
+            "valide": False,
+            "commentaire": request.form.get("commentaire", ""),
+            "date_revision": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+    elif action == "valider_tout":
+        dossiers = lister_dossiers()
+        dossier = next((d for d in dossiers if d["nom"] == nom), None)
+        if dossier:
+            for f in dossier["fichiers"]:
+                if f.endswith(".md"):
+                    revisions[nom][f] = {
+                        "valide": True,
+                        "commentaire": "Valide en bloc",
+                        "date_revision": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    }
+
+    _sauvegarder_revisions(revisions)
+    return redirect(url_for("revision_guidee", nom=nom))
+
+
+# --- Feature : CRM acheteur enrichi (stats) ---
+
+@app.route("/api/crm/<path:nom>/stats")
+def api_crm_stats(nom):
+    """GET /api/crm/<nom>/stats - Statistiques enrichies d'un acheteur."""
+    from crm_acheteurs import get_fiche
+    fiche = get_fiche(nom, is_cle=True)
+    if not fiche:
+        return jsonify({"error": "Acheteur introuvable"}), 404
+
+    historique = fiche.get("historique_ao", [])
+    nb_ao = len(historique)
+    nb_gagnes = sum(1 for h in historique if h.get("statut") == "gagne")
+    nb_perdus = sum(1 for h in historique if h.get("statut") == "perdu")
+    nb_soumis = sum(1 for h in historique if h.get("statut") in ("soumis", "gagne", "perdu"))
+    montant_total = sum(h.get("montant") or 0 for h in historique if h.get("montant"))
+    montant_moyen = round(montant_total / max(1, nb_ao))
+    win_rate = round(nb_gagnes / max(1, nb_soumis) * 100) if nb_soumis else 0
+
+    # Concurrents frequents (depuis concurrence.json)
+    concurrents_freq = []
+    try:
+        conc_file = DASHBOARD_DIR / "concurrence.json"
+        if conc_file.exists():
+            attributions = json.loads(conc_file.read_text(encoding="utf-8"))
+            acheteur_nom = fiche.get("nom", "").lower()
+            concurrents_count = {}
+            for a in attributions:
+                if acheteur_nom in (a.get("acheteur") or "").lower():
+                    t = a.get("titulaire", "").strip()
+                    if t and "almera" not in t.lower() and "ai mentor" not in t.lower():
+                        concurrents_count[t] = concurrents_count.get(t, 0) + 1
+            concurrents_freq = sorted(concurrents_count.items(), key=lambda x: -x[1])[:10]
+    except Exception:
+        pass
+
+    # Mots-cles frequents dans les titres
+    mots_freq = {}
+    stop_words = {"de", "des", "du", "la", "le", "les", "et", "en", "pour", "un", "une", "d", "l", "a"}
+    for h in historique:
+        for mot in (h.get("titre") or "").lower().split():
+            mot = mot.strip(".,;:()[]'-/")
+            if len(mot) > 3 and mot not in stop_words:
+                mots_freq[mot] = mots_freq.get(mot, 0) + 1
+    top_mots = sorted(mots_freq.items(), key=lambda x: -x[1])[:15]
+
+    return jsonify({
+        "nb_ao": nb_ao,
+        "nb_gagnes": nb_gagnes,
+        "nb_perdus": nb_perdus,
+        "nb_soumis": nb_soumis,
+        "win_rate": win_rate,
+        "montant_total": montant_total,
+        "montant_moyen": montant_moyen,
+        "concurrents_frequents": [{"nom": n, "count": c} for n, c in concurrents_freq],
+        "mots_cles": [{"mot": m, "count": c} for m, c in top_mots],
+    })
+
+
+# --- Feature : Import DCE drag & drop ---
+
+@app.route("/api/ao/<path:ao_id>/upload-dce", methods=["POST"])
+def api_upload_dce(ao_id):
+    """POST /api/ao/<id>/upload-dce - Upload de fichiers DCE par drag & drop."""
+    fichiers = request.files.getlist("fichiers")
+    if not fichiers:
+        return jsonify({"error": "Aucun fichier"}), 400
+
+    # Creer le dossier DCE
+    clean_id = ao_id.replace("/", "_").replace("\\", "_")
+    dossier_dce = DOSSIERS_GENERES_DIR / f"DCE_{clean_id}"
+    dossier_dce.mkdir(parents=True, exist_ok=True)
+
+    fichiers_sauves = []
+    for f in fichiers:
+        if f.filename:
+            import re as _re
+            safe_name = _re.sub(r"[^a-zA-Z0-9_.-]", "_", f.filename)
+            f.save(str(dossier_dce / safe_name))
+            fichiers_sauves.append(safe_name)
+
+    # Lancer l'analyse DCE en arriere-plan
+    def _analyse_bg():
+        try:
+            from analyse_semantique_dce import analyser_dce_complet_ia
+            appels = charger_ao()
+            ao_dict = next((a for a in appels if a.get("id") == ao_id), None)
+            if ao_dict:
+                result = analyser_dce_complet_ia(dossier_dce, ao_dict)
+                socketio.emit("veille_log", {"msg": f"DCE analyse: score adequation {result.get('score_adequation', '?')}/100"})
+                socketio.emit("dce_analyse_complete", {"ao_id": ao_id, "result": result})
+        except Exception as e:
+            logger.warning(f"Analyse DCE auto upload: {e}")
+            socketio.emit("veille_log", {"msg": f"Analyse DCE: {e}"})
+
+    thread = threading.Thread(target=_analyse_bg, daemon=True)
+    thread.start()
+
+    return jsonify({
+        "success": True,
+        "fichiers": fichiers_sauves,
+        "dossier": f"DCE_{clean_id}",
+        "analyse_lancee": True,
+    })
 
 
 # Demarrer le scheduler sur Render (pas en local, la tache planifiee Windows s'en charge)

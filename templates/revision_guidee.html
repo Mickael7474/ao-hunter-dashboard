@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Revision - {{ dossier.nom }}{% endblock %}
+
+{% block head %}
+<style>
+    .revision-progress { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+    .progress-bar { flex:1; height:10px; background:var(--border); border-radius:5px; overflow:hidden; }
+    .progress-fill { height:100%; background:#16a34a; border-radius:5px; transition:width 0.4s ease; }
+    .progress-text { font-weight:700; font-size:1.1rem; min-width:60px; }
+    .checklist-item { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:0.75rem; overflow:hidden; transition:border-color 0.2s; }
+    .checklist-item.valide { border-color:#16a34a; }
+    .checklist-item.rejete { border-color:#dc2626; }
+    .checklist-header { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; cursor:pointer; background:var(--card-bg); }
+    .checklist-header:hover { background:var(--meta-bg); }
+    .checklist-status { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; flex-shrink:0; }
+    .checklist-status.pending { background:#f1f5f9; color:var(--text-light); }
+    .checklist-status.ok { background:#dcfce7; color:#16a34a; }
+    .checklist-status.ko { background:#fee2e2; color:#dc2626; }
+    .checklist-label { flex:1; font-weight:600; font-size:0.9rem; }
+    .checklist-meta { font-size:0.75rem; color:var(--text-light); }
+    .checklist-body { display:none; padding:0.75rem 1rem; border-top:1px solid var(--border); background:var(--meta-bg); }
+    .checklist-body.open { display:block; }
+    .checklist-actions { display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap; }
+    .quality-alerts { margin-bottom:1rem; }
+    .quality-alert { padding:0.5rem 0.75rem; border-radius:var(--radius); font-size:0.8rem; margin-bottom:0.5rem; }
+    .quality-alert.warning { background:#fef3c7; color:#92400e; }
+    .quality-alert.error { background:#fee2e2; color:#991b1b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('detail_dossier', nom=dossier.nom) }}" class="btn btn-sm btn-outline" style="margin-bottom:0.5rem;">&larr; Retour au dossier</a>
+        <h1>Revision guidee</h1>
+        <p>{{ dossier.nom }}</p>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="valider_tout">
+            <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Valider toutes les pieces ?');">Tout valider</button>
+        </form>
+        <a href="{{ url_for('export_dossier_pdf', nom=dossier.nom) }}" class="btn btn-sm btn-outline">Exporter PDF</a>
+    </div>
+</div>
+
+<!-- Barre de progression -->
+{% set nb_valides = checklist | selectattr('valide') | list | length %}
+{% set nb_total = checklist | length %}
+{% set pct = (nb_valides / nb_total * 100) | round | int if nb_total > 0 else 0 %}
+<div class="revision-progress">
+    <div class="progress-bar">
+        <div class="progress-fill" style="width:{{ pct }}%;"></div>
+    </div>
+    <div class="progress-text {% if pct == 100 %}style="color:#16a34a;"{% endif %}">{{ nb_valides }}/{{ nb_total }}</div>
+    {% if pct == 100 %}
+    <span style="background:#dcfce7; color:#16a34a; padding:4px 12px; border-radius:var(--radius); font-size:0.85rem; font-weight:600;">Pret pour soumission</span>
+    {% endif %}
+</div>
+
+<!-- Alertes qualite IA -->
+{% if qualite.get('problemes') or qualite.get('ameliorations') %}
+<div class="quality-alerts">
+    {% for p in qualite.get('problemes', [])[:5] %}
+    <div class="quality-alert error">{{ p }}</div>
+    {% endfor %}
+    {% for a in qualite.get('ameliorations', [])[:3] %}
+    <div class="quality-alert warning">{{ a }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Checklist -->
+{% for item in checklist %}
+<div class="checklist-item {% if item.valide %}valide{% elif item.commentaire and not item.valide %}rejete{% endif %}">
+    <div class="checklist-header" onclick="toggleItem(this)">
+        <div class="checklist-status {% if item.valide %}ok{% elif item.commentaire and not item.valide %}ko{% else %}pending{% endif %}">
+            {% if item.valide %}&#10003;{% elif item.commentaire and not item.valide %}&#10007;{% else %}?{% endif %}
+        </div>
+        <div class="checklist-label">{{ item.label }}</div>
+        <div class="checklist-meta">
+            {% if item.date_revision %}{{ item.date_revision }}{% endif %}
+            {% if item.commentaire %} - {{ item.commentaire[:40] }}{% if item.commentaire|length > 40 %}...{% endif %}{% endif %}
+        </div>
+        <span style="font-size:0.7rem; color:var(--text-light);">&#9660;</span>
+    </div>
+    <div class="checklist-body">
+        <!-- Actions rapides -->
+        <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+            <a href="{{ url_for('servir_fichier', nom=dossier.nom, fichier=item.fichier) }}" target="_blank" class="btn btn-sm btn-outline">Lire</a>
+            <a href="{{ url_for('editer_fichier', nom=dossier.nom, fichier=item.fichier) }}" class="btn btn-sm btn-outline">Editer</a>
+            {% set bak_name = item.fichier.replace('.md', '.md.bak') %}
+            <a href="{{ url_for('diff_fichier', nom=dossier.nom, fichier=item.fichier) }}" class="btn btn-sm btn-outline">Diff</a>
+        </div>
+        <!-- Formulaire validation -->
+        <form method="POST" class="checklist-actions">
+            <input type="hidden" name="fichier" value="{{ item.fichier }}">
+            <input type="text" name="commentaire" placeholder="Commentaire (optionnel)..." value="{{ item.commentaire }}"
+                   style="flex:1; padding:0.35rem 0.6rem; border:1px solid var(--border); border-radius:4px; font-size:0.8rem; background:var(--input-bg); color:var(--text);">
+            <button type="submit" name="action" value="valider" class="btn btn-sm" style="background:#16a34a; color:white; border:none;">Valider</button>
+            <button type="submit" name="action" value="rejeter" class="btn btn-sm" style="background:#dc2626; color:white; border:none;">A corriger</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleItem(header) {
+    const body = header.nextElementSibling;
+    body.classList.toggle('open');
+}
+</script>
+{% endblock %}

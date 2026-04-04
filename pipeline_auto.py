@@ -202,6 +202,28 @@ def lancer_pipeline(nouveaux_ao: list[dict] = None) -> dict:
         except Exception as e:
             logger.warning(f"Pipeline: echec extraction RC pour {ao_id}: {e}")
 
+        # --- Etape 0c : Analyse semantique DCE IA (si DCE telecharge) ---
+        analyse_semantique = None
+        try:
+            if dossier_dce and dossier_dce.exists():
+                from analyse_semantique_dce import analyser_dce_complet_ia
+                analyse_semantique = analyser_dce_complet_ia(dossier_dce, ao)
+                if analyse_semantique and not analyse_semantique.get("erreur"):
+                    log_entry["analyse_semantique"] = True
+                    log_entry["score_adequation"] = analyse_semantique.get("score_adequation", 0)
+                    logger.info(f"Pipeline: analyse semantique DCE score={analyse_semantique.get('score_adequation', '?')}/100")
+                    # Enrichir le dce_texte avec les exigences detectees par l'IA
+                    exigences = analyse_semantique.get("exigences_techniques", [])
+                    if exigences and dce_texte:
+                        exig_txt = "\n--- EXIGENCES TECHNIQUES (analyse IA) ---\n"
+                        for ex in exigences:
+                            nom_ex = ex.get("exigence", "") if isinstance(ex, dict) else str(ex)
+                            conforme = ex.get("almera_conforme", False) if isinstance(ex, dict) else False
+                            exig_txt += f"- {'OK' if conforme else 'ATTENTION'} {nom_ex}\n"
+                        dce_texte = exig_txt + "\n" + dce_texte
+        except Exception as e:
+            logger.warning(f"Pipeline: analyse semantique DCE pour {ao_id}: {e}")
+
         # --- Etape 1 : Go/No-Go (enrichi DCE si disponible) ---
         try:
             if dce_texte:

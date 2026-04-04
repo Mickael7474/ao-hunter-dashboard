@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Diff {{ nom_fichier }}{% endblock %}
+
+{% block head %}
+<style>
+    .diff-container { max-width: 1100px; margin: 0 auto; }
+    .diff-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; }
+    .diff-panels { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .diff-panel { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .diff-panel-header { padding:0.5rem 1rem; background:var(--th-bg); font-weight:600; font-size:0.85rem; border-bottom:1px solid var(--border); }
+    .diff-panel-header.old { color:#dc2626; }
+    .diff-panel-header.new { color:#16a34a; }
+    .diff-panel-content { padding:1rem; font-family:'Consolas','Monaco',monospace; font-size:0.8rem; line-height:1.6; max-height:600px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; background:var(--card-bg); color:var(--text); }
+    .diff-unified { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; font-family:'Consolas','Monaco',monospace; font-size:0.8rem; line-height:1.6; max-height:700px; overflow-y:auto; }
+    .diff-line { padding:1px 8px; }
+    .diff-line.add { background:#dcfce7; color:#166534; }
+    .diff-line.remove { background:#fee2e2; color:#991b1b; }
+    .diff-line.header { background:var(--th-bg); color:var(--text-light); font-weight:600; }
+    .diff-tabs { display:flex; gap:0; margin-bottom:1rem; }
+    .diff-tab { padding:0.4rem 1rem; cursor:pointer; border:1px solid var(--border); font-size:0.85rem; background:var(--card-bg); color:var(--text-light); }
+    .diff-tab:first-child { border-radius:var(--radius) 0 0 var(--radius); }
+    .diff-tab:last-child { border-radius:0 var(--radius) var(--radius) 0; }
+    .diff-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .no-diff { text-align:center; padding:3rem; color:var(--text-light); }
+    @media (max-width:768px) { .diff-panels { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="diff-container">
+    <div class="diff-header">
+        <div>
+            <p style="font-size:0.85rem; color:var(--text-light);">
+                <a href="{{ url_for('liste_dossiers') }}" style="color:var(--primary);">Dossiers</a> /
+                <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}" style="color:var(--primary);">{{ nom_dossier }}</a> /
+                Diff {{ nom_fichier }}
+            </p>
+            <h1 style="font-size:1.3rem;">Modifications : {{ nom_fichier }}</h1>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            {% if has_diff %}
+            <form method="POST" action="{{ url_for('restaurer_fichier', nom=nom_dossier, fichier=nom_fichier) }}" onsubmit="return confirm('Restaurer la version precedente ?');">
+                <button type="submit" class="btn btn-sm btn-outline" style="border-color:#dc2626; color:#dc2626;">Restaurer l'ancien</button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('detail_dossier', nom=nom_dossier) }}" class="btn btn-sm btn-outline">Retour</a>
+        </div>
+    </div>
+
+    {% if not has_diff %}
+    <div class="card no-diff">
+        <p>Aucune version precedente disponible pour ce fichier.</p>
+        <p style="font-size:0.85rem; margin-top:0.5rem;">Les backups sont crees automatiquement lors des editions et regenerations.</p>
+    </div>
+    {% else %}
+
+    <div class="diff-tabs">
+        <div class="diff-tab active" onclick="showView('unified', this)">Unifie</div>
+        <div class="diff-tab" onclick="showView('split', this)">Cote a cote</div>
+    </div>
+
+    <!-- Vue unifiee -->
+    <div id="view-unified" class="diff-unified">
+        {% for line in diff_lines %}
+        {% if line.startswith('+++') or line.startswith('---') %}
+        <div class="diff-line header">{{ line }}</div>
+        {% elif line.startswith('@@') %}
+        <div class="diff-line header">{{ line }}</div>
+        {% elif line.startswith('+') %}
+        <div class="diff-line add">{{ line }}</div>
+        {% elif line.startswith('-') %}
+        <div class="diff-line remove">{{ line }}</div>
+        {% else %}
+        <div class="diff-line">{{ line }}</div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Vue cote a cote -->
+    <div id="view-split" class="diff-panels" style="display:none;">
+        <div class="diff-panel">
+            <div class="diff-panel-header old">Avant</div>
+            <div class="diff-panel-content">{{ ancien }}</div>
+        </div>
+        <div class="diff-panel">
+            <div class="diff-panel-header new">Apres</div>
+            <div class="diff-panel-content">{{ nouveau }}</div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showView(view, tab) {
+    document.querySelectorAll('.diff-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-unified').style.display = view === 'unified' ? '' : 'none';
+    document.getElementById('view-split').style.display = view === 'split' ? '' : 'none';
+}
+</script>
+{% endblock %}
