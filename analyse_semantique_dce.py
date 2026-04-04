@@ -16,7 +16,7 @@ DASHBOARD_DIR = Path(__file__).parent
 DOSSIERS_DIR = DASHBOARD_DIR / "dossiers_generes"
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODELE = "claude-sonnet-4-5-20251001"
+MODELE = "claude-sonnet-4-20250514"
 MAX_CHARS_DCE = 15000
 
 # Infos Almera pour le prompt

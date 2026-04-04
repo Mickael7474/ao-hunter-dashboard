@@ -159,7 +159,7 @@ Toutes les infos Almera sont dans `config.yaml` :
 - **Backend local**: Python 3.14, anthropic SDK, pdfplumber, pymupdf, python-docx, playwright
 - **Dashboard**: Flask 3, Flask-SocketIO, Gunicorn + gevent-websocket
 - **Scheduler**: APScheduler (BackgroundScheduler, toutes les 8h)
-- **API IA**: Claude Sonnet 4 (`claude-sonnet-4-5-20251001`) pour mémoire, lettre, BPU, programme ; Claude Haiku 3.5 (`claude-haiku-3-5-20251001`) pour planning, CV, scoring local
+- **API IA**: Claude Sonnet 4 (`claude-sonnet-4-20250514`) pour toutes les generations (memoire, lettre, BPU, programme, planning, CV, review). Haiku non disponible sur la cle API actuelle.
 - **Sources veille**: BOAMP API open data, TED API v3, marches-securises.fr RSS, AWS Defense scraping
 - **Email**: Gmail SMTP (envoi) + IMAP (brouillons)
 - **Excel**: openpyxl (DPGF)
@@ -186,5 +186,7 @@ Toutes les infos Almera sont dans `config.yaml` :
 |---|---|---|---|
 | 2026-04-04 | crm_acheteurs.py, app.py | CRM fiches acheteurs ne s'ouvraient pas au clic : double normalisation de la cle dans get_fiche(). Ajout param is_cle=True. | Resolu |
 | 2026-04-04 | estimation_marche.py | Internal Server Error sur detail AO : import top-level de decp_data crashait si module indisponible + structure retournee (fourchette_basse/haute, nb_concurrents_estime, facteurs_hausse) ne matchait pas le template (fourchette[], nb_candidats_estime, facteurs). Normalise les deux chemins DECP et heuristique. | Resolu |
+| 2026-04-04 | generateur_render.py, auto_review.py + 3 fichiers | Modeles Claude 404 : `claude-sonnet-4-20250514` et `claude-haiku-4-20250514` dans generateur_render, `claude-haiku-3-5-20251001` dans 4 autres fichiers. Haiku non disponible sur la cle API. Tous remplaces par `claude-sonnet-4-20250514`. | Resolu |
+| 2026-04-04 | generateur_render.py, auto_review.py | Conformite RC crash `'str' object has no attribute 'get'` : (1) extraire_rc() peut retourner un str, ajoute guard isinstance. (2) ao.criteres_attribution est un str pas une list, ajoute normalisation _as_list(). (3) verifier_conformite_rc() assumait criteres=list[dict], ajoute support str et list[str]. | Resolu |
 
 > Cette section est maintenue par Claude au fil des sessions. Ajouter une ligne à chaque bug résolu ou comportement inattendu découvert en prod ou en développement.

@@ -20,10 +20,17 @@
             <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
                 {% for f in d.fichiers | sort %}
                 {% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
+                {% set base = f.rsplit('.', 1)[0] if '.' in f else f %}
+                {# Cacher les .md quand le .docx correspondant existe #}
+                {% if ext == 'md' and (base ~ '.docx') in d.fichiers %}
+                {% else %}
+                {% set badge_bg = '#dbeafe' if ext == 'docx' else '#fef3c7' if ext == 'html' else '#e0f2fe' if ext == 'json' else '#f1f5f9' %}
+                {% set badge_color = '#1e40af' if ext == 'docx' else '#92400e' if ext == 'html' else '#0369a1' if ext == 'json' else '#334155' %}
                 <a href="{{ url_for('servir_fichier', nom=d.nom, fichier=f) }}"
                    target="_blank"
-                   class="badge" style="background:#f1f5f9; color:#334155; padding:3px 8px; font-size:0.7rem; text-decoration:none; cursor:pointer; transition:background 0.15s;"
-                   onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#f1f5f9'">{{ f }}</a>
+                   class="badge" style="background:{{ badge_bg }}; color:{{ badge_color }}; padding:3px 8px; font-size:0.7rem; text-decoration:none; cursor:pointer; transition:opacity 0.15s;"
+                   onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">{{ f }}</a>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>

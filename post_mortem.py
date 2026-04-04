@@ -12,7 +12,7 @@ from pathlib import Path
 logger = logging.getLogger("ao_hunter.post_mortem")
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODELE_HAIKU = "claude-haiku-3-5-20251001"
+MODELE_HAIKU = "claude-sonnet-4-20250514"  # Haiku non dispo, fallback Sonnet
 
 DASHBOARD_DIR = Path(__file__).parent
 POST_MORTEM_FILE = DASHBOARD_DIR / "post_mortem.json"

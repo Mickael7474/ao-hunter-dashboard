@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger("ao_hunter.auto_review")
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODELE_REVIEW = "claude-haiku-3-5-20251001"
+MODELE_REVIEW = "claude-sonnet-4-20250514"  # Haiku non dispo, fallback Sonnet
 
 
 def _appel_claude_review(prompt: str, max_tokens: int = 3000) -> str:
@@ -233,7 +233,15 @@ def verifier_conformite_rc(dossier: dict, rc_data: dict) -> dict:
         "attestations sociales": ["attestation_sociale", "urssaf"],
     }
 
+    # Guard: si rc_data est un str au lieu d'un dict, on ne peut rien faire
+    if not isinstance(rc_data, dict):
+        return {"conforme": False, "score": 0, "pieces_manquantes": [],
+                "pieces_presentes": [], "alertes": ["rc_data invalide (type: {})".format(type(rc_data).__name__)],
+                "suggestions": []}
+
     pieces_exigees = rc_data.get("pieces_exigees", [])
+    if isinstance(pieces_exigees, str):
+        pieces_exigees = [l.strip() for l in pieces_exigees.split("\n") if l.strip()]
     for piece_rc in pieces_exigees:
         piece_lower = piece_rc.lower()
         trouvee = False
@@ -353,13 +361,32 @@ def verifier_conformite_rc(dossier: dict, rc_data: dict) -> dict:
 
     # --- 5. Verification des criteres d'attribution couverts dans le memoire ---
     criteres = rc_data.get("criteres_attribution", [])
+    if isinstance(criteres, str):
+        criteres = [l.strip() for l in criteres.split("\n") if l.strip()]
+    # Criteres a NE PAS chercher dans le memoire (traites dans d'autres pieces)
+    CRITERES_HORS_MEMOIRE = ["prix", "cout", "tarif", "montant", "remise", "rabais"]
+
     if criteres and memoire_contenu:
         memoire_lower = memoire_contenu.lower()
+        # Aussi verifier dans tout le dossier pour les criteres hors-memoire
         for critere in criteres:
-            nom_critere = critere.get("nom", "")
-            poids = critere.get("poids", critere.get("poids_pct", 0))
-            # Verifier que le critere est au moins mentionne
-            mots_critere = [m for m in nom_critere.lower().split() if len(m) > 3]
+            # Critere peut etre un dict {"nom": ..., "poids": ...} ou un str "Valeur technique : 40%"
+            if isinstance(critere, dict):
+                nom_critere = critere.get("nom", "")
+                poids = critere.get("poids", critere.get("poids_pct", 0))
+            else:
+                nom_critere = str(critere)
+                import re as _re
+                m = _re.search(r'(\d+)\s*%', nom_critere)
+                poids = int(m.group(1)) if m else 0
+
+            # Ignorer les criteres prix/cout (traites dans le BPU, pas le memoire)
+            nom_lower = nom_critere.lower()
+            if any(mot in nom_lower for mot in CRITERES_HORS_MEMOIRE):
+                continue
+
+            # Verifier que le critere est au moins mentionne dans le memoire
+            mots_critere = [m for m in nom_lower.split() if len(m) > 3]
             couvert = any(m in memoire_lower for m in mots_critere) if mots_critere else True
             if not couvert and poids >= 10:
                 score -= 8
@@ -370,6 +397,8 @@ def verifier_conformite_rc(dossier: dict, rc_data: dict) -> dict:
 
     # --- 6. Conditions de participation ---
     conditions = rc_data.get("conditions_participation", [])
+    if isinstance(conditions, str):
+        conditions = [l.strip() for l in conditions.split("\n") if l.strip()]
     for cond in conditions:
         cond_lower = cond.lower()
         if "qualiopi" in cond_lower and "qualiopi" not in contenu_lower:

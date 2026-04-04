@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger("ao_hunter.questions")
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODELE_HAIKU = "claude-haiku-3-5-20251001"
+MODELE_HAIKU = "claude-sonnet-4-20250514"  # Haiku non dispo, fallback Sonnet
 
 
 def _appel_claude_haiku(prompt: str, max_tokens: int = 3000) -> str:

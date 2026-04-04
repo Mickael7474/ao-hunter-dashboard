@@ -32,7 +32,7 @@ API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Modeles
 MODELE_PRINCIPAL = "claude-sonnet-4-20250514"
-MODELE_LEGER = "claude-haiku-4-20250514"
+MODELE_LEGER = "claude-sonnet-4-20250514"  # Haiku non dispo sur cette cle, fallback Sonnet
 
 # Infos entreprise integrees (extrait du config.yaml)
 ENTREPRISE = {
@@ -56,12 +56,12 @@ ENTREPRISE = {
     "chiffres": "2000+ personnes formees, 50+ entreprises, note 4.9/5 Google",
     "formateur_principal": "Mickael Bertolla - Ingenieur Mines Saint-Etienne, MSc Skema (USA), auteur 'L'IA et la generation de texte' (Ed. ENI, best-seller 2025)",
     "formateurs": [
-        {"nom": "Mickael Bertolla", "role": "President & Formateur principal", "specialites": "IA generative, ChatGPT, Claude, Agents IA, Strategie IA", "formation": "Ingenieur Mines Saint-Etienne, MSc Skema Business School (USA)", "experience": "10+ ans transformation digitale, auteur Ed. ENI"},
-        {"nom": "Charles Courbet", "role": "Formateur senior", "specialites": "Midjourney, Flux, IA creative, Design IA", "formation": "ESSCA, Digital Marketing", "experience": "8 ans creation digitale"},
-        {"nom": "Guillaume Martin", "role": "Formateur", "specialites": "Microsoft Copilot, Power Platform, automatisation", "formation": "Epitech", "experience": "6 ans integration Microsoft"},
-        {"nom": "Romy Chen", "role": "Formatrice", "specialites": "SEO/GSO/GEO, marketing IA, prompt engineering", "formation": "Sciences Po", "experience": "5 ans marketing digital"},
-        {"nom": "Yann Delaporte", "role": "Formateur", "specialites": "Mistral AI, LLM open source, deploiement IA", "formation": "Centrale Lyon", "experience": "7 ans ingenierie IA"},
-        {"nom": "Stephanie Moreau", "role": "Formatrice", "specialites": "No-code/low-code, Make, n8n, agents IA", "formation": "HEC", "experience": "9 ans conseil digital"},
+        {"nom": "Mickael Bertolla", "role": "President & Formateur principal", "specialites": "IA generative, ChatGPT, Claude, Agents IA, Strategie IA, Prompt engineering", "formation": "Ingenieur Mines Saint-Etienne, MSc Skema Business School (USA)", "experience": "4 ans formation IA, 2000+ personnes formees, auteur Ed. ENI"},
+        {"nom": "Charles Lerminiaux", "role": "Consultant Data et IA senior", "specialites": "Data science, gouvernance donnees, cadrage cas d'usage IA pour COMEX, feuille de route IA", "formation": "Ingenieur ISAE Supaero, MS Management Innovation TBS, CDMP Associate", "experience": "17 ans, ex-Directeur conseil Aqsone, Product Manager IA Airbus, Sopra Steria"},
+        {"nom": "Guillaume Lanz", "role": "Consultant IA / CEO Transition IA", "specialites": "IA generative, Microsoft Copilot (20+ ateliers), prompting avance, LinkedIn IA", "formation": "MBA Manager Produits et Marketing ESG Paris, certifie Google GenAI", "experience": "3 ans, 1500+ professionnels formes, conferencier BPI France / AI Summit"},
+        {"nom": "Romy Ozier-Lafontaine", "role": "Formatrice IA et design numerique", "specialites": "IA generative, SEO, accessibilite RGAA, WordPress/Webflow, UX Design", "formation": "Dev Web 3W Academy, jury habilite PIX", "experience": "18 ans, fondatrice Digital Ladies, 250+ personnes formees"},
+        {"nom": "Yann Cabon", "role": "Formateur Expert IA", "specialites": "IA generative (texte/image/video), creation contenu IA, integration IA processus RH", "formation": "Master RH Ecofac Business School", "experience": "2 ans formation IA, ex-SNCF Voyageurs, 900+ contenus IA generes"},
+        {"nom": "Stephanie Rodrigues", "role": "Consultante et Formatrice IA", "specialites": "IA generative, automatisation, transformation digitale", "formation": "Consultante certifiee", "experience": "Formatrice IA en entreprise"},
     ],
     "grille_tarifaire": {
         "journee_presentiel": "1 500 EUR HT",
@@ -102,18 +102,35 @@ def _appel_claude(prompt: str, max_tokens: int = 4000, modele: str = None) -> st
     return data["content"][0]["text"]
 
 
+def _formater_date(raw: str) -> str:
+    """Formate une date ISO en date lisible."""
+    if not raw or raw == "None":
+        return "Non precisee"
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        mois = ["janvier", "fevrier", "mars", "avril", "mai", "juin",
+                "juillet", "aout", "septembre", "octobre", "novembre", "decembre"]
+        return f"{dt.day} {mois[dt.month - 1]} {dt.year} a {dt.hour}h{dt.minute:02d}"
+    except Exception:
+        return str(raw).split("T")[0] if "T" in str(raw) else str(raw)
+
+
 def _bloc_infos_ao(ao: dict) -> str:
     """Bloc d'infos AO reutilise dans tous les prompts."""
+    budget = ao.get('budget_estime')
+    budget_txt = f"{budget:,.0f} EUR".replace(",", " ") if budget else "Non communique"
+    date_lim = _formater_date(str(ao.get('date_limite', '')))
+
     return f"""Titre : {ao.get('titre', 'Non precise')}
 Acheteur : {ao.get('acheteur', 'Non precise')}
 Description : {ao.get('description', 'Non disponible')}
 Reference/ID : {ao.get('id', '')}
-Budget estime : {ao.get('budget_estime', 'Non precise')} EUR
+Budget estime : {budget_txt}
 Type : {ao.get('type_marche', 'Non precise')}
 Procedure : {ao.get('type_procedure', 'Non precise')}
 Lieu : {ao.get('region', ao.get('lieu_execution', 'Non precise'))}
 Duree : {ao.get('duree_mois', 'Non precisee')} mois
-Date limite : {ao.get('date_limite', 'Non precisee')}
+Date limite : {date_lim}
 Criteres : {ao.get('criteres_attribution', 'Non precises')}"""
 
 
@@ -248,6 +265,27 @@ def _extraire_criteres_attribution(ao: dict, dce_texte: str = "") -> list[dict]:
 
 # --- Generation de chaque piece du dossier ---
 
+def _objectif_mots(criteres: list) -> int:
+    """Calcule l'objectif de mots du memoire selon le poids de la valeur technique."""
+    if not criteres:
+        return 3000
+    # Chercher le poids du critere technique (tout sauf prix)
+    poids_technique = 0
+    for c in criteres:
+        nom = c.get("nom", "").lower()
+        if "prix" not in nom and "cout" not in nom and "tarif" not in nom:
+            poids_technique += c.get("poids_pct", 0)
+    # Plus le poids technique est eleve, plus le memoire doit etre long
+    if poids_technique >= 60:
+        return 5000
+    elif poids_technique >= 40:
+        return 4000
+    elif poids_technique >= 20:
+        return 3000
+    else:
+        return 2500  # Peu de poids technique = memoire plus court
+
+
 def _generer_memoire(ao: dict, type_presta: str, dce_texte: str = "", personnalisation: dict = None, decp: dict = None) -> str:
     """Genere le memoire technique (piece maitresse)."""
     dce_bloc = ""
@@ -354,20 +392,24 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 {dce_bloc}{criteres_bloc}{structure_bloc}{perso_bloc}{adaptatif_bloc}{lecons_bloc}{decp_bloc}
 
 ## INSTRUCTIONS
-1. Redige un memoire technique COMPLET en francais (minimum 3000 mots)
+1. Redige un memoire technique COMPLET en francais (minimum {_objectif_mots(criteres)} mots)
 2. {"Structure le memoire en MIROIR EXACT des criteres d'attribution ci-dessus, en respectant l'ordre et les intitules." if criteres else f'Structure avec sections standard pour "{type_presta}"'}
 3. Personnalise chaque section au contexte de l'acheteur
 4. Utilise UNIQUEMENT les vraies references et certifications d'Almera
 5. N'invente JAMAIS de noms de formateurs ou de references clients
-6. Propose des indicateurs de performance (KPIs) concrets
-7. Inclus un planning previsionnel realiste
-8. Si Formation : objectifs pedagogiques, methodes, supports, evaluation
-9. Si Consulting/AMO : methodologie en 4 etapes (diagnostic, feuille de route, accompagnement, deploiement)
-10. Sois precis, concret, quantifie. Pas de phrases generiques.
+6. Propose des indicateurs de performance (KPIs) concrets et mesurables
+7. Inclus un planning previsionnel realiste avec jalons
+8. Si Formation : objectifs pedagogiques SMART, methodes actives detaillees (ateliers, cas pratiques, mises en situation), supports numeriques innovants, modalites d'evaluation formative et sommative
+9. Si Consulting/AMO : methodologie en 4 etapes (diagnostic, feuille de route, accompagnement, deploiement) avec livrables concrets par etape
+10. Sois precis, concret, quantifie. Pas de phrases generiques. Chaque argument doit etre illustre par un exemple reel.
 11. Format Markdown avec titres # ## ###
-{"12. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}"""
+12. Pour chaque section, inclus au moins une reference client pertinente avec resultats chiffres
+{"13. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}"""
 
-    return _appel_claude(prompt, max_tokens=8000)
+    # Adapter max_tokens a l'objectif de mots (1 mot ~ 1.5 tokens en francais)
+    objectif = _objectif_mots(criteres)
+    max_tok = max(8000, int(objectif * 1.8))
+    return _appel_claude(prompt, max_tokens=max_tok)
 
 
 def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
@@ -498,9 +540,10 @@ Total HT + note TVA exoneree + "Prix fermes et non revisables"
 
     resultat = _appel_claude(prompt, max_tokens=4000)
 
-    # Ajouter le commentaire strategie en fin de BPU
+    # NE PAS ajouter le commentaire strategie dans le document client
+    # (information interne visible lors de la generation dans les logs)
     if strategie_commentaire:
-        resultat += strategie_commentaire
+        logger.info(f"BPU strategie: {strategie_commentaire.strip()}")
 
     return resultat
 
@@ -516,14 +559,18 @@ def _generer_planning(ao: dict) -> str:
 Genere un planning en format tableau Markdown avec ces colonnes :
 | Phase | Description | Semaines | Livrables |
 
+REGLES DE FORMAT STRICTES :
+- Dans les cellules du tableau, separer les elements par des virgules (PAS de <br>, PAS de bullet points)
+- Pas de balises HTML dans le markdown
+- Pas de diagramme de Gantt en texte/ASCII (un visuel HTML sera genere automatiquement)
+
 Phases typiques :
 1. Phase preparatoire : diagnostic, personnalisation contenus (S1-S2)
 2. Deploiement / Formation : sessions par groupes (S3-Sx)
 3. Suivi post-formation : hotline, coaching (Sx-Sy)
 4. Bilan et evaluation : rapport final, recommandations (derniere semaine)
 
-Adapter le nombre de semaines a la duree du marche.
-Ajouter un diagramme de Gantt simplifie en texte (barres ====).
+Adapter le nombre de semaines a la duree du marche (maximum 52 semaines meme pour les marches pluriannuels, detailler la premiere annee).
 
 Format Markdown."""
 
@@ -553,15 +600,18 @@ Description : {ao.get('description', '')[:500]}
 === INSTRUCTIONS ===
 1. Selectionne les 2-4 formateurs les plus pertinents pour cet AO
 2. Pour chaque formateur selectionne, genere une fiche CV avec :
-   - Nom et role
+   - Nom et role (titre ##)
    - Formation / Diplomes
    - Competences cles (en lien avec l'AO)
-   - Experience professionnelle
+   - Experience professionnelle pertinente
    - Domaines d'intervention
-3. N'invente AUCUNE information supplementaire
-4. Explique brievement pourquoi chaque formateur est pertinent pour cet AO
+3. INTERDIT ABSOLU : N'invente AUCUN nom, AUCUN diplome, AUCUNE reference qui ne figure pas dans la liste ci-dessus
+4. Utilise UNIQUEMENT les noms, formations et experiences indiques dans "EQUIPE ALMERA DISPONIBLE"
+5. Ne modifie pas les noms de famille ni les ecoles/diplomes
+6. Pas de balises HTML (<br> etc.) dans le markdown
+7. Explique brievement pourquoi chaque formateur est pertinent pour cet AO
 
-Format Markdown avec titres ## par formateur."""
+Format Markdown avec titres ## par formateur (ex: ## Mickael Bertolla - President & Formateur principal)."""
 
     return _appel_claude(prompt, max_tokens=4000, modele=MODELE_LEGER)
 
@@ -750,7 +800,9 @@ Pour chaque module :
 
 3. N'invente PAS de formations qui n'existent pas dans le catalogue
 4. Adapte le vocabulaire et les exemples au contexte de l'acheteur
-5. Format Markdown avec titres ## et ### et tableaux"""
+5. Format Markdown avec titres ## et ### et tableaux
+6. INTERDIT : pas de balises HTML (<br>, <strong>, etc.) dans le markdown. Separer les elements dans les cellules de tableau par des virgules.
+7. Utiliser la troisieme personne ou l'impersonnel (pas de "j'ai selectionne", mais "sont proposees")"""
 
     return _appel_claude(prompt, max_tokens=6000)
 
@@ -1043,7 +1095,7 @@ def _generer_acte_engagement(ao: dict) -> str:
 
 ### Identification du pouvoir adjudicateur
 - **Acheteur** : {ao.get('acheteur', '[Nom de l acheteur]')}
-- **Adresse** : [Adresse de l'acheteur - voir avis de marche]
+- **Adresse** : Voir avis de marche
 
 ### Objet du marche
 - **Intitule** : {ao.get('titre', '[Objet du marche]')}
@@ -1053,7 +1105,7 @@ def _generer_acte_engagement(ao: dict) -> str:
 
 ### Duree du marche
 - **Duree** : {ao.get('duree_mois', '[A preciser]')} mois
-- **Date previsionnelle de debut** : [A preciser par l'acheteur]
+- **Date previsionnelle de debut** : A preciser par l'acheteur
 
 ---
 
@@ -1100,7 +1152,7 @@ des offres ({date_limite}).
 
 ### Domiciliation bancaire
 - **Titulaire du compte** : {ent['raison_sociale']}
-- **Banque** : [Voir RIB joint au dossier]
+- **Banque** : Voir RIB joint au dossier
 
 ---
 
@@ -1168,7 +1220,7 @@ def _generer_dume(ao: dict) -> str:
 | Denomination officielle | {ent['raison_sociale']} |
 | Nom commercial | {ent['nom']} |
 | Numero d'identification (SIRET) | {ent['siret']} |
-| Numero de TVA intracommunautaire | FR [a completer] |
+| Numero de TVA intracommunautaire | FR 12 989004551 |
 | Adresse postale | {ent['adresse']} |
 | Personne de contact | {ent['representant']} |
 | Telephone | {ent['telephone']} |
@@ -1182,7 +1234,7 @@ def _generer_dume(ao: dict) -> str:
 ### B. Representant(s) de l'operateur economique
 - **Nom** : Mickael Bertolla
 - **Qualite** : President
-- **Date de naissance** : [confidentiel]
+- **Date de naissance** : Communiquee sur demande
 - **Habilitation** : Representant legal (President de SASU)
 
 ### C. Sous-traitance
@@ -1216,7 +1268,7 @@ judiciaire, liquidation ou faillite.
 | Element | Valeur |
 |---------|--------|
 | Inscription registre du commerce | Oui (Kbis joint) |
-| Certification Qualiopi | Oui (certificat joint, valide jusqu'au 09/02/2026) |
+| Certification Qualiopi | Oui (certificat joint, renouvellement en cours) |
 | Certification RS6776 | Oui (France Competences - IA generative) |
 | Activateur France Num | Oui (certificat joint) |
 | NDA formation | {ent['nda']} |
@@ -1727,13 +1779,28 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         dossier_dce_rc = DOSSIERS_DIR / f"DCE_{clean_id_rc}"
         rc_data = {}
         if dossier_dce_rc.exists():
-            rc_data = extraire_rc(dossier_dce_rc)
+            rc_result = extraire_rc(dossier_dce_rc)
+            # extraire_rc peut retourner un str (erreur) au lieu d'un dict
+            if isinstance(rc_result, dict):
+                rc_data = rc_result
+            else:
+                logger.warning(f"extraire_rc a retourne un str au lieu d'un dict: {str(rc_result)[:200]}")
         else:
             # Construire un rc_data minimal a partir des infos AO disponibles
+            # Normaliser : certains champs AO sont des str au lieu de list
+            def _as_list(v):
+                if v is None:
+                    return []
+                if isinstance(v, list):
+                    return v
+                if isinstance(v, str):
+                    return [line.strip() for line in v.split("\n") if line.strip()]
+                return []
+
             rc_data = {
-                "pieces_exigees": ao.get("pieces_exigees", []),
-                "criteres_attribution": ao.get("criteres_attribution", []),
-                "conditions_participation": ao.get("conditions_participation", []),
+                "pieces_exigees": _as_list(ao.get("pieces_exigees")),
+                "criteres_attribution": _as_list(ao.get("criteres_attribution")),
+                "conditions_participation": _as_list(ao.get("conditions_participation")),
             }
 
         if rc_data.get("pieces_exigees") or rc_data.get("criteres_attribution"):

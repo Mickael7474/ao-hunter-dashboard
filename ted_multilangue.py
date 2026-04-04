@@ -16,7 +16,7 @@ logger = logging.getLogger("ao_hunter.ted_multilangue")
 
 API_URL = "https://api.ted.europa.eu/v3/notices/search"
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODELE_HAIKU = "claude-haiku-3-5-20251001"
+MODELE_HAIKU = "claude-sonnet-4-20250514"  # Haiku non dispo, fallback Sonnet
 
 # Mots-cles par langue
 MOTS_CLES_MULTILANGUE = {

@@ -110,8 +110,11 @@ def _parse_planning_md(planning_md: str) -> list[dict]:
                 duree_m = re.search(r"(\d+)", cols[-1]) if cols[-1] else None
                 duree = int(duree_m.group(1)) if duree_m else 1
                 nom_clean = re.sub(r"\s*[\(\[].+?[\)\]]", "", nom).strip(" -:*#")
+                # Exclure les headers de tableau et mots-cles non-phase
+                skip_words = ["phase", "etape", "---", "duree", "periode",
+                              "description", "livrables", "semaine", "activite"]
                 if nom_clean and len(nom_clean) > 2 and not any(
-                    w in nom_clean.lower() for w in ["phase", "etape", "---", "duree", "periode"]
+                    w in nom_clean.lower() for w in skip_words
                 ):
                     phases.append({"nom": nom_clean, "duree_sem": min(duree, 12)})
 
@@ -245,27 +248,49 @@ def generer_gantt(ao: dict, planning_md: str = "") -> str:
 # ---------------------------------------------------------------------------
 
 def _parse_cv_md(cv_md: str) -> list[dict]:
-    """Extrait les formateurs depuis cv_formateurs.md."""
+    """Extrait les formateurs depuis cv_formateurs.md.
+    Ne retient que les blocs qui contiennent un vrai nom de personne (prenom + nom),
+    en excluant les headers de section comme 'Formation & Diplomes', 'Competences cles', etc.
+    """
     formateurs = []
     if not cv_md:
         return formateurs
 
-    # Pattern "## Nom Prenom" ou "### Nom Prenom" ou "**Nom Prenom**"
-    blocks = re.split(r"(?=#{2,3}\s+|\*\*[A-Z])", cv_md)
+    # Mots-cles de sections a ignorer (pas des noms de personnes)
+    SECTIONS_IGNORE = [
+        "formation", "diplome", "competence", "experience", "domaine",
+        "intervention", "justification", "selection", "reference",
+        "specialite", "expertise", "profil", "parcours", "synthese",
+        "introduction", "equipe", "cv", "curriculum", "resume",
+    ]
+
+    # Pattern "## Nom Prenom" ou "### Nom Prenom"
+    blocks = re.split(r"(?=#{2,3}\s+)", cv_md)
     for block in blocks:
-        nom_m = re.match(r"(?:#{2,3}\s+|\*\*)(.+?)(?:\*\*)?$", block.split("\n")[0])
+        nom_m = re.match(r"#{2,3}\s+(.+?)$", block.split("\n")[0])
         if not nom_m:
             continue
-        nom = nom_m.group(1).strip(" *#")
-        # Chercher le role
-        role_m = re.search(r"(?:Role|Fonction|Poste)\s*[:]\s*(.+)", block, re.IGNORECASE)
+        nom = nom_m.group(1).strip(" *#-–")
+
+        # Ignorer les titres de sections (pas des noms de personnes)
+        nom_lower = nom.lower()
+        if any(kw in nom_lower for kw in SECTIONS_IGNORE):
+            continue
+        # Un vrai nom a au moins 2 mots et moins de 6
+        mots = nom.split()
+        if len(mots) < 2 or len(mots) > 5:
+            continue
+        # Ignorer les noms tout en majuscules (JUSTIFICATION, etc.)
+        if nom == nom.upper() and len(nom) > 3:
+            continue
+
+        # Extraire role et specialites depuis le bloc
+        role_m = re.search(r"(?:Role|Fonction|Poste|Titre)\s*[:]\s*(.+)", block, re.IGNORECASE)
         role = role_m.group(1).strip() if role_m else ""
-        # Chercher les specialites
         spec_m = re.search(r"(?:Specialit|Expertise|Competence)\s*[:]\s*(.+)", block, re.IGNORECASE)
         spec = spec_m.group(1).strip() if spec_m else ""
 
-        if nom and len(nom) > 2:
-            formateurs.append({"nom": nom, "role": role, "specialites": spec})
+        formateurs.append({"nom": nom, "role": role, "specialites": spec})
 
     return formateurs
 
@@ -281,18 +306,18 @@ def generer_organigramme(ao: dict, cv_md: str = "") -> str:
     # Equipe depuis le CV ou par defaut
     equipe = _parse_cv_md(cv_md) if cv_md else []
     if not equipe:
-        # Selectionner les formateurs pertinents depuis les donnees entreprise
+        # Selectionner les formateurs pertinents depuis les donnees entreprise (vrais noms)
         if is_formation:
             equipe = [
-                {"nom": "Charles Courbet", "role": "Formateur senior", "specialites": "IA creative, Midjourney"},
-                {"nom": "Romy Chen", "role": "Formatrice", "specialites": "Prompt engineering, Marketing IA"},
-                {"nom": "Guillaume Martin", "role": "Formateur", "specialites": "Microsoft Copilot, Power Platform"},
+                {"nom": "Charles Lerminiaux", "role": "Consultant Data & IA senior", "specialites": "Data science, cadrage IA COMEX, 17 ans exp."},
+                {"nom": "Guillaume Lanz", "role": "Consultant IA / Formateur", "specialites": "Microsoft Copilot, IA generative, 1500+ formes"},
+                {"nom": "Romy Ozier-Lafontaine", "role": "Formatrice IA", "specialites": "IA generative, SEO, accessibilite, UX Design"},
             ]
         else:
             equipe = [
-                {"nom": "Yann Delaporte", "role": "Consultant senior", "specialites": "LLM, deploiement IA"},
-                {"nom": "Stephanie Moreau", "role": "Consultante", "specialites": "No-code, automatisation"},
-                {"nom": "Romy Chen", "role": "Consultante", "specialites": "SEO/GEO, marketing IA"},
+                {"nom": "Charles Lerminiaux", "role": "Consultant Data & IA senior", "specialites": "Feuille de route IA, gouvernance donnees"},
+                {"nom": "Stephanie Rodrigues", "role": "Consultante IA", "specialites": "Transformation digitale, automatisation"},
+                {"nom": "Guillaume Lanz", "role": "Consultant IA", "specialites": "Prompting avance, LinkedIn IA, Copilot"},
             ]
 
     # Support admin
@@ -568,10 +593,16 @@ def generer_radar_competences(ao: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def _parse_references_md(refs_md: str) -> list[dict]:
-    """Extrait les references depuis references_clients.md."""
+    """Extrait les references depuis references_clients.md.
+    Gere les formats: lignes simples ('Secteur : X'), tableaux md ('| **Secteur** | X |'),
+    et listes ('- **Secteur** : X')."""
     refs = []
     if not refs_md:
         return refs
+
+    # Mots-cles a ignorer comme noms de clients (titres de section, synthese, etc.)
+    SKIP_CLIENTS = ["reference", "synthese", "resume", "almera", "ai mentor",
+                    "bilan", "introduction", "conclusion", "total"]
 
     blocks = re.split(r"(?=#{2,3}\s+)", refs_md)
     for block in blocks:
@@ -579,44 +610,66 @@ def _parse_references_md(refs_md: str) -> list[dict]:
         if not lines:
             continue
 
-        # Extraire le nom du client depuis le titre
         titre_m = re.match(r"#{2,3}\s+(.+)", lines[0])
         if not titre_m:
             continue
-        client = titre_m.group(1).strip(" *#-")
+        client = titre_m.group(1).strip(" *#-–—")
 
-        # Chercher les infos dans le bloc
+        # Ignorer les sections non-clients
+        if any(kw in client.lower() for kw in SKIP_CLIENTS):
+            continue
+        # Un client a au moins 2 caracteres et contient au moins une lettre
+        if len(client) < 2 or not re.search(r"[a-zA-Z]", client):
+            continue
+
         secteur = ""
         prestation = ""
         nb_formes = ""
         annee = ""
         satisfaction = ""
 
-        for line in lines[1:]:
-            l = line.strip().lower()
-            if "secteur" in l:
-                secteur = re.sub(r".*?[:]\s*", "", line.strip(), count=1).strip(" *")
-            elif "prestation" in l or "mission" in l or "objet" in l:
-                prestation = re.sub(r".*?[:]\s*", "", line.strip(), count=1).strip(" *")
-            elif any(w in l for w in ["forme", "stagiaire", "participant", "personne"]):
-                nb_m = re.search(r"(\d+)", line)
-                nb_formes = nb_m.group(1) if nb_m else ""
-            elif "annee" in l or "date" in l or "periode" in l:
-                yr_m = re.search(r"(20\d{2})", line)
-                annee = yr_m.group(1) if yr_m else ""
-            elif "satisfaction" in l or "note" in l or "avis" in l:
-                sat_m = re.search(r"([\d.,]+\s*/\s*\d+|[\d.,]+%)", line)
-                satisfaction = sat_m.group(1) if sat_m else ""
+        block_text = "\n".join(lines[1:])
 
-        if client and len(client) > 1:
-            refs.append({
-                "client": client,
-                "secteur": secteur,
-                "prestation": prestation,
-                "nb_formes": nb_formes,
-                "annee": annee,
-                "satisfaction": satisfaction,
-            })
+        # Extraction depuis n'importe quel format (tableau md, liste, texte simple)
+        def _extract_value(text, keywords):
+            for kw in keywords:
+                # Format tableau: | **Kw** | Valeur |
+                m = re.search(rf'\|\s*\*?\*?{kw}\*?\*?\s*\|\s*(.+?)\s*\|', text, re.IGNORECASE)
+                if m:
+                    return m.group(1).strip(" *")
+                # Format liste: - **Kw** : Valeur  ou  Kw : Valeur
+                m = re.search(rf'(?:^|\n)\s*[-*]?\s*\*?\*?{kw}\*?\*?\s*[:]\s*(.+)', text, re.IGNORECASE)
+                if m:
+                    return m.group(1).strip(" *")
+            return ""
+
+        secteur = _extract_value(block_text, ["Secteur"])
+        prestation = _extract_value(block_text, ["Objet", "Mission", "Prestation"])
+        satisfaction = _extract_value(block_text, ["Satisfaction", "Note", "Avis"])
+
+        # Nombre de formes - extraire le premier nombre pres de mots-cles
+        for kw in ["forme", "stagiaire", "participant", "personne"]:
+            m = re.search(rf'{kw}\w*\s*[:]\s*(\d[\d\s+]*)', block_text, re.IGNORECASE)
+            if m:
+                nb_formes = re.search(r'\d+', m.group(1)).group(0)
+                break
+            m = re.search(rf'(\d+)\+?\s*(?:{kw})', block_text, re.IGNORECASE)
+            if m:
+                nb_formes = m.group(1)
+                break
+
+        # Annee
+        annee_m = re.search(r"(20\d{2})", block_text)
+        annee = annee_m.group(1) if annee_m else ""
+
+        refs.append({
+            "client": client,
+            "secteur": secteur,
+            "prestation": prestation,
+            "nb_formes": nb_formes,
+            "annee": annee,
+            "satisfaction": satisfaction,
+        })
 
     return refs
 
@@ -761,11 +814,11 @@ def generer_fiche_synthese(ao: dict, gng: dict = None, estimation: dict = None) 
     if gng and gng.get("points_forts"):
         points_forts = gng["points_forts"][:3]
 
-    # Equipe proposee
+    # Equipe proposee (vrais noms)
     equipe = [
-        "Mickael Bertolla - Chef de projet",
-        "Charles Courbet - Formateur senior",
-        "Romy Chen - Formatrice",
+        "Mickael Bertolla - Chef de projet & Formateur principal",
+        "Charles Lerminiaux - Consultant Data & IA senior",
+        "Guillaume Lanz - Consultant IA / Formateur",
     ]
 
     # Budget
@@ -971,6 +1024,18 @@ def generer_toutes_annexes(ao: dict, dossier_path, dossier_contenu: dict = None)
         logger.info("Annexe visuelle: synthese_references.html OK")
     except Exception as e:
         logger.error(f"Erreur annexe references: {e}")
+
+    # Fallback: parser le score Go/No-Go depuis le markdown si pas dans le JSON
+    if not gng:
+        gng_md = contenu.get("01_analyse_go_no_go.md", "")
+        if gng_md:
+            score_m = re.search(r"Score\s*(?:global|total)?\s*[:=]\s*(\d+)", gng_md, re.IGNORECASE)
+            decision_m = re.search(r"(GO|NO[- ]?GO|A EVALUER)", gng_md, re.IGNORECASE)
+            if score_m:
+                gng = {
+                    "score": int(score_m.group(1)),
+                    "decision": decision_m.group(1) if decision_m else "GO",
+                }
 
     # 5. Fiche de synthese
     try:
