@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Carte des opportunites{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Carte des opportunites par region</h1>
+    <p>Repartition geographique des AO detectes</p>
+</div>
+
+<!-- KPIs regions -->
+<div class="stats-grid">
+    <div class="stat-card info">
+        <div class="stat-value">{{ regions|length }}</div>
+        <div class="stat-label">Regions actives</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ total_ao }}</div>
+        <div class="stat-label">AO avec region</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ top_region.nom if top_region else 'N/A' }}</div>
+        <div class="stat-label">Region n1</div>
+    </div>
+</div>
+
+<!-- Liste par region -->
+<div class="grid-2">
+    {% for region in regions %}
+    <div class="card" style="margin-bottom:0.75rem;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="font-size:0.95rem;">{{ region.nom }}</h2>
+            <span class="badge" style="background:var(--primary); color:white;">{{ region.nb_ao }} AO</span>
+        </div>
+        <div style="padding:0.5rem;">
+            <!-- Barre de score moyen -->
+            <div style="font-size:0.75rem; color:var(--text-light); margin-bottom:0.3rem;">
+                Score moyen: {{ region.score_moyen }}%
+            </div>
+            <div class="progress-bar-animated" style="margin-bottom:0.5rem;">
+                <div class="fill {% if region.score_moyen >= 70 %}green{% elif region.score_moyen >= 40 %}yellow{% else %}red{% endif %}" style="width:{{ region.score_moyen }}%;"></div>
+            </div>
+
+            <!-- Top AO de la region -->
+            {% for ao in region.top_ao[:3] %}
+            <div style="font-size:0.8rem; padding:0.2rem 0; display:flex; justify-content:space-between;">
+                <a href="{{ url_for('detail_ao', ao_id=ao.id) }}" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ ao.titre[:50] }}</a>
+                <span class="score {% if ao.score >= 70 %}score-high{% elif ao.score >= 40 %}score-mid{% else %}score-low{% endif %}" style="font-size:0.7rem;">
+                    {{ ao.score }}%
+                </span>
+            </div>
+            {% endfor %}
+            {% if region.nb_ao > 3 %}
+            <div style="font-size:0.75rem; color:var(--text-light); margin-top:0.3rem;">
+                + {{ region.nb_ao - 3 }} autre(s)
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not regions %}
+<div class="card">
+    <div class="empty">
+        <p>Aucun AO avec region detectee</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

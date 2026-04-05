@@ -113,6 +113,72 @@
 {% endif %}
 {% endfor %}
 
+<!-- Validation automatique du dossier -->
+<div class="card" id="validationDossierCard" style="display:none; margin-bottom:1rem;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Validation automatique</h2>
+        <span id="validDossierBadge" class="validation-badge"></span>
+    </div>
+    <div id="validDossierContent" style="padding:0.5rem;"></div>
+</div>
+
+<script>
+// Charger validation du dossier
+(function() {
+    // Extraire ao_id depuis le nom du dossier (format: AO_<id>_<date>)
+    var nom = '{{ dossier.nom }}';
+    var parts = nom.split('_');
+    // Reconstituer l'id (tout sauf le premier element 'AO' et le dernier element 'date')
+    if (parts.length >= 3) {
+        var aoId = parts.slice(1, -1).join('_').replace(/_/g, '/');
+        // Essayer aussi avec le format original
+        fetch('/api/ao/' + encodeURIComponent(aoId) + '/validation')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.error) return;
+                var card = document.getElementById('validationDossierCard');
+                card.style.display = '';
+
+                var badge = document.getElementById('validDossierBadge');
+                if (d.pret_soumission) {
+                    badge.className = 'validation-badge ready';
+                    badge.textContent = 'Pret a soumettre (' + d.completude_score + '%)';
+                } else if (d.completude_score >= 70) {
+                    badge.className = 'validation-badge partial';
+                    badge.textContent = 'Partiellement pret (' + d.completude_score + '%)';
+                } else {
+                    badge.className = 'validation-badge incomplete';
+                    badge.textContent = 'Incomplet (' + d.completude_score + '%)';
+                }
+
+                var content = document.getElementById('validDossierContent');
+                var html = '';
+                html += '<div class="progress-bar-animated" style="margin-bottom:0.75rem;">';
+                html += '<div class="fill ' + (d.completude_score >= 90 ? 'green' : d.completude_score >= 70 ? 'yellow' : 'red') + '" style="width:' + d.completude_score + '%;"></div>';
+                html += '</div>';
+                html += '<div style="font-size:0.85rem; margin-bottom:0.5rem;">' + d.nb_presentes + ' / ' + d.nb_total + ' pieces presentes</div>';
+
+                if (d.pieces_manquantes && d.pieces_manquantes.length > 0) {
+                    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--danger); margin-bottom:0.3rem;">Pieces manquantes :</div>';
+                    d.pieces_manquantes.forEach(function(p) {
+                        html += '<div style="font-size:0.8rem; color:var(--danger); padding:0.15rem 0;">&#x2717; ' + p + '</div>';
+                    });
+                }
+                if (d.alertes && d.alertes.length > 0) {
+                    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--warning); margin-top:0.5rem; margin-bottom:0.3rem;">Alertes :</div>';
+                    d.alertes.forEach(function(a) {
+                        html += '<div style="font-size:0.8rem; padding:0.15rem 0; border-left:3px solid var(--warning); padding-left:0.5rem;">&#x26A0; ' + a + '</div>';
+                    });
+                }
+                if (d.pret_soumission) {
+                    html += '<div style="margin-top:0.5rem; padding:0.5rem; background:#dcfce7; border-radius:6px; font-size:0.85rem; color:#166534; font-weight:600;">&#x2713; Dossier pret pour soumission</div>';
+                }
+                content.innerHTML = html;
+            }).catch(function(){});
+    }
+})();
+</script>
+
 <!-- Relecture collaborative -->
 <div class="card">
     <div class="card-header">

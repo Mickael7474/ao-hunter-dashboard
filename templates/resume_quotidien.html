@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Resume du jour{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Resume du jour</h1>
+    <p>{{ resume.date }}</p>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ resume.kpis.total_ao }}</div>
+        <div class="stat-label">AO dans le pipeline</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-value">{{ resume.kpis.score_moyen }}%</div>
+        <div class="stat-label">Score moyen</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-value">{{ resume.kpis.nb_dossiers }}</div>
+        <div class="stat-label">Dossiers generes</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ resume.kpis.nb_urgents }}</div>
+        <div class="stat-label">Urgences</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--success);">
+        <div class="stat-value">{{ resume.kpis.win_rate }}%</div>
+        <div class="stat-label">Win Rate</div>
+    </div>
+</div>
+
+<!-- Actions prioritaires -->
+{% if resume.actions_prioritaires %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Actions prioritaires</h2></div>
+    <div style="padding:0.5rem;">
+        {% for action in resume.actions_prioritaires %}
+        <div style="padding:0.5rem 0.75rem; margin-bottom:0.5rem; border-radius:6px; font-size:0.85rem;
+            {% if action.priorite == 'CRITIQUE' %}background:#fee2e2; border-left:4px solid var(--danger);
+            {% elif action.priorite == 'HAUTE' %}background:#ffedd5; border-left:4px solid var(--warning);
+            {% elif action.priorite == 'MOYENNE' %}background:#fef9c3; border-left:4px solid #eab308;
+            {% else %}background:var(--bg); border-left:4px solid var(--success);{% endif %}">
+            <span style="font-weight:600; font-size:0.75rem; color:
+                {% if action.priorite == 'CRITIQUE' %}var(--danger){% elif action.priorite == 'HAUTE' %}var(--warning){% else %}var(--text-light){% endif %};">
+                {{ action.priorite }}
+            </span>
+            <span style="margin-left:0.5rem;">{{ action.action }}</span>
+            {% if action.ao_id %}
+            <a href="{{ url_for('detail_ao', ao_id=action.ao_id) }}" style="float:right; font-size:0.8rem;">Voir</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="grid-2">
+    <!-- Nouveaux AO -->
+    <div class="card">
+        <div class="card-header"><h2>Nouveaux AO (24h)</h2></div>
+        {% if resume.nouveaux_ao %}
+        <div style="padding:0.5rem;">
+            {% for ao in resume.nouveaux_ao %}
+            <div style="padding:0.4rem 0.5rem; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre }}</a>
+                    <div style="font-size:0.75rem; color:var(--text-light);">{{ ao.acheteur }}</div>
+                </div>
+                <span class="score {% if ao.score >= 70 %}score-high{% elif ao.score >= 40 %}score-mid{% else %}score-low{% endif %}">{{ ao.score }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><p>Aucun nouvel AO</p></div>
+        {% endif %}
+    </div>
+
+    <!-- Deadlines -->
+    <div class="card">
+        <div class="card-header"><h2>Deadlines imminentes</h2></div>
+        {% if resume.deadlines_imminentes %}
+        <div style="padding:0.5rem;">
+            {% for ao in resume.deadlines_imminentes %}
+            <div class="urgent-item">
+                <span class="urgent-title"><a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre }}</a></span>
+                <span class="urgent-days {% if ao.jours == 0 %}j0{% elif ao.jours <= 3 %}j1-3{% else %}j4-7{% endif %}">
+                    {% if ao.jours == 0 %}Aujourd'hui{% elif ao.jours == 1 %}Demain{% else %}J-{{ ao.jours }}{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><p>Aucune deadline imminente</p></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pipeline -->
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Pipeline</h2></div>
+    <div style="padding:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        {% for statut, nb in resume.pipeline.items() %}
+        {% if nb > 0 %}
+        <div style="text-align:center; padding:0.5rem 1rem; background:var(--bg); border-radius:8px; min-width:80px;">
+            <div style="font-size:1.2rem; font-weight:700;">{{ nb }}</div>
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:capitalize;">{{ statut }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Top opportunites -->
+{% if resume.opportunites %}
+<div class="card">
+    <div class="card-header"><h2>Top opportunites</h2></div>
+    <div style="padding:0.5rem;">
+        {% for ao in resume.opportunites %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.5rem; font-size:0.85rem;">
+            <div>
+                <a href="{{ url_for('detail_ao', ao_id=ao.id) }}">{{ ao.titre }}</a>
+                <div style="font-size:0.75rem; color:var(--text-light);">{{ ao.acheteur }}</div>
+            </div>
+            <div>
+                <span class="score score-high">{{ ao.score }}%</span>
+                <a href="{{ url_for('detail_ao', ao_id=ao.id) }}?action=generer" class="btn btn-sm btn-primary" style="margin-left:0.5rem;">Generer</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

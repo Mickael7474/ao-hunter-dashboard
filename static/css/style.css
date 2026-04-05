@@ -1794,3 +1794,162 @@ tr:hover { background: var(--table-hover); }
 .notif-toast.toast-error { border-left: 4px solid var(--danger); }
 .notif-toast.toast-info { border-left: 4px solid var(--info); }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* === RECHERCHE GLOBALE === */
+.nav-search input {
+    transition: width 0.3s ease;
+}
+.nav-search input:focus {
+    width: 250px !important;
+    border-color: var(--primary) !important;
+    outline: none;
+}
+
+/* === RESULTATS TRACKER === */
+.urgent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+}
+.urgent-item:last-child { border-bottom: none; }
+.urgent-title { flex: 1; }
+.urgent-title a { color: var(--text); text-decoration: none; }
+.urgent-title a:hover { color: var(--primary); }
+.urgent-days {
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.urgent-days.j0 { background: var(--danger); color: white; }
+.urgent-days.j1-3 { background: var(--warning); color: #000; }
+.urgent-days.j4-7 { background: #fef9c3; color: #92400e; }
+
+/* === KEYBOARD SHORTCUTS OVERLAY === */
+.shortcuts-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.shortcuts-overlay.active { display: flex; }
+.shortcuts-panel {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.shortcuts-panel h2 { margin-bottom: 1rem; font-size: 1.1rem; }
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+}
+.shortcut-key {
+    background: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+}
+
+/* === VALIDATION SCORE BADGE === */
+.validation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.validation-badge.ready { background: #dcfce7; color: #166534; }
+.validation-badge.partial { background: #fef9c3; color: #92400e; }
+.validation-badge.incomplete { background: #fee2e2; color: #991b1b; }
+
+/* === SCORE PREDICTIF === */
+.prediction-card {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 0.75rem;
+}
+.prediction-score {
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0;
+}
+.prediction-factors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+}
+.factor-positive { color: var(--success); }
+.factor-positive::before { content: '+ '; }
+.factor-negative { color: var(--danger); }
+.factor-negative::before { content: '- '; }
+
+/* === PROGRESS BAR ANIMATION === */
+.progress-bar-animated {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--bg);
+    overflow: hidden;
+}
+.progress-bar-animated .fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+.progress-bar-animated .fill.green { background: var(--success); }
+.progress-bar-animated .fill.yellow { background: var(--warning); }
+.progress-bar-animated .fill.red { background: var(--danger); }
+
+/* === EMPTY STATE === */
+.empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-light);
+}
+
+/* === TABLE WRAPPER === */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+/* === PAGE HEADER === */
+.page-header {
+    margin-bottom: 1.5rem;
+}
+.page-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+.page-header p {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+/* === FORM SELECT === */
+.form-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 0.85rem;
+}

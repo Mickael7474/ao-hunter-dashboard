@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Suivi Resultats{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Suivi des resultats</h1>
+    <p>Analyse Win/Loss et amelioration continue</p>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid">
+    <div class="stat-card success">
+        <div class="stat-value">{{ stats.global.nb_gagnes }}</div>
+        <div class="stat-label">AO Gagnes</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid var(--danger);">
+        <div class="stat-value">{{ stats.global.nb_perdus }}</div>
+        <div class="stat-label">AO Perdus</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-value">{{ stats.global.win_rate }}%</div>
+        <div class="stat-label">Win Rate</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-value">{{ "{:,.0f}".format(stats.global.ca_gagne).replace(",", " ") }} EUR</div>
+        <div class="stat-label">CA Gagne</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ "{:,.0f}".format(stats.global.ca_moyen).replace(",", " ") }} EUR</div>
+        <div class="stat-label">Montant moyen gagne</div>
+    </div>
+</div>
+
+<!-- Enregistrer un resultat -->
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header">
+        <h2>Enregistrer un resultat</h2>
+    </div>
+    <form id="formResultat" style="display:flex; flex-wrap:wrap; gap:0.75rem; padding:0.5rem;">
+        <select name="ao_id" id="selAO" required style="flex:2; min-width:200px;" class="form-select">
+            <option value="">-- Selectionner un AO --</option>
+            {% for ao in aos_soumis %}
+            <option value="{{ ao.id }}">{{ ao.titre[:60] }} ({{ ao.acheteur[:30] }})</option>
+            {% endfor %}
+        </select>
+        <select name="resultat" required style="flex:0.5; min-width:120px;" class="form-select">
+            <option value="">Resultat</option>
+            <option value="gagne">Gagne</option>
+            <option value="perdu">Perdu</option>
+            <option value="abandon">Abandon</option>
+            <option value="sans_suite">Sans suite</option>
+        </select>
+        <input type="text" name="raison_principale" placeholder="Raison principale" style="flex:1.5; min-width:150px; padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; background:var(--input-bg); color:var(--text);">
+        <input type="number" name="montant_final" placeholder="Montant final EUR" style="flex:0.8; min-width:100px; padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; background:var(--input-bg); color:var(--text);">
+        <input type="text" name="concurrent_gagnant" placeholder="Concurrent gagnant (si perdu)" style="flex:1; min-width:120px; padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:6px; background:var(--input-bg); color:var(--text);">
+        <button type="submit" class="btn btn-sm btn-primary">Enregistrer</button>
+    </form>
+</div>
+
+<div class="grid-2">
+    <!-- Win Rate par type -->
+    <div class="card">
+        <div class="card-header"><h2>Win Rate par type d'acheteur</h2></div>
+        <canvas id="chartTypeAcheteur" height="200"></canvas>
+    </div>
+    <!-- Win Rate par budget -->
+    <div class="card">
+        <div class="card-header"><h2>Win Rate par tranche budget</h2></div>
+        <canvas id="chartBudget" height="200"></canvas>
+    </div>
+</div>
+
+{% if stats.tendance.mois %}
+<div class="card">
+    <div class="card-header"><h2>Evolution du Win Rate</h2></div>
+    <canvas id="chartTendance" height="130"></canvas>
+</div>
+{% endif %}
+
+{% if stats.recommandations %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Recommandations IA</h2></div>
+    <div style="padding:0.5rem;">
+        {% for reco in stats.recommandations %}
+        <div style="padding:0.5rem; margin-bottom:0.5rem; background:var(--bg); border-radius:6px; border-left:3px solid var(--primary); font-size:0.85rem;">
+            {{ reco }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="grid-2">
+    {% if stats.facteurs_succes %}
+    <div class="card">
+        <div class="card-header"><h2>Facteurs de succes</h2></div>
+        <div style="padding:0.5rem;">
+            {% for f in stats.facteurs_succes %}
+            <div style="display:flex; justify-content:space-between; padding:0.3rem 0.5rem; font-size:0.85rem;">
+                <span>{{ f.facteur }}</span>
+                <span class="badge" style="background:var(--success); color:white;">{{ f.frequence }}x</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if stats.facteurs_echec %}
+    <div class="card">
+        <div class="card-header"><h2>Facteurs d'echec</h2></div>
+        <div style="padding:0.5rem;">
+            {% for f in stats.facteurs_echec %}
+            <div style="display:flex; justify-content:space-between; padding:0.3rem 0.5rem; font-size:0.85rem;">
+                <span>{{ f.facteur }}</span>
+                <span class="badge" style="background:var(--danger); color:white;">{{ f.frequence }}x</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if stats.concurrents_frequents %}
+<div class="card">
+    <div class="card-header"><h2>Concurrents les plus frequents</h2></div>
+    <div class="table-wrapper">
+        <table style="width:100%; font-size:0.85rem;">
+            <thead><tr><th>#</th><th>Concurrent</th><th>Nb fois gagnant</th></tr></thead>
+            <tbody>
+                {% for c in stats.concurrents_frequents %}
+                <tr><td>{{ loop.index }}</td><td style="font-weight:600;">{{ c.nom }}</td><td style="text-align:center;">{{ c.nb_fois }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('formResultat').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    var data = {};
+    fd.forEach(function(v, k) { if(v) data[k] = v; });
+    fetch('/api/resultats', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(function(r) { return r.json(); }).then(function() {
+        if (typeof showToast === 'function') showToast('Resultat enregistre', 'success');
+        setTimeout(function() { location.reload(); }, 1000);
+    }).catch(function() {
+        if (typeof showToast === 'function') showToast('Erreur enregistrement', 'error');
+    });
+});
+
+var colors = {success: '#16a34a', danger: '#dc2626', primary: '#2563eb', warning: '#f59e0b'};
+
+var typeData = {{ stats.par_type_acheteur | tojson }};
+if (Object.keys(typeData).length > 0) {
+    var labels = Object.keys(typeData);
+    new Chart(document.getElementById('chartTypeAcheteur'), {
+        type: 'bar',
+        data: {
+            labels: labels.map(function(l) { return l.charAt(0).toUpperCase() + l.slice(1); }),
+            datasets: [
+                {label: 'Gagnes', data: labels.map(function(l) { return typeData[l].nb_gagnes; }), backgroundColor: colors.success, borderRadius: 4},
+                {label: 'Perdus', data: labels.map(function(l) { return typeData[l].nb_perdus; }), backgroundColor: colors.danger, borderRadius: 4}
+            ]
+        },
+        options: {responsive: true, plugins: {legend: {position: 'top'}}, scales: {y: {beginAtZero: true, ticks: {stepSize: 1}}}}
+    });
+}
+
+var budgetData = {{ stats.par_tranche_budget | tojson }};
+if (Object.keys(budgetData).length > 0) {
+    var bLabels = Object.keys(budgetData);
+    new Chart(document.getElementById('chartBudget'), {
+        type: 'bar',
+        data: {
+            labels: bLabels,
+            datasets: [{label: 'Win Rate %', data: bLabels.map(function(l) { return budgetData[l].win_rate; }), backgroundColor: colors.primary, borderRadius: 4}]
+        },
+        options: {responsive: true, plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, max: 100, ticks: {callback: function(v) { return v + '%'; }}}}}
+    });
+}
+
+var tendance = {{ stats.tendance | tojson }};
+if (tendance.mois && tendance.mois.length > 0) {
+    new Chart(document.getElementById('chartTendance'), {
+        type: 'line',
+        data: {
+            labels: tendance.mois,
+            datasets: [{label: 'Win Rate %', data: tendance.win_rates, borderColor: colors.primary, backgroundColor: colors.primary + '20', fill: true, tension: 0.3}]
+        },
+        options: {responsive: true, scales: {y: {beginAtZero: true, max: 100, ticks: {callback: function(v) { return v + '%'; }}}}}
+    });
+}
+</script>
+{% endblock %}

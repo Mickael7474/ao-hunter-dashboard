@@ -26,7 +26,12 @@
             <a href="{{ url_for('objectifs_view') }}" class="{% if request.endpoint == 'objectifs_view' %}active{% endif %}">Objectifs</a>
             <a href="{{ url_for('crm_view') }}" class="{% if request.endpoint == 'crm_view' %}active{% endif %}">CRM</a>
             <a href="{{ url_for('page_concurrence') }}" class="{% if request.endpoint == 'page_concurrence' %}active{% endif %}">Concurrence</a>
+            <a href="{{ url_for('page_resultats') }}" class="{% if request.endpoint == 'page_resultats' %}active{% endif %}">Resultats</a>
+            <a href="{{ url_for('page_resume') }}" class="{% if request.endpoint == 'page_resume' %}active{% endif %}">Resume</a>
         </div>
+        <form action="{{ url_for('page_recherche') }}" method="GET" class="nav-search" style="margin-left:auto; margin-right:0.5rem;">
+            <input type="text" name="q" placeholder="Rechercher..." style="padding:0.3rem 0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.8rem; width:150px; background:var(--input-bg); color:var(--text);">
+        </form>
         <div class="nav-actions">
             {% if auth_enabled and current_user.is_authenticated %}
             <div class="nav-user">

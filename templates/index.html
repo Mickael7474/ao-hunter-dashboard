@@ -116,13 +116,79 @@ fetch('/api/veille/status').then(r => r.json()).then(function(data) {
 }).catch(function(){});
 </script>
 
+<!-- Prediction CA et pipeline -->
+<div class="card" style="margin-bottom:1rem; padding:0.75rem;" id="predictionCA">
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+        <div style="flex:1; min-width:200px;">
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">Prediction CA pipeline</div>
+            <div style="font-size:1.5rem; font-weight:800; color:var(--success);" id="predCA">-</div>
+            <div style="font-size:0.75rem; color:var(--text-light);" id="predCADetail"></div>
+        </div>
+        <div style="flex:1; min-width:200px;">
+            <div style="font-size:0.75rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">Pipeline funnel</div>
+            <div style="display:flex; gap:0.3rem; align-items:flex-end; height:40px; margin-top:0.25rem;" id="funnelBars"></div>
+        </div>
+        <div style="flex:0.5; min-width:120px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-light);">Efficacite</div>
+            <div style="font-size:1.8rem; font-weight:800;" id="efficacite">-</div>
+        </div>
+    </div>
+</div>
+<script>
+// Prediction CA
+fetch('/api/stats').then(r => r.json()).then(function(data) {
+    var ps = data.par_statut || {};
+    var gagnes = ps.gagne || 0;
+    var soumis = ps.soumis || 0;
+    var candidature = ps.candidature || 0;
+    var analyse = ps.analyse || 0;
+
+    // Estimation CA: gagnes * montant_moyen + soumis * montant_moyen * win_rate + candidature * montant_moyen * win_rate * 0.5
+    var total_decides = gagnes + (ps.perdu || 0);
+    var winRate = total_decides > 0 ? gagnes / total_decides : 0.3;
+    var montantMoyen = 25000; // Estimation par defaut
+
+    var caGagne = gagnes * montantMoyen;
+    var caPipeline = soumis * montantMoyen * winRate + candidature * montantMoyen * winRate * 0.5 + analyse * montantMoyen * winRate * 0.2;
+    var caTotal = caGagne + caPipeline;
+
+    document.getElementById('predCA').textContent = Math.round(caTotal / 1000) + ' k EUR';
+    document.getElementById('predCADetail').textContent = Math.round(caGagne / 1000) + 'k gagnes + ' + Math.round(caPipeline / 1000) + 'k en pipeline';
+
+    // Efficacite
+    var totalTraites = gagnes + (ps.perdu || 0) + soumis + candidature;
+    var eff = totalTraites > 0 ? Math.round(gagnes / Math.max(1, totalTraites) * 100) : 0;
+    var effEl = document.getElementById('efficacite');
+    effEl.textContent = eff + '%';
+    effEl.style.color = eff >= 30 ? 'var(--success)' : eff >= 15 ? 'var(--warning)' : 'var(--danger)';
+
+    // Funnel bars
+    var stages = [
+        {label: 'Nouveau', count: ps.nouveau || 0, color: 'var(--text-light)'},
+        {label: 'Analyse', count: analyse, color: 'var(--info)'},
+        {label: 'Candidature', count: candidature, color: 'var(--primary)'},
+        {label: 'Soumis', count: soumis, color: 'var(--warning)'},
+        {label: 'Gagne', count: gagnes, color: 'var(--success)'},
+    ];
+    var maxCount = Math.max(1, ...stages.map(s => s.count));
+    var funnelEl = document.getElementById('funnelBars');
+    funnelEl.innerHTML = stages.map(function(s) {
+        var h = Math.max(4, Math.round(s.count / maxCount * 40));
+        return '<div style="flex:1; text-align:center;"><div style="background:' + s.color + '; height:' + h + 'px; border-radius:3px; margin-bottom:2px;"></div><div style="font-size:0.6rem; color:var(--text-light);">' + s.label + '</div><div style="font-size:0.7rem; font-weight:600;">' + s.count + '</div></div>';
+    }).join('');
+}).catch(function(){});
+</script>
+
 <!-- Actions rapides -->
 <div class="card" style="padding:0.75rem; margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
     <span style="font-weight:600; font-size:0.85rem; margin-right:0.5rem;">Actions rapides :</span>
     <button class="btn btn-sm btn-primary" onclick="fetch('/api/veille',{method:'POST'}).then(()=>showToast('Veille lancee','info'))">Lancer veille</button>
     <button class="btn btn-sm btn-outline" onclick="fetch('/api/backup',{method:'POST'}).then(r=>r.json()).then(d=>showToast('Backup: '+d.saved+' fichier(s)','success'))">Sauvegarder donnees</button>
-    <a href="{{ url_for('page_concurrence') }}" class="btn btn-sm btn-outline" style="border-color:#8b5cf6; color:#8b5cf6;">Intelligence concurrentielle</a>
-    <a href="{{ url_for('liste_ao') }}?score_min=0.7&tri=score" class="btn btn-sm btn-outline" style="border-color:var(--success); color:var(--success);">AO score > 70%</a>
+    <a href="{{ url_for('page_concurrence') }}" class="btn btn-sm btn-outline" style="border-color:#8b5cf6; color:#8b5cf6;">Concurrence</a>
+    <a href="{{ url_for('page_resultats') }}" class="btn btn-sm btn-outline" style="border-color:var(--success); color:var(--success);">Resultats Win/Loss</a>
+    <a href="{{ url_for('page_resume') }}" class="btn btn-sm btn-outline" style="border-color:var(--info); color:var(--info);">Resume du jour</a>
+    <a href="{{ url_for('page_carte_regions') }}" class="btn btn-sm btn-outline">Carte regions</a>
+    <a href="{{ url_for('liste_ao') }}?score_min=0.7&tri=score" class="btn btn-sm btn-outline" style="border-color:var(--warning); color:var(--warning);">AO > 70%</a>
 </div>
 
 <!-- Graphs -->

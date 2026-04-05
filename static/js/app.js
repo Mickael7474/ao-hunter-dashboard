@@ -105,3 +105,118 @@ function showToast(msg, duration) {
         }
     });
 })();
+
+
+// ===================================================================
+// KEYBOARD SHORTCUTS
+// ===================================================================
+
+(function() {
+    // Shortcuts overlay HTML
+    var overlayHTML = '<div class="shortcuts-overlay" id="shortcutsOverlay">' +
+        '<div class="shortcuts-panel">' +
+        '<h2>Raccourcis clavier</h2>' +
+        '<div class="shortcut-row"><span>Aller au Dashboard</span><span class="shortcut-key">Alt+D</span></div>' +
+        '<div class="shortcut-row"><span>Liste des AO</span><span class="shortcut-key">Alt+A</span></div>' +
+        '<div class="shortcut-row"><span>Kanban</span><span class="shortcut-key">Alt+K</span></div>' +
+        '<div class="shortcut-row"><span>Recherche globale</span><span class="shortcut-key">Alt+S</span></div>' +
+        '<div class="shortcut-row"><span>Resume du jour</span><span class="shortcut-key">Alt+R</span></div>' +
+        '<div class="shortcut-row"><span>Concurrence</span><span class="shortcut-key">Alt+C</span></div>' +
+        '<div class="shortcut-row"><span>CRM Acheteurs</span><span class="shortcut-key">Alt+M</span></div>' +
+        '<div class="shortcut-row"><span>Dark mode</span><span class="shortcut-key">Alt+T</span></div>' +
+        '<div class="shortcut-row"><span>Lancer veille</span><span class="shortcut-key">Alt+V</span></div>' +
+        '<div class="shortcut-row"><span>Aide raccourcis</span><span class="shortcut-key">?</span></div>' +
+        '<div style="text-align:center; margin-top:1rem; font-size:0.8rem; color:var(--text-light);">Appuyer sur Echap pour fermer</div>' +
+        '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', overlayHTML);
+
+    document.addEventListener('keydown', function(e) {
+        var overlay = document.getElementById('shortcutsOverlay');
+
+        // Ignorer si on est dans un input/textarea
+        var tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+            if (e.key === 'Escape' && overlay) overlay.classList.remove('active');
+            return;
+        }
+
+        // ? = aide
+        if (e.key === '?' && !e.altKey && !e.ctrlKey) {
+            e.preventDefault();
+            if (overlay) overlay.classList.toggle('active');
+            return;
+        }
+
+        // Escape = fermer overlay
+        if (e.key === 'Escape') {
+            if (overlay) overlay.classList.remove('active');
+            return;
+        }
+
+        // Alt + touche
+        if (e.altKey) {
+            var routes = {
+                'd': '/',
+                'a': '/ao',
+                'k': '/kanban',
+                's': '/recherche',
+                'r': '/resume',
+                'c': '/concurrence',
+                'm': '/crm',
+            };
+
+            var key = e.key.toLowerCase();
+
+            if (routes[key]) {
+                e.preventDefault();
+                window.location.href = routes[key];
+                return;
+            }
+
+            // Alt+T = dark mode toggle
+            if (key === 't') {
+                e.preventDefault();
+                if (typeof toggleDarkMode === 'function') toggleDarkMode();
+                return;
+            }
+
+            // Alt+V = lancer veille
+            if (key === 'v') {
+                e.preventDefault();
+                fetch('/api/veille', {method: 'POST'}).then(function(r) { return r.json(); }).then(function(d) {
+                    if (typeof showToast === 'function') showToast('Veille lancee !', 'info');
+                });
+                return;
+            }
+        }
+    });
+})();
+
+
+// ===================================================================
+// LIVE SEARCH DEBOUNCE (ameliore)
+// ===================================================================
+
+(function() {
+    var searchInput = document.getElementById('liveSearch');
+    if (!searchInput) return;
+
+    var timer = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timer);
+        var val = this.value.toLowerCase();
+        timer = setTimeout(function() {
+            var rows = document.querySelectorAll('#aoTable tbody tr');
+            var count = 0;
+            rows.forEach(function(row) {
+                var match = row.textContent.toLowerCase().indexOf(val) >= 0;
+                row.style.display = match ? '' : 'none';
+                if (match) count++;
+            });
+            // Update count display if exists
+            var countEl = document.getElementById('searchCount');
+            if (countEl) countEl.textContent = count + ' resultat(s)';
+        }, 200); // 200ms debounce
+    });
+})();

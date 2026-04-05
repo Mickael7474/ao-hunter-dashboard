@@ -278,6 +278,27 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
 </div>
 {% endif %}
 
+<!-- Score predictif -->
+<div class="card" id="predictionCard" style="display:none; margin-bottom:1rem;">
+    <div class="card-header">
+        <h2>Score predictif de gain</h2>
+    </div>
+    <div class="prediction-card">
+        <div class="prediction-score" id="predScore">-</div>
+        <div style="text-align:center; font-size:0.8rem; color:var(--text-light); margin-bottom:0.5rem;">Probabilite de gain estimee</div>
+        <div class="prediction-factors" id="predFactors"></div>
+    </div>
+</div>
+
+<!-- Validation dossier -->
+<div class="card" id="validationCard" style="display:none; margin-bottom:1rem;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Validation du dossier</h2>
+        <span class="validation-badge" id="validBadge"></span>
+    </div>
+    <div id="validContent" style="padding:0.5rem;"></div>
+</div>
+
 <!-- Import DCE drag & drop -->
 <div class="card" id="dceDropCard">
     <div class="card-header">
@@ -1687,5 +1708,77 @@ function uploadDCEFiles(files) {
             status.style.color = '#dc2626';
         });
 }
+
+// Score predictif
+(function() {
+    var aoId = '{{ ao.id }}';
+    fetch('/api/ao/' + encodeURIComponent(aoId) + '/score-predictif')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) return;
+            var card = document.getElementById('predictionCard');
+            card.style.display = '';
+            var scoreEl = document.getElementById('predScore');
+            var prob = d.probabilite_gain || 0;
+            scoreEl.textContent = prob + '%';
+            scoreEl.style.color = prob >= 60 ? 'var(--success)' : prob >= 40 ? 'var(--warning)' : 'var(--danger)';
+
+            var factors = document.getElementById('predFactors');
+            var html = '';
+            (d.facteurs_positifs || []).forEach(function(f) {
+                html += '<div class="factor-positive">' + f + '</div>';
+            });
+            (d.facteurs_negatifs || []).forEach(function(f) {
+                html += '<div class="factor-negative">' + f + '</div>';
+            });
+            if (d.ao_similaires_gagnes > 0 || d.ao_similaires_perdus > 0) {
+                html += '<div style="margin-top:0.5rem; font-size:0.75rem; color:var(--text-light);">AO similaires: ' + d.ao_similaires_gagnes + ' gagnes, ' + d.ao_similaires_perdus + ' perdus</div>';
+            }
+            factors.innerHTML = html;
+        }).catch(function() {});
+})();
+
+// Validation dossier
+(function() {
+    var aoId = '{{ ao.id }}';
+    fetch('/api/ao/' + encodeURIComponent(aoId) + '/validation')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) return;
+            var card = document.getElementById('validationCard');
+            card.style.display = '';
+
+            var badge = document.getElementById('validBadge');
+            if (d.pret_soumission) {
+                badge.className = 'validation-badge ready';
+                badge.textContent = 'Pret (' + d.completude_score + '%)';
+            } else if (d.completude_score >= 70) {
+                badge.className = 'validation-badge partial';
+                badge.textContent = 'Partiel (' + d.completude_score + '%)';
+            } else {
+                badge.className = 'validation-badge incomplete';
+                badge.textContent = 'Incomplet (' + d.completude_score + '%)';
+            }
+
+            var content = document.getElementById('validContent');
+            var html = '<div style="margin-bottom:0.5rem; font-size:0.85rem;">' + d.nb_presentes + '/' + d.nb_total + ' pieces presentes</div>';
+
+            if (d.pieces_manquantes && d.pieces_manquantes.length > 0) {
+                html += '<div style="font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Pieces manquantes :</div>';
+                d.pieces_manquantes.forEach(function(p) {
+                    html += '<div style="font-size:0.8rem; color:var(--danger); padding:0.1rem 0;">&bull; ' + p + '</div>';
+                });
+            }
+
+            if (d.alertes && d.alertes.length > 0) {
+                html += '<div style="font-size:0.8rem; font-weight:600; margin-top:0.5rem; margin-bottom:0.3rem;">Alertes :</div>';
+                d.alertes.forEach(function(a) {
+                    html += '<div style="font-size:0.8rem; color:var(--warning); padding:0.1rem 0;">\u26A0 ' + a + '</div>';
+                });
+            }
+
+            content.innerHTML = html;
+        }).catch(function() {});
+})();
 </script>
 {% endblock %}

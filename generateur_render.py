@@ -286,6 +286,39 @@ def _objectif_mots(criteres: list) -> int:
         return 2500  # Peu de poids technique = memoire plus court
 
 
+def _seuil_dynamique(ao: dict) -> float:
+    """Calcule un seuil de pertinence dynamique selon le type d'acheteur et le budget."""
+    acheteur = (ao.get('acheteur', '') or '').lower()
+    budget = ao.get('budget_estime', 0) or 0
+
+    # Type d'acheteur
+    mots_public = ['ministere', 'region', 'departement', 'commune', 'mairie',
+                   'collectivite', 'cnrs', 'universite', 'inserm', 'chu', 'hopital',
+                   'crous', 'rectorat', 'prefecture', 'agence', 'etablissement public',
+                   'syndicat mixte', 'communaute', 'metropole', 'conseil']
+    mots_education = ['universite', 'ecole', 'lycee', 'college', 'crous', 'rectorat',
+                      'education', 'enseignement', 'campus', 'iut', 'bts']
+
+    is_public = any(m in acheteur for m in mots_public)
+    is_education = any(m in acheteur for m in mots_education)
+
+    # Seuil de base
+    if is_education:
+        seuil = 0.55  # Missions alignees, souvent moins concurrentielles
+    elif is_public:
+        seuil = 0.60  # Bon historique de gain sur le public
+    else:
+        seuil = 0.70  # Prive = plus exigeant sur le fit
+
+    # Ajustement budget
+    if 5000 <= budget <= 70000:
+        seuil -= 0.05  # Zone ideale Almera = plus permissif
+    elif budget > 100000:
+        seuil += 0.05  # Gros marche = plus de concurrence
+
+    return round(max(0.40, min(0.85, seuil)), 2)
+
+
 def _generer_memoire(ao: dict, type_presta: str, dce_texte: str = "", personnalisation: dict = None, decp: dict = None) -> str:
     """Genere le memoire technique (piece maitresse)."""
     dce_bloc = ""
@@ -420,12 +453,42 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 11. Format Markdown avec titres # ## ###
 12. Pour chaque section, inclus au moins une reference client pertinente avec resultats chiffres
 {"13. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}
-14. IMPORTANT : Le memoire DOIT se terminer proprement avec une conclusion. Ne depasse pas {_objectif_mots(criteres) + 1500} mots. Termine TOUJOURS par une section "CONCLUSION" de 3-5 phrases resumant les points forts de la candidature."""
+14. IMPORTANT : Le memoire DOIT se terminer proprement avec une conclusion. Ne depasse pas {_objectif_mots(criteres) + 1500} mots. Termine TOUJOURS par une section "CONCLUSION" de 3-5 phrases resumant les points forts de la candidature.
+15. DIFFERENCIATION CONCURRENTIELLE : Pour chaque point cle, explique en quoi Almera se distingue des autres organismes de formation (approche en 4 etapes, certification RS6776 rare, personnalisation 100%, reseau de 10 formateurs specialises, auteur publie chez ENI)
+16. PREUVES CONCRETES : Chaque affirmation doit etre etayee par un chiffre reel (2000+ personnes formees, 50+ entreprises, 4.9/5 Google, 80+ personnes chez Havas, etc.)
+17. MAPPING RC : Si des criteres d'attribution sont detectes, commence chaque section par "En reponse au critere [nom du critere] :" pour faciliter la notation par l'acheteur
+18. ENGAGEMENT QUALITE : Inclus systematiquement les engagements : taux de satisfaction > 4.5/5, taux de completion > 95%, suivi post-formation 3 mois, hotline 48h"""
 
     # Adapter max_tokens a l'objectif de mots (1 mot ~ 1.5 tokens en francais)
     objectif = _objectif_mots(criteres)
     max_tok = max(16000, int(objectif * 3.0))
     return _appel_claude(prompt, max_tokens=max_tok)
+
+
+def _detecter_persona_acheteur(acheteur: str) -> str:
+    """Detecte le type d'acheteur et retourne les instructions de ton pour le prompt."""
+    acheteur_lower = (acheteur or '').lower()
+
+    mots_institutionnel = ['ministere', 'region', 'departement', 'commune', 'mairie',
+                           'collectivite', 'cnrs', 'universite', 'inserm', 'chu', 'hopital']
+    mots_prive = ['sas', 'sa ', 'sarl', 'group', 'corp']
+
+    if any(m in acheteur_lower for m in mots_institutionnel):
+        return ("Tone detecte : FORMEL/INSTITUTIONNEL\n"
+                "- Utiliser le vouvoiement strict et un registre soutenu\n"
+                "- References aux cadres reglementaires (CCP, Qualiopi, France Competences)\n"
+                "- Insister sur la conformite, les garanties et les engagements de service public\n"
+                "- Vocabulaire : 'nous avons l'honneur', 'conformement a', 'nous nous engageons'")
+    elif any(m in acheteur_lower for m in mots_prive):
+        return ("Tone detecte : PROFESSIONNEL/DYNAMIQUE\n"
+                "- Ton professionnel mais dynamique, axe resultats et ROI\n"
+                "- Mettre en avant l'agilite, la personnalisation et les retours concrets\n"
+                "- Vocabulaire : 'partenaire', 'performance', 'valeur ajoutee', 'impact mesurable'")
+    else:
+        return ("Tone detecte : PROFESSIONNEL\n"
+                "- Ton professionnel equilibre\n"
+                "- Combiner rigueur institutionnelle et orientation resultats\n"
+                "- Vocabulaire adapte au contexte de l'acheteur")
 
 
 def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
@@ -453,6 +516,9 @@ def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
 - La lettre doit etre 100% prete a imprimer et signer, sans aucune modification necessaire.
 - Utilise la date du jour : {datetime.now().strftime('%d/%m/%Y')}
 
+=== PERSONA ACHETEUR ===
+{_detecter_persona_acheteur(ao.get('acheteur', ''))}
+
 === CONTENU ===
 - Adresser a l'acheteur ({ao.get('acheteur', '')})
 - Mentionner l'objet exact du marche
@@ -460,10 +526,14 @@ def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
 - Declarer sur l'honneur l'absence de cas d'exclusion (art. L.2141-1 a L.2141-5 CCP)
 - Attester etre en regle vis-a-vis obligations fiscales et sociales
 - Mentionner les certifications (Qualiopi, RS6776)
+- Faire reference a 1-2 exigences specifiques extraites de la description de l'AO pour montrer la lecture attentive du cahier des charges
+- Inclure l'engagement : "Mickael Bertolla assurera personnellement la direction pedagogique"
+- Inclure l'engagement : "Almera s'engage sur un taux de satisfaction superieur a 4.5/5"
+- Terminer par un paragraphe de valeur ajoutee avec 3 resultats quantifies (ex: 2000+ personnes formees, 50+ entreprises accompagnees, note 4.9/5 Google)
 - Signature par le representant legal avec nom, titre, date
 {"- Adapter le ton et le vocabulaire au type d'acheteur (" + personnalisation['type_acheteur'] + ")" if personnalisation else ""}
 
-Format : Lettre professionnelle formelle, prete a imprimer."""
+Format : Lettre professionnelle formelle, prete a imprimer. Adapter le ton selon la PERSONA ACHETEUR detectee ci-dessus."""
 
     return _appel_claude(prompt, max_tokens=2000)
 
@@ -2218,3 +2288,113 @@ def _maj_index(dossier_nom: str, ao: dict, dossier_path: Path):
     DOSSIERS_INDEX.write_text(
         json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+
+def valider_dossier_complet(ao: dict, dossier_path) -> dict:
+    """Valide la completude et la coherence d'un dossier genere.
+
+    Returns dict with:
+    - completude_score: 0-100
+    - pieces_presentes: list of files found
+    - pieces_manquantes: list of expected but missing files
+    - alertes: list of issues detected
+    - pret_soumission: bool
+    """
+    dossier_path = Path(dossier_path)
+
+    # Pieces attendues
+    pieces_attendues = {
+        'analyse_go_no_go.md': 'Analyse Go/No-Go',
+        'memoire_technique.md': 'Memoire technique',
+        'lettre_candidature.md': 'Lettre de candidature',
+        'bpu_dpgf.md': 'BPU / DPGF',
+        'bpu_dpgf.xlsx': 'DPGF Excel',
+        'planning_previsionnel.md': 'Planning previsionnel',
+        'cv_formateurs.md': 'CV Formateurs',
+        'dc1_dc2.md': 'DC1 / DC2',
+        'programme_formation.md': 'Programme de formation',
+        'references_clients.md': 'References clients',
+        'acte_engagement.md': 'Acte d\'engagement',
+        'dume.md': 'DUME',
+        'moyens_techniques.md': 'Moyens techniques',
+        'checklist_soumission.md': 'Checklist soumission',
+        'fiche_ao.json': 'Fiche AO',
+    }
+
+    presentes = []
+    manquantes = []
+    alertes = []
+
+    for fichier, label in pieces_attendues.items():
+        filepath = dossier_path / fichier
+        if filepath.exists():
+            presentes.append(fichier)
+            # Verifier taille minimale
+            taille = filepath.stat().st_size
+            if taille < 100 and not fichier.endswith('.json'):
+                alertes.append(f"{label} semble trop court ({taille} octets)")
+        else:
+            manquantes.append(fichier)
+
+    # Score completude
+    nb_total = len(pieces_attendues)
+    nb_presentes = len(presentes)
+    completude = round(nb_presentes / nb_total * 100) if nb_total > 0 else 0
+
+    # Verifications croisees
+    memoire_path = dossier_path / 'memoire_technique.md'
+    if memoire_path.exists():
+        memoire_txt = memoire_path.read_text(encoding='utf-8', errors='ignore')
+        nb_mots = len(memoire_txt.split())
+        if nb_mots < 2000:
+            alertes.append(f"Memoire technique trop court ({nb_mots} mots, minimum recommande: 3000)")
+        if 'conclusion' not in memoire_txt.lower():
+            alertes.append("Memoire technique sans conclusion detectee")
+        # Verifier que les formateurs du CV sont mentionnes
+        cv_path = dossier_path / 'cv_formateurs.md'
+        if cv_path.exists():
+            cv_txt = cv_path.read_text(encoding='utf-8', errors='ignore')
+            for f in ENTREPRISE['formateurs'][:3]:
+                if f['nom'] in cv_txt and f['nom'] not in memoire_txt:
+                    alertes.append(f"Formateur {f['nom']} dans CV mais pas mentionne dans le memoire")
+
+    # Verifier coherence BPU vs budget
+    bpu_path = dossier_path / 'bpu_dpgf.md'
+    if bpu_path.exists():
+        bpu_txt = bpu_path.read_text(encoding='utf-8', errors='ignore')
+        budget = ao.get('budget_estime', 0) or 0
+        if budget > 0:
+            # Chercher le total dans le BPU
+            totaux = re.findall(r'(\d[\d\s]*[\d])\s*(?:EUR|€)', bpu_txt)
+            if totaux:
+                try:
+                    montant_max = max(int(t.replace(' ', '').replace('\u202f', '')) for t in totaux if int(t.replace(' ', '').replace('\u202f', '')) > 1000)
+                    if montant_max > budget * 1.3:
+                        alertes.append(f"BPU ({montant_max} EUR) depasse le budget de +{round((montant_max/budget - 1)*100)}%")
+                except (ValueError, ZeroDivisionError):
+                    pass
+
+    # Verification deadline
+    date_limite = ao.get('date_limite')
+    if date_limite:
+        try:
+            dl = datetime.fromisoformat(str(date_limite).replace('Z', '+00:00'))
+            jours = (dl.replace(tzinfo=None) - datetime.now()).days
+            if jours < 0:
+                alertes.append("ATTENTION: La deadline est depassee !")
+            elif jours <= 2:
+                alertes.append(f"URGENT: Deadline dans {jours} jour(s) !")
+        except Exception:
+            pass
+
+    pret = completude >= 90 and not any('ATTENTION' in a or 'trop court' in a for a in alertes)
+
+    return {
+        'completude_score': completude,
+        'pieces_presentes': presentes,
+        'pieces_manquantes': manquantes,
+        'alertes': alertes,
+        'pret_soumission': pret,
+        'nb_presentes': nb_presentes,
+        'nb_total': nb_total,
+    }

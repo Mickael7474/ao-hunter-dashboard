@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Recherche{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Recherche globale</h1>
+    <p>Recherchez dans tous les AO, dossiers, notes et CRM</p>
+</div>
+
+<form method="GET" action="{{ url_for('page_recherche') }}" style="margin-bottom:1rem;">
+    <div style="display:flex; gap:0.5rem;">
+        <input type="text" name="q" value="{{ query or '' }}" placeholder="Rechercher un AO, acheteur, dossier..." style="flex:1; padding:0.75rem; border:2px solid var(--border); border-radius:8px; font-size:1rem; background:var(--bg-card); color:var(--text);" autofocus>
+        <button type="submit" class="btn btn-primary" style="padding:0.75rem 1.5rem;">Rechercher</button>
+    </div>
+</form>
+
+{% if query %}
+<p style="color:var(--text-light); font-size:0.85rem; margin-bottom:1rem;">
+    {{ resultats.nb_total }} resultat(s) pour "{{ query }}"
+</p>
+
+{% if resultats.resultats.ao %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Appels d'offres ({{ resultats.resultats.ao|length }})</h2></div>
+    <div class="table-wrapper">
+        <table style="width:100%; font-size:0.85rem;">
+            <thead><tr><th>Score</th><th>Titre</th><th>Acheteur</th><th>Statut</th></tr></thead>
+            <tbody>
+                {% for r in resultats.resultats.ao %}
+                <tr>
+                    <td><span class="score {% if r.score_pertinence >= 0.7 %}score-high{% elif r.score_pertinence >= 0.4 %}score-mid{% else %}score-low{% endif %}">{{ (r.score_pertinence * 100)|int }}%</span></td>
+                    <td class="table-title">
+                        <a href="{{ url_for('detail_ao', ao_id=r.id) }}">{{ r.titre[:70] }}</a>
+                        <div style="font-size:0.75rem; color:var(--text-light);">{{ r.extrait[:100] }}</div>
+                    </td>
+                    <td>{{ r.acheteur[:40] }}</td>
+                    <td><span class="badge badge-{{ r.statut }}">{{ r.statut }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if resultats.resultats.dossiers %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Dossiers generes ({{ resultats.resultats.dossiers|length }})</h2></div>
+    <div style="padding:0.5rem;">
+        {% for r in resultats.resultats.dossiers %}
+        <div style="padding:0.5rem; margin-bottom:0.5rem; background:var(--bg); border-radius:6px; font-size:0.85rem;">
+            <strong>{{ r.dossier }}</strong> / {{ r.fichier }}
+            <div style="color:var(--text-light); font-size:0.8rem; margin-top:0.25rem;">{{ r.extrait[:150] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if resultats.resultats.notes %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>Notes et commentaires ({{ resultats.resultats.notes|length }})</h2></div>
+    <div style="padding:0.5rem;">
+        {% for r in resultats.resultats.notes %}
+        <div style="padding:0.5rem; margin-bottom:0.5rem; background:var(--bg); border-radius:6px; font-size:0.85rem;">
+            <a href="{{ url_for('detail_ao', ao_id=r.ao_id) }}">AO {{ r.ao_id }}</a>
+            <div style="color:var(--text-light); font-size:0.8rem;">{{ r.contenu[:150] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if resultats.resultats.crm %}
+<div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><h2>CRM - Acheteurs ({{ resultats.resultats.crm|length }})</h2></div>
+    <div style="padding:0.5rem;">
+        {% for r in resultats.resultats.crm %}
+        <div style="padding:0.5rem; margin-bottom:0.5rem; background:var(--bg); border-radius:6px; font-size:0.85rem;">
+            <strong>{{ r.nom }}</strong> - {{ r.extrait }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if resultats.nb_total == 0 %}
+<div class="card">
+    <div class="empty"><p>Aucun resultat pour "{{ query }}"</p><p style="font-size:0.85rem; color:var(--text-light);">Essayez avec d'autres mots-cles</p></div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-header"><h2>Suggestions de recherche</h2></div>
+    <div style="padding:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+        {% for s in suggestions %}
+        <a href="{{ url_for('page_recherche', q=s) }}" class="btn btn-sm btn-outline">{{ s }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

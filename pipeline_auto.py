@@ -24,9 +24,39 @@ AO_FILE = DASHBOARD_DIR / "ao_pertinents.json"
 PIPELINE_LOG = DASHBOARD_DIR / "pipeline_auto_log.json"
 
 # Seuils configurables
-SCORE_MIN_PIPELINE = 0.70      # Score pertinence minimum pour entrer dans le pipeline
+SCORE_MIN_PIPELINE = 0.70      # Score pertinence minimum par defaut (ecrase par seuil dynamique)
 SCORE_GO_MIN = 60              # Score Go/No-Go minimum pour generer un dossier
-MAX_DOSSIERS_PAR_JOUR = 1      # Max 1 dossier genere par jour (phase prudente)
+MAX_DOSSIERS_PAR_JOUR = 2      # Max 2 dossiers generes par jour (augmente pour efficacite)
+
+
+def _seuil_dynamique_ao(ao: dict) -> float:
+    """Calcule un seuil de pertinence dynamique selon le type d'acheteur et budget."""
+    acheteur = (ao.get('acheteur', '') or '').lower()
+    budget = ao.get('budget_estime', 0) or 0
+
+    mots_public = ['ministere', 'region', 'departement', 'commune', 'mairie',
+                   'collectivite', 'cnrs', 'universite', 'inserm', 'chu', 'hopital',
+                   'crous', 'rectorat', 'prefecture', 'agence', 'etablissement',
+                   'syndicat', 'communaute', 'metropole', 'conseil']
+    mots_education = ['universite', 'ecole', 'lycee', 'college', 'crous', 'rectorat',
+                      'education', 'enseignement', 'campus']
+
+    is_education = any(m in acheteur for m in mots_education)
+    is_public = any(m in acheteur for m in mots_public)
+
+    if is_education:
+        seuil = 0.55
+    elif is_public:
+        seuil = 0.60
+    else:
+        seuil = 0.70
+
+    if 5000 <= budget <= 70000:
+        seuil -= 0.05
+    elif budget > 100000:
+        seuil += 0.05
+
+    return round(max(0.40, min(0.85, seuil)), 2)
 
 # Config email (brouillons Gmail via IMAP)
 IMAP_HOST = "imap.gmail.com"
@@ -97,18 +127,18 @@ def lancer_pipeline(nouveaux_ao: list[dict] = None) -> dict:
         logger.info(f"Pipeline auto: {dossiers_aujourd_hui} dossier(s) deja genere(s) aujourd'hui (max {MAX_DOSSIERS_PAR_JOUR})")
         return {"traites": 0, "generes": 0, "brouillons": 0, "erreurs": 0, "details": [f"Max {MAX_DOSSIERS_PAR_JOUR}/jour atteint"]}
 
-    # Filtrer les AO eligibles
+    # Filtrer les AO eligibles (seuil dynamique par type d'acheteur)
     if nouveaux_ao is None:
         candidats = [
             ao for ao in appels
-            if ao.get("score_pertinence", 0) >= SCORE_MIN_PIPELINE
+            if ao.get("score_pertinence", 0) >= _seuil_dynamique_ao(ao)
             and ao.get("id") not in ids_traites
             and ao.get("statut", "nouveau") in ("nouveau", "analyse")
         ]
     else:
         candidats = [
             ao for ao in nouveaux_ao
-            if ao.get("score_pertinence", 0) >= SCORE_MIN_PIPELINE
+            if ao.get("score_pertinence", 0) >= _seuil_dynamique_ao(ao)
             and ao.get("id") not in ids_traites
         ]
 
@@ -116,8 +146,27 @@ def lancer_pipeline(nouveaux_ao: list[dict] = None) -> dict:
         logger.info("Pipeline auto: aucun AO eligible")
         return {"traites": 0, "generes": 0, "brouillons": 0, "erreurs": 0, "details": []}
 
-    # Trier par score decroissant
-    candidats.sort(key=lambda a: a.get("score_pertinence", 0), reverse=True)
+    # Trier par score composite: pertinence × urgence (deadline proche = prioritaire)
+    def _score_priorite(ao):
+        score = ao.get("score_pertinence", 0)
+        # Bonus urgence: AO avec deadline proche sont prioritaires
+        dl = ao.get("date_limite", "")
+        if dl:
+            try:
+                dt = datetime.fromisoformat(str(dl).replace("Z", "+00:00")).replace(tzinfo=None)
+                jours = (dt - datetime.now()).days
+                if 0 <= jours <= 7:
+                    score *= 1.5  # Bonus 50% si deadline < 7j
+                elif 7 < jours <= 14:
+                    score *= 1.2  # Bonus 20% si deadline < 14j
+            except Exception:
+                pass
+        # Bonus budget zone ideale
+        budget = ao.get("budget_estime", 0) or 0
+        if 10000 <= budget <= 50000:
+            score *= 1.1
+        return score
+    candidats.sort(key=_score_priorite, reverse=True)
 
     traites = 0
     generes = 0

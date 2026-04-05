@@ -3436,8 +3436,322 @@ def page_concurrence():
 
 
 # ===================================================================
+# Nouvelles routes : Resultats, Recherche, Resume, Validation
+# ===================================================================
+
+@app.route("/resultats")
+def page_resultats():
+    """Page de suivi des resultats Win/Loss."""
+    try:
+        from win_loss_tracker import analyser_performances
+        stats = analyser_performances(periode_mois=12)
+    except Exception as e:
+        logger.warning(f"Win/Loss tracker: {e}")
+        stats = {
+            'global': {'nb_gagnes': 0, 'nb_perdus': 0, 'win_rate': 0, 'ca_gagne': 0, 'ca_moyen': 0, 'nb_abandons': 0, 'nb_sans_suite': 0, 'nb_total': 0},
+            'par_type_acheteur': {}, 'par_tranche_budget': {}, 'par_source': {},
+            'facteurs_succes': [], 'facteurs_echec': [], 'concurrents_frequents': [],
+            'tendance': {'mois': [], 'win_rates': []}, 'recommandations': [],
+        }
+    # AO soumis (pour le formulaire d'enregistrement)
+    aos = charger_ao()
+    aos_soumis = [ao for ao in aos if ao.get('statut') in ('soumis', 'candidature', 'gagne', 'perdu')]
+    return render_template("resultats_tracker.html", stats=stats, aos_soumis=aos_soumis)
+
+
+@app.route("/api/resultats", methods=["POST"])
+def api_enregistrer_resultat():
+    """Enregistre un resultat Win/Loss."""
+    try:
+        from win_loss_tracker import enregistrer_resultat
+        data = request.get_json() or request.form.to_dict()
+        ao_id = data.get('ao_id')
+        resultat = data.get('resultat')
+        if not ao_id or not resultat:
+            return jsonify({"error": "ao_id et resultat requis"}), 400
+        details = {
+            'raison_principale': data.get('raison_principale', ''),
+            'montant_final': float(data['montant_final']) if data.get('montant_final') else 0,
+            'concurrent_gagnant': data.get('concurrent_gagnant', ''),
+        }
+        entry = enregistrer_resultat(ao_id, resultat, details)
+        return jsonify({"ok": True, "entry": entry})
+    except Exception as e:
+        logger.error(f"Erreur enregistrement resultat: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/resultats/stats")
+def api_resultats_stats():
+    """Stats Win/Loss en JSON."""
+    try:
+        from win_loss_tracker import analyser_performances
+        return jsonify(analyser_performances(periode_mois=12))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/recherche")
+def page_recherche():
+    """Page de recherche globale."""
+    query = request.args.get('q', '').strip()
+    resultats = {'nb_total': 0, 'resultats': {'ao': [], 'dossiers': [], 'notes': [], 'crm': []}}
+    suggestions = []
+
+    if query:
+        try:
+            from recherche_globale import rechercher
+            resultats = rechercher(query)
+        except Exception as e:
+            logger.warning(f"Recherche: {e}")
+    else:
+        try:
+            from recherche_globale import suggestions_recherche
+            suggestions = suggestions_recherche()
+        except Exception:
+            suggestions = ['formation IA', 'intelligence artificielle', 'Qualiopi']
+
+    return render_template("recherche.html", query=query, resultats=resultats, suggestions=suggestions)
+
+
+@app.route("/api/recherche")
+def api_recherche():
+    """API de recherche globale."""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({"error": "Parametre q requis"}), 400
+    try:
+        from recherche_globale import rechercher
+        return jsonify(rechercher(query))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/resume")
+def page_resume():
+    """Page du resume quotidien."""
+    try:
+        from resume_quotidien import generer_resume
+        resume = generer_resume()
+    except Exception as e:
+        logger.warning(f"Resume quotidien: {e}")
+        resume = {
+            'date': datetime.now().strftime('%A %d %B %Y'),
+            'resume_texte': 'Resume indisponible',
+            'kpis': {'total_ao': 0, 'score_moyen': 0, 'nb_dossiers': 0, 'nb_urgents': 0, 'win_rate': 0, 'nb_gagnes': 0, 'nb_perdus': 0},
+            'nouveaux_ao': [], 'deadlines_imminentes': [], 'actions_prioritaires': [],
+            'opportunites': [], 'pipeline': {},
+        }
+    return render_template("resume_quotidien.html", resume=resume)
+
+
+@app.route("/api/resume")
+def api_resume():
+    """API resume quotidien en JSON."""
+    try:
+        from resume_quotidien import generer_resume
+        return jsonify(generer_resume())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ao/<ao_id>/validation")
+def api_validation_dossier(ao_id):
+    """Validation de completude d'un dossier genere."""
+    try:
+        from generateur_render import valider_dossier_complet
+        ao = next((a for a in charger_ao() if a.get('id') == ao_id), None)
+        if not ao:
+            return jsonify({"error": "AO non trouve"}), 404
+        # Trouver le dossier
+        dossier_name = f"AO_{ao_id.replace('/', '_').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}"
+        dossier_path = DOSSIERS_GENERES_DIR / dossier_name
+        # Chercher le dossier le plus recent pour cet AO
+        if not dossier_path.exists():
+            prefix = f"AO_{ao_id.replace('/', '_').replace(' ', '_')}"
+            candidates = sorted(DOSSIERS_GENERES_DIR.glob(f"{prefix}*"), reverse=True)
+            if candidates:
+                dossier_path = candidates[0]
+            else:
+                return jsonify({"error": "Aucun dossier genere pour cet AO"}), 404
+        result = valider_dossier_complet(ao, dossier_path)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Validation dossier: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/carte")
+def page_carte_regions():
+    """Carte des opportunites par region."""
+    aos = charger_ao()
+    from collections import defaultdict
+    regions_data = defaultdict(lambda: {'ao_list': [], 'scores': []})
+
+    for ao in aos:
+        region = ao.get('region', '') or ao.get('lieu_execution', '') or ''
+        if not region or region.lower() in ('non precise', 'non precis', ''):
+            continue
+        score = round((ao.get('score_pertinence', 0) or 0) * 100)
+        regions_data[region]['ao_list'].append({'id': ao.get('id', ''), 'titre': ao.get('titre', ''), 'score': score})
+        regions_data[region]['scores'].append(score)
+
+    regions = []
+    for nom, data in regions_data.items():
+        scores = data['scores']
+        regions.append({
+            'nom': nom,
+            'nb_ao': len(data['ao_list']),
+            'score_moyen': round(sum(scores) / len(scores)) if scores else 0,
+            'top_ao': sorted(data['ao_list'], key=lambda x: x['score'], reverse=True)[:5],
+        })
+    regions.sort(key=lambda x: x['nb_ao'], reverse=True)
+
+    top_region = regions[0] if regions else None
+    total_ao = sum(r['nb_ao'] for r in regions)
+
+    return render_template("carte_regions.html", regions=regions, top_region=top_region, total_ao=total_ao)
+
+
+@app.route("/api/ao/<ao_id>/score-predictif")
+def api_score_predictif(ao_id):
+    """Score predictif de gain base sur l'historique."""
+    try:
+        from win_loss_tracker import score_predictif_ao
+        ao = next((a for a in charger_ao() if a.get('id') == ao_id), None)
+        if not ao:
+            return jsonify({"error": "AO non trouve"}), 404
+        return jsonify(score_predictif_ao(ao))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/batch-generer", methods=["POST"])
+def api_batch_generer():
+    """Generation batch intelligente avec priorite automatique."""
+    data = request.get_json() or {}
+    max_dossiers = min(int(data.get('max', 3)), 5)  # Max 5 par batch
+    score_min = float(data.get('score_min', 0.6))
+
+    aos = charger_ao()
+
+    # Filtrer AO eligibles (pas deja generes, score suffisant)
+    dossiers_index = {}
+    dossiers_index_path = DASHBOARD_DIR / "dossiers_index.json"
+    if dossiers_index_path.exists():
+        try:
+            idx = json.loads(dossiers_index_path.read_text(encoding="utf-8"))
+            if isinstance(idx, list):
+                dossiers_index = {d.get('ao_id', ''): d for d in idx}
+            elif isinstance(idx, dict):
+                dossiers_index = idx
+        except Exception:
+            pass
+
+    eligibles = []
+    for ao in aos:
+        if ao.get('statut', 'nouveau') in ('gagne', 'perdu', 'ignore', 'abandon'):
+            continue
+        if ao.get('id', '') in dossiers_index:
+            continue
+        score = ao.get('score_pertinence', 0) or 0
+        if score < score_min:
+            continue
+
+        # Score de priorite: pertinence × urgence
+        priorite = score
+        dl = ao.get('date_limite', '')
+        if dl:
+            try:
+                dt = datetime.fromisoformat(str(dl).replace('Z', '+00:00')).replace(tzinfo=None)
+                jours = (dt - datetime.now()).days
+                if 0 < jours <= 7:
+                    priorite *= 1.5
+                elif 7 < jours <= 14:
+                    priorite *= 1.2
+                elif jours <= 0:
+                    continue  # Deadline passee
+            except Exception:
+                pass
+
+        eligibles.append({'ao': ao, 'priorite': priorite})
+
+    eligibles.sort(key=lambda x: x['priorite'], reverse=True)
+    selection = eligibles[:max_dossiers]
+
+    if not selection:
+        return jsonify({"ok": True, "message": "Aucun AO eligible", "generes": 0, "details": []})
+
+    # Lancer les generations en arriere-plan
+    def _batch_worker():
+        resultats = []
+        for i, item in enumerate(selection):
+            ao = item['ao']
+            try:
+                socketio.emit("batch_progress", {
+                    "phase": "generation",
+                    "message": f"Generation {i+1}/{len(selection)}: {ao.get('titre', '')[:50]}",
+                    "nb_complete": i,
+                    "nb_total": len(selection),
+                })
+                from generateur_render import generer_dossier_complet
+                result = generer_dossier_complet(ao)
+                resultats.append({"ao_id": ao.get('id'), "ok": True, "dossier": result.get('nom', '')})
+            except Exception as e:
+                resultats.append({"ao_id": ao.get('id'), "ok": False, "erreur": str(e)})
+
+        socketio.emit("batch_progress", {
+            "phase": "termine",
+            "message": f"Batch termine: {sum(1 for r in resultats if r['ok'])}/{len(resultats)} dossiers generes",
+            "nb_complete": len(selection),
+            "nb_total": len(selection),
+        })
+
+    thread = threading.Thread(target=_batch_worker, daemon=True)
+    thread.start()
+
+    return jsonify({
+        "ok": True,
+        "message": f"Generation batch lancee pour {len(selection)} AO",
+        "generes": len(selection),
+        "details": [{"ao_id": s['ao'].get('id'), "titre": s['ao'].get('titre', '')[:60], "priorite": round(s['priorite'] * 100)} for s in selection],
+    })
+
+
+# ===================================================================
 # Scheduler : ajouter self-ping + backup periodique
 # ===================================================================
+
+def _resume_quotidien_auto():
+    """Genere et envoie le resume quotidien par email (brouillon Gmail)."""
+    try:
+        from resume_quotidien import generer_email_resume
+        email = generer_email_resume()
+        logger.info(f"Resume quotidien genere: {email['sujet']}")
+
+        # Creer brouillon Gmail si SMTP dispo
+        smtp_password = os.environ.get("SMTP_PASSWORD", "")
+        if smtp_password:
+            try:
+                import imaplib
+                from email.mime.text import MIMEText
+                msg = MIMEText(email['corps'], 'plain', 'utf-8')
+                msg['Subject'] = email['sujet']
+                msg['From'] = 'mickael.bertolla@gmail.com'
+                msg['To'] = email['destinataire']
+
+                imap = imaplib.IMAP4_SSL("imap.gmail.com", 993)
+                imap.login('mickael.bertolla@gmail.com', smtp_password)
+                imap.append('[Gmail]/Brouillons', '', None, msg.as_bytes())
+                imap.logout()
+                logger.info("Resume quotidien: brouillon Gmail cree")
+            except Exception as e:
+                logger.warning(f"Resume quotidien: brouillon non cree: {e}")
+        else:
+            logger.info("Resume quotidien: pas de SMTP_PASSWORD, brouillon non cree")
+    except Exception as e:
+        logger.error(f"Erreur resume quotidien: {e}")
+
 
 def init_scheduler_enhanced():
     """Version amelioree du scheduler avec self-ping + backup."""
@@ -3465,6 +3779,15 @@ def init_scheduler_enhanced():
             trigger=IntervalTrigger(hours=6),
             id="auto_backup",
             name="Backup donnees GitHub",
+            replace_existing=True,
+        )
+
+        # Resume quotidien chaque jour a 8h30
+        _scheduler.add_job(
+            func=_resume_quotidien_auto,
+            trigger=CronTrigger(hour=8, minute=30),
+            id="resume_quotidien",
+            name="Resume quotidien 8h30",
             replace_existing=True,
         )
 
