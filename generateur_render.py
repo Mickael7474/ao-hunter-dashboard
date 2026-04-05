@@ -41,11 +41,14 @@ ENTREPRISE = {
     "siret": "98900455100010",
     "nda": "11757431975",
     "forme_juridique": "SASU",
+    "capital_social": "1 000 EUR",
     "adresse": "25 rue Campagne Premiere, 75014 Paris",
     "representant": "Mickael Bertolla, President",
     "site_web": "almera.one",
     "email": "contact@almera.one",
     "telephone": "+33686680611",
+    "chiffre_affaires": "250 000+ EUR",
+    "effectif": "3 salaries + reseau de 10 formateurs freelance specialises",
     "certifications": [
         "Qualiopi (actions de formation)",
         "RS6776 France Competences (IA generative)",
@@ -54,24 +57,28 @@ ENTREPRISE = {
         "Membre French Tech",
     ],
     "chiffres": "2000+ personnes formees, 50+ entreprises, note 4.9/5 Google",
-    "formateur_principal": "Mickael Bertolla - Ingenieur Mines Saint-Etienne, MSc Skema (USA), auteur 'L'IA et la generation de texte' (Ed. ENI, best-seller 2025)",
+    "formateur_principal": "Mickael Bertolla - Ingenieur Mines Saint-Etienne, MSc Skema (USA), ex-trader options (Akuna Capital Chicago), auteur 'L'IA et la generation de texte' (Ed. ENI, best-seller 2025)",
     "formateurs": [
-        {"nom": "Mickael Bertolla", "role": "President & Formateur principal", "specialites": "IA generative, ChatGPT, Claude, Agents IA, Strategie IA, Prompt engineering", "formation": "Ingenieur Mines Saint-Etienne, MSc Skema Business School (USA)", "experience": "4 ans formation IA, 2000+ personnes formees, auteur Ed. ENI"},
-        {"nom": "Charles Lerminiaux", "role": "Consultant Data et IA senior", "specialites": "Data science, gouvernance donnees, cadrage cas d'usage IA pour COMEX, feuille de route IA", "formation": "Ingenieur ISAE Supaero, MS Management Innovation TBS, CDMP Associate", "experience": "17 ans, ex-Directeur conseil Aqsone, Product Manager IA Airbus, Sopra Steria"},
-        {"nom": "Guillaume Lanz", "role": "Consultant IA / CEO Transition IA", "specialites": "IA generative, Microsoft Copilot (20+ ateliers), prompting avance, LinkedIn IA", "formation": "MBA Manager Produits et Marketing ESG Paris, certifie Google GenAI", "experience": "3 ans, 1500+ professionnels formes, conferencier BPI France / AI Summit"},
-        {"nom": "Romy Ozier-Lafontaine", "role": "Formatrice IA et design numerique", "specialites": "IA generative, SEO, accessibilite RGAA, WordPress/Webflow, UX Design", "formation": "Dev Web 3W Academy, jury habilite PIX", "experience": "18 ans, fondatrice Digital Ladies, 250+ personnes formees"},
-        {"nom": "Yann Cabon", "role": "Formateur Expert IA", "specialites": "IA generative (texte/image/video), creation contenu IA, integration IA processus RH", "formation": "Master RH Ecofac Business School", "experience": "2 ans formation IA, ex-SNCF Voyageurs, 900+ contenus IA generes"},
-        {"nom": "Stephanie Rodrigues", "role": "Consultante et Formatrice IA", "specialites": "IA generative, automatisation, transformation digitale", "formation": "Consultante certifiee", "experience": "Formatrice IA en entreprise"},
+        {"nom": "Mickael Bertolla", "genre": "M", "role": "President & Formateur principal", "specialites": "IA generative, ChatGPT, Claude, Agents IA, Strategie IA, Prompt engineering", "formation": "Ingenieur Mines Saint-Etienne, MSc Skema Business School (USA)", "experience": "4 ans formation IA, 2000+ personnes formees, auteur Ed. ENI, ex-trader options Akuna Capital Chicago"},
+        {"nom": "Charles Lerminiaux", "genre": "M", "role": "Consultant Data et IA senior", "specialites": "Data science, gouvernance donnees, cadrage cas d'usage IA pour COMEX, feuille de route IA", "formation": "Ingenieur ISAE Supaero, MS Management Innovation TBS, CDMP Associate", "experience": "17 ans, ex-Directeur conseil Aqsone, Product Manager IA Airbus, Sopra Steria"},
+        {"nom": "Guillaume Lanz", "genre": "M", "role": "Consultant IA / CEO Transition IA", "specialites": "IA generative, Microsoft Copilot (20+ ateliers), prompting avance, LinkedIn IA", "formation": "MBA Manager Produits et Marketing ESG Paris, certifie Google GenAI", "experience": "3 ans, 1500+ professionnels formes, conferencier BPI France / AI Summit"},
+        {"nom": "Romy Ozier-Lafontaine", "genre": "F", "role": "Formatrice IA et design numerique", "specialites": "IA generative, SEO, accessibilite RGAA, WordPress/Webflow, UX Design", "formation": "Dev Web 3W Academy, jury habilite PIX", "experience": "18 ans, fondatrice Digital Ladies, 250+ personnes formees"},
+        {"nom": "Yann Cabon", "genre": "M", "role": "Formateur Expert IA", "specialites": "IA generative (texte/image/video), creation contenu IA, integration IA processus RH", "formation": "Master RH Ecofac Business School", "experience": "2 ans formation IA, ex-SNCF Voyageurs, 900+ contenus IA generes"},
+        {"nom": "Stephanie Rodrigues", "genre": "F", "role": "Consultante et Formatrice IA", "specialites": "IA generative, automatisation, transformation digitale", "formation": "Consultante certifiee", "experience": "Formatrice IA en entreprise"},
     ],
     "grille_tarifaire": {
         "journee_presentiel": "1 500 EUR HT",
         "journee_distanciel": "1 200 EUR HT",
-        "journee_preparation": "800 EUR HT",
-        "heure_suivi": "150 EUR HT",
+        "demi_journee_presentiel": "850 EUR HT",
+        "demi_journee_distanciel": "700 EUR HT",
+        "journee_preparation_ingenierie": "1 000 EUR HT",
+        "heure_suivi_individuel": "200 EUR HT",
         "coaching_individuel": "1 800 EUR HT / jour",
-        "elearning_par_stagiaire": "200 EUR HT",
-        "certification_rs6776": "500 EUR HT / stagiaire",
-        "diagnostic_audit": "1 500 EUR HT / jour",
+        "elearning_par_stagiaire": "300 EUR HT",
+        "certification_rs6776": "600 EUR HT / stagiaire",
+        "diagnostic_audit_ia": "1 400 EUR HT / jour",
+        "conference_sensibilisation": "2 500 EUR HT / demi-journee",
+        "frais_deplacement": "200 EUR forfait / jour hors IDF",
     },
 }
 
@@ -457,7 +464,9 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 15. DIFFERENCIATION CONCURRENTIELLE : Pour chaque point cle, explique en quoi Almera se distingue des autres organismes de formation (approche en 4 etapes, certification RS6776 rare, personnalisation 100%, reseau de 10 formateurs specialises, auteur publie chez ENI)
 16. PREUVES CONCRETES : Chaque affirmation doit etre etayee par un chiffre reel (2000+ personnes formees, 50+ entreprises, 4.9/5 Google, 80+ personnes chez Havas, etc.)
 17. MAPPING RC : Si des criteres d'attribution sont detectes, commence chaque section par "En reponse au critere [nom du critere] :" pour faciliter la notation par l'acheteur
-18. ENGAGEMENT QUALITE : Inclus systematiquement les engagements : taux de satisfaction > 4.5/5, taux de completion > 95%, suivi post-formation 3 mois, hotline 48h"""
+18. ENGAGEMENT QUALITE : Inclus systematiquement les engagements : taux de satisfaction > 4.5/5, taux de completion > 95%, suivi post-formation 3 mois, hotline 48h
+19. NE JAMAIS proposer de garantie de remboursement integral ni de garantie de resultat financiere. Almera ne pratique pas ce type d'engagement.
+20. PARCOURS DU FONDATEUR : Mentionner le parcours unique de Mickael Bertolla incluant son experience de trader d'options sur les marches financiers americains (Akuna Capital Chicago), apportant rigueur analytique et approche data-driven a la formation IA"""
 
     # Adapter max_tokens a l'objectif de mots (1 mot ~ 1.5 tokens en francais)
     objectif = _objectif_mots(criteres)
@@ -520,9 +529,11 @@ def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
 {_detecter_persona_acheteur(ao.get('acheteur', ''))}
 
 === CONTENU ===
+- En-tete : AI MENTOR - ALMERA, SASU au capital de {ent.get('capital_social', '1 000 EUR')}, SIRET {ent['siret']}, {ent['adresse']}, Tel {ent['telephone']}, Email {ent['email']}
 - Adresser a l'acheteur ({ao.get('acheteur', '')})
 - Mentionner l'objet exact du marche
 - Presenter l'entreprise et sa qualification
+- Mentionner le parcours unique du fondateur : ingenieur Mines Saint-Etienne, ex-trader options sur les marches financiers americains (Akuna Capital Chicago, selectionne parmi 7000 candidats), apportant une rigueur analytique et une approche data-driven a la formation IA
 - Declarer sur l'honneur l'absence de cas d'exclusion (art. L.2141-1 a L.2141-5 CCP)
 - Attester etre en regle vis-a-vis obligations fiscales et sociales
 - Mentionner les certifications (Qualiopi, RS6776)
@@ -530,6 +541,7 @@ def _generer_lettre(ao: dict, personnalisation: dict = None) -> str:
 - Inclure l'engagement : "Mickael Bertolla assurera personnellement la direction pedagogique"
 - Inclure l'engagement : "Almera s'engage sur un taux de satisfaction superieur a 4.5/5"
 - Terminer par un paragraphe de valeur ajoutee avec 3 resultats quantifies (ex: 2000+ personnes formees, 50+ entreprises accompagnees, note 4.9/5 Google)
+- NE PAS mentionner de garantie de remboursement integral
 - Signature par le representant legal avec nom, titre, date
 {"- Adapter le ton et le vocabulaire au type d'acheteur (" + personnalisation['type_acheteur'] + ")" if personnalisation else ""}
 
@@ -673,16 +685,12 @@ Format Markdown."""
     return _appel_claude(prompt, max_tokens=4000, modele=MODELE_LEGER)
 
 
-def _generer_cv_formateurs(ao: dict) -> str:
-    """Genere les fiches CV des formateurs pertinents (template, sans appel API)."""
-
-    # --- 1. Extraire les mots-cles de l'AO (titre + description) ---
+def _selectionner_formateurs(ao: dict) -> list:
+    """Selectionne les formateurs les plus pertinents pour l'AO par scoring mots-cles."""
     texte_ao = (ao.get('titre', '') + ' ' + ao.get('description', '')).lower()
-    # Nettoyer : retirer accents simples, ponctuation
     for c in ".,;:!?()[]{}\"'-/\\":
         texte_ao = texte_ao.replace(c, ' ')
     mots_ao = set(texte_ao.split())
-    # Retirer les mots vides courants
     mots_vides = {'de', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'et', 'en',
                   'a', 'au', 'aux', 'pour', 'par', 'sur', 'dans', 'avec', 'qui',
                   'que', 'est', 'sont', 'ce', 'cette', 'ces', 'ou', 'son', 'sa',
@@ -693,7 +701,6 @@ def _generer_cv_formateurs(ao: dict) -> str:
                   'accord', 'cadre', 'prestations', 'services'}
     mots_ao -= mots_vides
 
-    # --- 2. Scorer chaque formateur par correspondance mots-cles ---
     scores = []
     for f in ENTREPRISE["formateurs"]:
         spec_txt = (f.get('specialites', '') + ' ' + f.get('role', '') + ' ' + f.get('experience', '')).lower()
@@ -703,10 +710,8 @@ def _generer_cv_formateurs(ao: dict) -> str:
         matches = mots_ao & mots_formateur
         scores.append((len(matches), matches, f))
 
-    # Trier par score decroissant
     scores.sort(key=lambda x: x[0], reverse=True)
 
-    # Toujours inclure Mickael Bertolla en premier (formateur principal)
     selectionnes = []
     reste = []
     for score, matches, f in scores:
@@ -715,63 +720,82 @@ def _generer_cv_formateurs(ao: dict) -> str:
         else:
             reste.append((score, matches, f))
 
-    # Ajouter 1-3 autres formateurs (ceux avec le meilleur score, min 1 match)
     nb_autres = min(3, len([r for r in reste if r[0] > 0]))
-    nb_autres = max(1, nb_autres)  # Au moins 1 autre formateur
+    nb_autres = max(1, nb_autres)
     for i in range(min(nb_autres, len(reste))):
         selectionnes.append(reste[i])
 
-    # --- 3. Generer le markdown ---
-    titre_ao = ao.get('titre', 'cet appel d\'offres')
-    md = f"""# FICHES CV - EQUIPE PEDAGOGIQUE MOBILISEE
+    return selectionnes
 
-**Appel d'offres** : {titre_ao}
+
+def _generer_cv_formateurs(ao: dict) -> str:
+    """Genere les fiches CV des formateurs via appel API pour des profils detailles et contextualises."""
+
+    selectionnes = _selectionner_formateurs(ao)
+
+    # Construire le bloc de donnees formateurs pour le prompt
+    formateurs_data = []
+    for score, matches, f in selectionnes:
+        genre = f.get('genre', 'M')
+        mots_pertinents = ", ".join(sorted(matches)[:8]) if matches else "direction pedagogique"
+        formateurs_data.append(
+            f"- Nom: {f['nom']}\n"
+            f"  Genre: {'Masculin' if genre == 'M' else 'Feminin'}\n"
+            f"  Role: {f['role']}\n"
+            f"  Formation: {f['formation']}\n"
+            f"  Specialites: {f['specialites']}\n"
+            f"  Experience: {f['experience']}\n"
+            f"  References: {f.get('references', 'Non renseignees')}\n"
+            f"  Mots-cles pertinents pour cet AO: {mots_pertinents}"
+        )
+
+    prompt = f"""Tu es un expert en reponse aux appels d'offres publics francais.
+Genere les FICHES CV DETAILLEES de l'equipe pedagogique mobilisee pour cet appel d'offres.
+
+=== APPEL D'OFFRES ===
+{_bloc_infos_ao(ao)}
+
+=== FORMATEURS SELECTIONNES ({len(selectionnes)} personnes) ===
+{chr(10).join(formateurs_data)}
+
+=== INSTRUCTIONS ===
+Pour CHAQUE formateur, genere une fiche CV riche et contextualise comprenant :
+
+1. **Tableau recapitulatif** (Formation, Specialites, Experience, Annees d'experience)
+2. **Profil detaille** (1 paragraphe de 4-6 phrases) :
+   - Parcours professionnel valorise et contextualise au secteur de l'acheteur
+   - Pour Mickael Bertolla : mentionner son parcours unique d'ingenieur Mines Saint-Etienne, puis trader d'options sur les marches financiers americains (Akuna Capital Chicago, selectionne parmi 7000 candidats), apportant rigueur analytique et approche data-driven. Mentionner aussi son livre "L'IA et la generation de texte" (Ed. ENI, best-seller 2025)
+   - Expertise specifique en lien DIRECT avec les besoins de l'AO
+   - Resultats concrets obtenus (chiffres si disponibles)
+   - NE PAS utiliser de formulations generiques type "il/elle", "Fort(e)", "retenu(e)"
+   - Utiliser le genre grammatical correct (masculin/feminin) pour chaque formateur
+3. **Contribution specifique a cette mission** (2-3 phrases expliquant CONCRETEMENT ce que ce formateur apportera a ce marche specifique, en lien avec les mots-cles pertinents)
+4. **Domaines d'intervention sur ce marche** (liste de 3-4 modules/themes que ce formateur peut animer)
+
+=== REGLES ===
+- NE PAS inventer de diplomes, certifications ou experiences qui ne sont pas listees ci-dessus
+- Adapter le vocabulaire et les exemples au contexte de l'acheteur ({ao.get('acheteur', '')})
+- Chaque fiche doit faire 150-250 mots (pas plus)
+- Format Markdown avec ## pour chaque formateur, tableau |, et sous-sections en gras
+- Terminer par une section "Organisation de l'equipe" expliquant la coordination
+- Certifications de l'organisme a mentionner : {', '.join(ENTREPRISE.get('certifications', []))}
+
+=== FORMAT ===
+# FICHES CV - EQUIPE PEDAGOGIQUE MOBILISEE
+
+**Appel d'offres** : {ao.get('titre', '')}
 **Candidat** : {ENTREPRISE['nom']} ({ENTREPRISE['raison_sociale']})
 **Nombre de formateurs mobilises** : {len(selectionnes)}
 
 ---
 
-"""
-
-    for score, matches, f in selectionnes:
-        # Construire la liste de mots-cles matches pour la pertinence
-        if matches:
-            mots_pertinents = ", ".join(sorted(matches)[:8])
-        else:
-            mots_pertinents = "direction pedagogique et coordination generale"
-
-        # Extraire les references du formateur si disponibles
-        refs = f.get('references', '')
-        refs_bloc = f"\n\n**References cles :** {refs}" if refs else ""
-
-        md += f"""## {f['nom']} - {f['role']}
-
-| Element | Detail |
-|---------|--------|
-| **Formation** | {f['formation']} |
-| **Specialites** | {f['specialites']} |
-| **Experience** | {f['experience']} |
-
-**Profil detaille**
-
-{f['nom']} intervient en tant que {f['role'].lower()} au sein d'Almera. Fort(e) d'une formation en {f['formation'].split(',')[0].strip()}, il/elle a developpe une expertise reconnue en {f['specialites'].split(',')[0].strip()} et {f['specialites'].split(',')[1].strip() if ',' in f['specialites'] else 'intelligence artificielle'}. Son experience de {f['experience'].split(',')[0].strip()} lui permet d'adapter sa pedagogie aux besoins specifiques de chaque public.{refs_bloc}
-
-**Mobilisation sur cette mission :** {f['nom']} est retenu(e) pour son expertise en {mots_pertinents}, en adequation directe avec les besoins identifies dans le cahier des charges.
+## [Nom] - [Role]
+[tableau + profil + contribution + domaines]
 
 ---
-
 """
 
-    md += f"""## Organisation de l'equipe
-
-L'equipe proposee est coordonnee par **{ENTREPRISE['formateurs'][0]['nom']}** ({ENTREPRISE['formateurs'][0]['role']}), garant de la qualite pedagogique et de la coherence de l'intervention.
-
-Chaque formateur dispose d'une expertise complementaire permettant de couvrir l'ensemble des besoins exprimes dans le cahier des charges.
-
-**Certifications de l'organisme** : {', '.join(ENTREPRISE.get('certifications', []))}
-"""
-
-    return md
+    return _appel_claude(prompt, max_tokens=4000)
 
 
 def _generer_dc1_dc2(ao: dict) -> str:
@@ -842,9 +866,9 @@ Le representant habilite a engager la societe est {ent['representant']}, en sa q
 
 | Indicateur | Valeur |
 |------------|--------|
-| Chiffre d'affaires global | 200 000+ EUR |
-| CA relatif aux prestations objet du marche | 200 000+ EUR |
-| Effectif moyen annuel | 3 salaries + reseau de 10 formateurs freelance mobilisables |
+| Chiffre d'affaires global | {ent.get('chiffre_affaires', '250 000+ EUR')} |
+| CA relatif aux prestations objet du marche | {ent.get('chiffre_affaires', '250 000+ EUR')} |
+| Effectif moyen annuel | {ent.get('effectif', '3 salaries + reseau de 10 formateurs freelance specialises')} |
 
 ## 4. Capacites techniques et professionnelles
 
@@ -856,7 +880,7 @@ L'equipe permanente est composee de 3 salaries, appuyee par un reseau de 10 form
 
 ## 5. Sous-traitance
 
-Le candidat n'envisage pas de sous-traiter une partie du marche.
+Le candidat envisage de faire appel a des formateurs freelance specialises en IA pour l'execution de certaines prestations de formation. Ces intervenants, membres du reseau Almera, sont selectionnes pour leur expertise specifique et interviennent sous la coordination et la responsabilite directe du candidat. La liste des sous-traitants sera communiquee a l'acheteur conformement aux dispositions du Code de la commande publique.
 
 Fait a Paris, le {date_jour}
 
@@ -971,7 +995,8 @@ Pour chaque module :
 4. Adapte le vocabulaire et les exemples au contexte de l'acheteur
 5. Format Markdown avec titres ## et ### et tableaux
 6. INTERDIT : pas de balises HTML (<br>, <strong>, etc.) dans le markdown. Separer les elements dans les cellules de tableau par des virgules.
-7. Utiliser la troisieme personne ou l'impersonnel (pas de "j'ai selectionne", mais "sont proposees")"""
+7. Utiliser la troisieme personne ou l'impersonnel (pas de "j'ai selectionne", mais "sont proposees")
+8. IMPORTANT : Limiter les listes a puces a 4-5 items maximum par section. Privilegier des phrases redigees pour les descriptions de methodes pedagogiques, evaluations et supports. Les listes a puces doivent etre reservees aux enumerations courtes. Les objectifs pedagogiques peuvent etre sous forme de liste courte (4 items max)."""
 
     return _appel_claude(prompt, max_tokens=6000)
 
@@ -1250,9 +1275,15 @@ def _generer_acte_engagement(ao: dict) -> str:
     """Genere l'acte d'engagement pre-rempli (template)."""
     ent = ENTREPRISE
     date_jour = datetime.now().strftime("%d/%m/%Y")
-    date_limite = ao.get("date_limite", "Non precisee")
-    if "T" in str(date_limite):
+    date_limite = ao.get("date_limite") or "Non precisee"
+    if date_limite != "Non precisee" and "T" in str(date_limite):
         date_limite = date_limite.split("T")[0]
+    # Sanitize None string
+    if str(date_limite).strip().lower() in ("none", ""):
+        date_limite = "Non precisee"
+
+    duree = ao.get("duree_mois")
+    duree_txt = f"{duree} mois" if duree and str(duree).lower() != "none" else "Selon cahier des charges"
 
     budget = ao.get("budget_estime")
     budget_txt = f"{budget:,.0f} EUR HT" if budget else "[A completer selon le BPU/DPGF]"
@@ -1268,11 +1299,11 @@ def _generer_acte_engagement(ao: dict) -> str:
 ### Objet du marche
 - **Intitule** : {ao.get('titre', '[Objet du marche]')}
 - **Reference** : {ao.get('id', '[Reference du marche]')}
-- **Type** : {ao.get('type_marche', 'Services')}
-- **Procedure** : {ao.get('type_procedure', 'Procedure adaptee')}
+- **Type** : {ao.get('type_marche', 'Services') or 'Services'}
+- **Procedure** : {ao.get('type_procedure', 'Procedure adaptee') or 'Procedure adaptee'}
 
 ### Duree du marche
-- **Duree** : {ao.get('duree_mois', '[A preciser]')} mois
+- **Duree** : {duree_txt}
 - **Date previsionnelle de debut** : A preciser par l'acheteur
 
 ---
@@ -1405,7 +1436,7 @@ def _generer_dume(ao: dict) -> str:
 - **Habilitation** : Representant legal (President de SASU)
 
 ### C. Sous-traitance
-L'operateur economique n'a pas l'intention de sous-traiter une partie du marche.
+L'operateur economique envisage de sous-traiter une partie des prestations de formation a des formateurs freelance specialises en IA, membres de son reseau. Ces intervenants sont selectionnes et coordonnes par Almera, qui reste responsable de l'execution du marche.
 
 ---
 
@@ -1444,8 +1475,8 @@ judiciaire, liquidation ou faillite.
 
 | Element | Valeur |
 |---------|--------|
-| Chiffre d'affaires annuel | 200 000+ EUR |
-| CA relatif au marche | 200 000+ EUR |
+| Chiffre d'affaires annuel | {ent.get('chiffre_affaires', '250 000+ EUR')} |
+| CA relatif au marche | {ent.get('chiffre_affaires', '250 000+ EUR')} |
 | Assurance RC professionnelle | En cours d'obtention |
 
 ### C. Capacites techniques et professionnelles
@@ -1455,7 +1486,7 @@ judiciaire, liquidation ou faillite.
 | Nombre de personnes formees | 2 000+ |
 | Nombre d'entreprises clientes | 50+ |
 | Note de satisfaction | 4.9/5 (Google) |
-| Effectif | 1 salarie + reseau 10+ formateurs freelance |
+| Effectif | 3 salaries + reseau 10+ formateurs freelance |
 | Couverture geographique | France entiere |
 | Certifications qualite | Qualiopi, RS6776, France Num |
 
@@ -1610,9 +1641,11 @@ pour les personnes en situation de handicap :
 
 def _generer_checklist_soumission(ao: dict, fichiers_generes: list[str]) -> str:
     """Genere la checklist de soumission (pas d'appel API)."""
-    date_limite = ao.get("date_limite", "Non precisee")
-    if "T" in str(date_limite):
+    date_limite = ao.get("date_limite") or "Non precisee"
+    if date_limite != "Non precisee" and "T" in str(date_limite):
         date_limite = date_limite.split("T")[0]
+    if str(date_limite).strip().lower() in ("none", ""):
+        date_limite = "Non precisee"
 
     fichiers_txt = "\n".join(f"- [x] {f}" for f in fichiers_generes)
 

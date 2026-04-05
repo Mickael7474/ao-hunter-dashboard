@@ -298,13 +298,16 @@ def markdown_to_docx(
             continue
 
         # Titres
-        if stripped.startswith("# "):
+        if stripped.startswith("#") and not stripped.startswith("#|"):
             level = 0
             text = stripped
             while text.startswith("#"):
                 level += 1
                 text = text[1:]
             text = text.strip()
+            # Nettoyer le bold markdown des titres
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+            text = re.sub(r'\*(.*?)\*', r'\1', text)
 
             p = doc.add_paragraph()
             run = p.add_run(text)

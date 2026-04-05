@@ -3627,7 +3627,7 @@ def api_score_predictif(ao_id):
 
 
 @app.route("/api/batch-generer", methods=["POST"])
-def api_batch_generer():
+def api_batch_generer_smart():
     """Generation batch intelligente avec priorite automatique."""
     data = request.get_json() or {}
     max_dossiers = min(int(data.get('max', 3)), 5)  # Max 5 par batch
