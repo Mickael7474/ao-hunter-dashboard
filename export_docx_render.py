@@ -203,15 +203,16 @@ def _ajouter_table(doc, rows):
                 # Header row
                 shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1E3A5F"/>')
                 cell._tc.get_or_add_tcPr().append(shading)
-                run = p.add_run(cell_text)
+                # Retirer les ** du header (tout est deja bold)
+                clean_text = cell_text.replace("**", "")
+                run = p.add_run(clean_text)
                 _set_font(run, size=10, bold=True, color=BLANC)
             else:
                 # Alternance de couleurs
                 if i % 2 == 0:
                     shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="F3F4F6"/>')
                     cell._tc.get_or_add_tcPr().append(shading)
-                run = p.add_run(cell_text)
-                _set_font(run, size=10)
+                _appliquer_inline(p, cell_text)
 
     # Bordures legeres
     tbl = table._tbl

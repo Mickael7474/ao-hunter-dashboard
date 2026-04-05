@@ -450,7 +450,7 @@ Genere un MEMOIRE TECHNIQUE complet et professionnel pour cet appel d'offres.
 8. Si Formation : objectifs pedagogiques SMART, methodes actives detaillees (ateliers, cas pratiques, mises en situation), supports numeriques innovants, modalites d'evaluation formative et sommative
 9. Si Consulting/AMO : methodologie en 4 etapes (diagnostic, feuille de route, accompagnement, deploiement) avec livrables concrets par etape
 10. Sois precis, concret, quantifie. Pas de phrases generiques. Chaque argument doit etre illustre par un exemple reel.
-11. Format Markdown avec titres # ## ###
+11. Format Markdown avec titres # ## ###. PRIVILEGIER DES PARAGRAPHES REDIGES plutot que des listes a puces. Les listes a puces doivent etre reservees aux enumerations courtes (max 4-5 items). Le reste doit etre du texte structure en phrases completes, comme un vrai memoire professionnel. Les evaluateurs preferent un texte fluide et argumente.
 12. Pour chaque section, inclus au moins une reference client pertinente avec resultats chiffres
 {"13. Le VOLUME de chaque section doit etre PROPORTIONNEL au poids du critere (ex: critere a 30% = ~30% du memoire)" if criteres else ""}
 14. IMPORTANT : Le memoire DOIT se terminer proprement avec une conclusion. Ne depasse pas {_objectif_mots(criteres) + 1500} mots. Termine TOUJOURS par une section "CONCLUSION" de 3-5 phrases resumant les points forts de la candidature.
@@ -622,7 +622,10 @@ Total HT + note TVA exoneree + "Prix fermes et non revisables"
 - Utilise les tarifs de la RECOMMANDATION DE PRIX si disponible, sinon la grille tarifaire
 - Viser 80-90% du budget si connu
 - Certification RS6776 en OPTION separee
-- Format Markdown avec tableaux"""
+- Format Markdown avec tableaux
+- NE JAMAIS mentionner les sources de donnees (DECP, prix median marche, donnees marche) dans le document final. Ces infos sont internes uniquement.
+- NE PAS ajouter de commentaire sur la strategie de pricing ou la calibration des prix
+- Privilegier du texte structure avec des phrases completes plutot que des listes a puces"""
 
     resultat = _appel_claude(prompt, max_tokens=4000)
 
@@ -642,11 +645,18 @@ def _generer_planning(ao: dict) -> str:
 {_bloc_infos_ao(ao)}
 
 === STRUCTURE ===
-Genere un planning en format tableau Markdown avec ces colonnes :
-| Phase | Description | Semaines | Livrables |
+
+D'abord un tableau recapitulatif :
+| Phase | Periode | Livrables |
+
+Puis pour CHAQUE phase, un paragraphe detaille (pas de bullet points) expliquant :
+- Les activites prevues
+- Les jalons et points de validation
+- Les ressources mobilisees
 
 REGLES DE FORMAT STRICTES :
-- Dans les cellules du tableau, separer les elements par des virgules (PAS de <br>, PAS de bullet points)
+- Privilegier le texte redige en paragraphes, pas des listes a puces
+- Dans les cellules du tableau, separer les elements par des virgules (PAS de <br>)
 - Pas de balises HTML dans le markdown
 - Pas de diagramme de Gantt en texte/ASCII (un visuel HTML sera genere automatiquement)
 
@@ -656,11 +666,11 @@ Phases typiques :
 3. Suivi post-formation : hotline, coaching (Sx-Sy)
 4. Bilan et evaluation : rapport final, recommandations (derniere semaine)
 
-Adapter le nombre de semaines a la duree du marche (maximum 52 semaines meme pour les marches pluriannuels, detailler la premiere annee).
+Adapter le nombre de semaines a la duree du marche (maximum 52 semaines).
 
 Format Markdown."""
 
-    return _appel_claude(prompt, max_tokens=3000, modele=MODELE_LEGER)
+    return _appel_claude(prompt, max_tokens=4000, modele=MODELE_LEGER)
 
 
 def _generer_cv_formateurs(ao: dict) -> str:
@@ -730,19 +740,23 @@ def _generer_cv_formateurs(ao: dict) -> str:
         else:
             mots_pertinents = "direction pedagogique et coordination generale"
 
+        # Extraire les references du formateur si disponibles
+        refs = f.get('references', '')
+        refs_bloc = f"\n\n**References cles :** {refs}" if refs else ""
+
         md += f"""## {f['nom']} - {f['role']}
 
-### Formation et diplomes
-{f['formation']}
+| Element | Detail |
+|---------|--------|
+| **Formation** | {f['formation']} |
+| **Specialites** | {f['specialites']} |
+| **Experience** | {f['experience']} |
 
-### Specialites et competences cles
-{f['specialites']}
+**Profil detaille**
 
-### Experience professionnelle
-{f['experience']}
+{f['nom']} intervient en tant que {f['role'].lower()} au sein d'Almera. Fort(e) d'une formation en {f['formation'].split(',')[0].strip()}, il/elle a developpe une expertise reconnue en {f['specialites'].split(',')[0].strip()} et {f['specialites'].split(',')[1].strip() if ',' in f['specialites'] else 'intelligence artificielle'}. Son experience de {f['experience'].split(',')[0].strip()} lui permet d'adapter sa pedagogie aux besoins specifiques de chaque public.{refs_bloc}
 
-### Pertinence pour cet AO
-{f['nom']} est mobilise(e) sur cette mission en raison de son expertise en lien direct avec les besoins identifies : {mots_pertinents}. Son profil repond aux exigences de l'appel d'offres par ses competences en {f['specialites'].split(',')[0].strip()}.
+**Mobilisation sur cette mission :** {f['nom']} est retenu(e) pour son expertise en {mots_pertinents}, en adequation directe avec les besoins identifies dans le cahier des charges.
 
 ---
 
@@ -765,77 +779,88 @@ def _generer_dc1_dc2(ao: dict) -> str:
     ent = ENTREPRISE
     date_jour = datetime.now().strftime("%d/%m/%Y")
 
+    certifs = ", ".join(ent['certifications'])
+
     return f"""# DC1 - LETTRE DE CANDIDATURE
 
 ## Identification du pouvoir adjudicateur
-- Acheteur : {ao.get('acheteur', 'Non precise')}
-- Objet du marche : {ao.get('titre', 'Non precise')}
-- Reference : {ao.get('id', '')}
+
+| Element | Detail |
+|---------|--------|
+| Acheteur | {ao.get('acheteur', 'Non precise')} |
+| Objet du marche | {ao.get('titre', 'Non precise')} |
+| Reference | {ao.get('id', '')} |
 
 ## Identification du candidat
-- Denomination : {ent['raison_sociale']} (nom commercial : {ent['nom']})
-- Forme juridique : {ent['forme_juridique']}
-- SIRET : {ent['siret']}
-- NDA : {ent['nda']}
-- Adresse : {ent['adresse']}
-- Representant legal : {ent['representant']}
-- Telephone : {ent['telephone']}
-- Email : {ent['email']}
-- Site web : {ent['site_web']}
+
+| Element | Detail |
+|---------|--------|
+| Denomination | {ent['raison_sociale']} (nom commercial : {ent['nom']}) |
+| Forme juridique | {ent['forme_juridique']} |
+| SIRET | {ent['siret']} |
+| NDA | {ent['nda']} |
+| Adresse | {ent['adresse']} |
+| Representant legal | {ent['representant']} |
+| Telephone | {ent['telephone']} |
+| Email | {ent['email']} |
+| Site web | {ent['site_web']} |
 
 ## Objet de la candidature
-Le candidat presente sa candidature pour le marche designe ci-dessus.
-Le candidat se presente seul (candidature individuelle).
+
+Le candidat presente sa candidature pour le marche designe ci-dessus. Le candidat se presente seul (candidature individuelle).
 
 ## Attestation sur l'honneur
-Le candidat declare sur l'honneur :
-- Ne pas tomber sous le coup des interdictions de soumissionner prevues aux articles L.2141-1 a L.2141-5 et L.2141-7 a L.2141-11 du Code de la commande publique
-- Etre en regle au regard des articles L.5212-1 a L.5212-11 du code du travail (obligation d'emploi des travailleurs handicapes)
 
-Date : {date_jour}
-Signature : {ent['representant']}
+Le candidat declare sur l'honneur ne pas tomber sous le coup des interdictions de soumissionner prevues aux articles L.2141-1 a L.2141-5 et L.2141-7 a L.2141-11 du Code de la commande publique, et etre en regle au regard des articles L.5212-1 a L.5212-11 du code du travail concernant l'obligation d'emploi des travailleurs handicapes.
+
+Fait a Paris, le {date_jour}
+
+{ent['representant']}
 
 ---
 
 # DC2 - DECLARATION DU CANDIDAT INDIVIDUEL
 
 ## 1. Identification du candidat
-- Denomination sociale : {ent['raison_sociale']}
-- Nom commercial : {ent['nom']}
-- SIRET : {ent['siret']}
-- Code APE/NAF : 8559A (Formation continue d'adultes)
-- NDA : {ent['nda']}
-- Forme juridique : {ent['forme_juridique']}
-- Date de creation : 2023
-- Adresse : {ent['adresse']}
+
+| Element | Detail |
+|---------|--------|
+| Denomination sociale | {ent['raison_sociale']} |
+| Nom commercial | {ent['nom']} |
+| SIRET | {ent['siret']} |
+| Code APE/NAF | 8559A (Formation continue d'adultes) |
+| NDA | {ent['nda']} |
+| Forme juridique | {ent['forme_juridique']} |
+| Date de creation | 2023 |
+| Adresse | {ent['adresse']} |
 
 ## 2. Representant habilite
-- Nom : Mickael Bertolla
-- Qualite : President
-- Habilitation : directe (President de SASU)
+
+Le representant habilite a engager la societe est {ent['representant']}, en sa qualite de President de SASU, disposant d'une habilitation directe.
 
 ## 3. Renseignements economiques et financiers
-- Chiffre d'affaires global : 200 000+ EUR
-- Chiffre d'affaires relatif aux prestations objet du marche : 200 000+ EUR
-- Effectif moyen annuel : 1 salarie + reseau de 10 formateurs freelance
+
+| Indicateur | Valeur |
+|------------|--------|
+| Chiffre d'affaires global | 200 000+ EUR |
+| CA relatif aux prestations objet du marche | 200 000+ EUR |
+| Effectif moyen annuel | 3 salaries + reseau de 10 formateurs freelance mobilisables |
 
 ## 4. Capacites techniques et professionnelles
-### Certifications
-{chr(10).join(f'- {c}' for c in ent['certifications'])}
 
-### References
-- {ent['chiffres']}
+L'entreprise dispose des certifications suivantes : {certifs}.
 
-### Moyens humains
-- Equipe de 6 formateurs specialises en IA
-- Reseau de 10+ formateurs freelance mobilisables
-- Couverture nationale
+En termes de references, Almera a forme plus de 2 000 personnes au sein de plus de 50 entreprises, avec une note de satisfaction de 4.9/5 sur Google.
+
+L'equipe permanente est composee de 3 salaries, appuyee par un reseau de 10 formateurs freelance specialises en IA, assurant une couverture nationale.
 
 ## 5. Sous-traitance
+
 Le candidat n'envisage pas de sous-traiter une partie du marche.
 
-Date : {date_jour}
-Signature : {ent['representant']}
+Fait a Paris, le {date_jour}
+
+{ent['representant']}
 """
 
 
@@ -1000,7 +1025,7 @@ def _generer_references_clients(ao: dict) -> str:
         {"client": "Orange", "secteur": "Telecommunications", "mission": "Formation IA generative et prompt engineering pour les equipes techniques", "montant": "20 000 - 35 000 EUR HT", "periode": "2024-2025", "nb_personnes": "40+", "contact": "Orange Campus"},
         {"client": "Caisse des Depots", "secteur": "Institution financiere publique", "mission": "Formation IA pour les agents et cadres de la CDC", "montant": "25 000 - 50 000 EUR HT", "periode": "2024-2025", "nb_personnes": "100+", "contact": "Direction de la transformation numerique"},
         {"client": "Eli Lilly", "secteur": "Pharmaceutique", "mission": "Formation IA generative pour les equipes R&D et marketing", "montant": "10 000 - 20 000 EUR HT", "periode": "2024-2025", "nb_personnes": "30+", "contact": "Direction Scientifique"},
-        {"client": "3DS (Dassault Systemes)", "secteur": "Technologie / Ingenierie", "mission": "Formation IA et automatisation pour les ingenieurs", "montant": "15 000 - 30 000 EUR HT", "periode": "2024-2025", "nb_personnes": "40+", "contact": "Direction R&D"},
+        {"client": "3DS (agence de publicite)", "secteur": "Communication / Publicite", "mission": "Formation IA generative pour les equipes creatives", "montant": "10 000 - 20 000 EUR HT", "periode": "2024-2025", "nb_personnes": "20+", "contact": "Direction Generale"},
         {"client": "Action Logement", "secteur": "Logement social", "mission": "Acculturation IA et transformation digitale", "montant": "10 000 - 20 000 EUR HT", "periode": "2024-2025", "nb_personnes": "50+", "contact": "Direction Generale"},
         {"client": "CCI", "secteur": "Chambre de commerce", "mission": "Formation IA pour les conseillers et equipes d'accompagnement", "montant": "15 000 - 25 000 EUR HT", "periode": "2023-2025", "nb_personnes": "60+", "contact": "Direction Formation"},
     ]
@@ -1061,7 +1086,6 @@ def _generer_references_clients(ao: dict) -> str:
 *References disponibles sur demande. Attestations de bonne execution fournies sur demande.*
 
 ---
-*Document genere le {datetime.now().strftime('%d/%m/%Y')}*
 """
     return fiches
 
@@ -1330,7 +1354,6 @@ Le representant legal du candidat,
 *Note : Si l'acheteur fournit un formulaire d'Acte d'Engagement dans le DCE,
 utiliser ce formulaire en priorite et reporter les informations ci-dessus.*
 
-*Document genere le {date_jour}*
 """
 
 
@@ -1468,7 +1491,6 @@ Fait a Paris, le {date_jour}
 electronique (espd.uzpe.gov.fr) en priorite. Ce document sert de
 base pour pre-remplir le formulaire officiel.*
 
-*Document genere le {date_jour}*
 """
 
 
@@ -1498,17 +1520,27 @@ def _generer_moyens_techniques(ao: dict) -> str:
 | Outil | Usage |
 |-------|-------|
 | Midjourney | Creation d'images professionnelles |
-| DALL-E 3 (ChatGPT) | Generation d'images integree |
-| Krea AI | Design et creation visuelle |
+| DALL-E (integre a ChatGPT) | Generation d'images via ChatGPT |
+| GPT-4o Image (OpenAI) | Generation et edition d'images conversationnelle |
+| Imagen (Google Gemini) | Generation d'images via Gemini |
 | Flux (Black Forest Labs) | Generation d'images open source |
+| Ideogram | Design et typographie IA |
+| Krea AI | Design et creation visuelle temps reel |
 | Leonardo AI | Design et assets visuels |
 
 ### IA Audio & Video
 | Outil | Usage |
 |-------|-------|
-| ElevenLabs | Synthese vocale, doublage |
-| HeyGen | Avatars video IA |
+| ElevenLabs | Synthese vocale, clonage voix, doublage |
+| Suno | Generation musicale par IA |
+| Udio | Composition musicale IA |
+| HeyGen | Avatars video IA, traduction video |
 | Runway ML | Generation et edition video |
+| Sora (OpenAI) | Generation video a partir de texte |
+| Veo (Google) | Generation video IA |
+| Kling | Generation video realiste |
+| NotebookLM (Google) | Generation de podcasts audio IA |
+| Descript | Edition audio/video assistee par IA |
 
 ### Automatisation & Agents IA
 | Outil | Usage |
@@ -1573,7 +1605,6 @@ pour les personnes en situation de handicap :
 - Referent handicap : Mickael Bertolla (contact@almera.one)
 
 ---
-*Document genere le {datetime.now().strftime('%d/%m/%Y')}*
 """
 
 
@@ -1864,18 +1895,18 @@ def generer_dossier_complet(ao: dict, type_presta: str = "Formation", gng_result
         logger.error(f"Erreur conversion DOCX globale: {e}")
 
     # 17. Pre-remplissage formulaires natifs du DCE (DC1/DC2/DUME PDF/DOCX)
+    # Ne generer QUE si un vrai dossier DCE a ete telecharge
     try:
         from formulaires_natifs import preremplir_formulaires
-        # Chercher le dossier DCE (telecharge par dce_auto)
         clean_id = ao.get("id", "inconnu").replace("/", "_").replace("\\", "_")
         dossier_dce_candidat = DOSSIERS_DIR / f"DCE_{clean_id}"
-        if not dossier_dce_candidat.exists():
-            # Tenter aussi le dossier courant (les fichiers DCE sont parfois dans le meme dossier)
-            dossier_dce_candidat = dossier_path
-        formulaires_ok = preremplir_formulaires(dossier_dce_candidat, dossier_path)
-        if formulaires_ok:
-            fichiers_generes.extend(formulaires_ok)
-            logger.info(f"  {len(formulaires_ok)} formulaire(s) pre-rempli(s)")
+        if dossier_dce_candidat.exists():
+            formulaires_ok = preremplir_formulaires(dossier_dce_candidat, dossier_path)
+            if formulaires_ok:
+                fichiers_generes.extend(formulaires_ok)
+                logger.info(f"  {len(formulaires_ok)} formulaire(s) pre-rempli(s)")
+        else:
+            logger.info("  Pas de DCE telecharge, pas de preremplissage formulaires")
     except Exception as e:
         erreurs.append(f"Pre-remplissage formulaires: {e}")
         logger.error(f"Erreur pre-remplissage formulaires: {e}")

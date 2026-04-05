@@ -262,15 +262,27 @@ def _parse_cv_md(cv_md: str) -> list[dict]:
         "intervention", "justification", "selection", "reference",
         "specialite", "expertise", "profil", "parcours", "synthese",
         "introduction", "equipe", "cv", "curriculum", "resume",
+        "pertinence", "organisation", "certifications", "objectifs",
+        "missions", "fiches", "equipe pedagogique",
     ]
 
-    # Pattern "## Nom Prenom" ou "### Nom Prenom"
-    blocks = re.split(r"(?=#{2,3}\s+)", cv_md)
+    # Pattern "## Nom Prenom - Role" ou "## Nom Prenom"
+    blocks = re.split(r"(?=^##\s+)", cv_md, flags=re.MULTILINE)
     for block in blocks:
-        nom_m = re.match(r"#{2,3}\s+(.+?)$", block.split("\n")[0])
+        first_line = block.split("\n")[0]
+        nom_m = re.match(r"##\s+(.+?)$", first_line)
         if not nom_m:
             continue
-        nom = nom_m.group(1).strip(" *#-–")
+        raw = nom_m.group(1).strip(" *#")
+
+        # Extraire le role depuis le header "Nom Prenom - Role"
+        role_from_header = ""
+        if " - " in raw:
+            parts = raw.split(" - ", 1)
+            nom = parts[0].strip()
+            role_from_header = parts[1].strip()
+        else:
+            nom = raw
 
         # Ignorer les titres de sections (pas des noms de personnes)
         nom_lower = nom.lower()
@@ -286,8 +298,8 @@ def _parse_cv_md(cv_md: str) -> list[dict]:
 
         # Extraire role et specialites depuis le bloc
         role_m = re.search(r"(?:Role|Fonction|Poste|Titre)\s*[:]\s*(.+)", block, re.IGNORECASE)
-        role = role_m.group(1).strip() if role_m else ""
-        spec_m = re.search(r"(?:Specialit|Expertise|Competence)\s*[:]\s*(.+)", block, re.IGNORECASE)
+        role = role_m.group(1).strip() if role_m else role_from_header
+        spec_m = re.search(r"(?:Specialit|Expertise|Competence)[^:]*[:]\s*(.+)", block, re.IGNORECASE)
         spec = spec_m.group(1).strip() if spec_m else ""
 
         formateurs.append({"nom": nom, "role": role, "specialites": spec})
