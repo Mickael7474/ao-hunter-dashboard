@@ -1241,6 +1241,7 @@ SIRET : 989 004 551 00010 | NDA : 11757431975</textarea>
     </div>
     <p style="margin-bottom:0.75rem; font-size:0.9rem;">
         <strong>{{ dossier.nom }}</strong> - {{ dossier.fichiers | length }} fichier(s)
+        {% if dossier.get('source') == 'index' %}<span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.7rem; margin-left:0.5rem;">Archive - regenerez pour acceder aux fichiers</span>{% endif %}
     </p>
     <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
         {% for f in dossier.fichiers | sort %}

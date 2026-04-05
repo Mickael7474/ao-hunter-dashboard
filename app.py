@@ -381,15 +381,35 @@ def _scan_dossiers_dir(base_dir: Path) -> list[dict]:
 
 
 def lister_dossiers() -> list[dict]:
-    # D'abord local (PC)
+    """Liste tous les dossiers en fusionnant filesystem + index JSON."""
+    # Scanner les repertoires physiques
     dossiers = _scan_dossiers_dir(RESULTATS_DIR)
-    # Puis dossiers_generes/ (Render)
-    if not dossiers:
-        dossiers = _scan_dossiers_dir(DOSSIERS_GENERES_DIR)
-    # Fallback: index JSON
-    if not dossiers and DOSSIERS_INDEX.exists():
-        with open(DOSSIERS_INDEX, "r", encoding="utf-8") as f:
-            dossiers = json.load(f)
+    dossiers.extend(_scan_dossiers_dir(DOSSIERS_GENERES_DIR))
+
+    # Fusionner avec dossiers_index.json (contient les dossiers perdus apres redeploy)
+    if DOSSIERS_INDEX.exists():
+        try:
+            with open(DOSSIERS_INDEX, "r", encoding="utf-8") as f:
+                index_data = json.load(f)
+            if isinstance(index_data, list):
+                noms_existants = {d["nom"] for d in dossiers}
+                for entry in index_data:
+                    nom = entry.get("nom", "")
+                    if nom and nom not in noms_existants:
+                        # Normaliser la structure pour matcher _scan_dossiers_dir
+                        dossiers.append({
+                            "nom": nom,
+                            "chemin": entry.get("chemin", ""),
+                            "nb_fichiers": entry.get("nb_fichiers", 0),
+                            "fichiers": entry.get("fichiers", []),
+                            "date_creation": entry.get("date_creation", ""),
+                            "ao_id": entry.get("ao_id", ""),
+                            "ao_titre": entry.get("ao_titre", ""),
+                            "source": "index",
+                        })
+        except (json.JSONDecodeError, OSError):
+            pass
+
     return dossiers
 
 
@@ -1034,6 +1054,21 @@ def detail_ao(ao_id):
                 break
         if dossier_genere:
             break
+    # Fallback: chercher dans dossiers_index.json
+    if not dossier_genere and DOSSIERS_INDEX.exists():
+        try:
+            idx = json.loads(DOSSIERS_INDEX.read_text(encoding="utf-8"))
+            if isinstance(idx, list):
+                for entry in idx:
+                    if entry.get("ao_id") == ao_id or (clean_id and clean_id in entry.get("nom", "")):
+                        dossier_genere = {
+                            "nom": entry.get("nom", ""),
+                            "fichiers": sorted(entry.get("fichiers", [])),
+                            "source": "index",
+                        }
+                        break
+        except (json.JSONDecodeError, OSError):
+            pass
 
     # Notes
     notes = charger_notes()

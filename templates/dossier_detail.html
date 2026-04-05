@@ -21,7 +21,9 @@
     <div>
         <a href="{{ url_for('liste_dossiers') }}" class="btn btn-sm btn-outline" style="margin-bottom:0.5rem;">&larr; Retour</a>
         <h1>{{ dossier.nom }}</h1>
-        <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}</p>
+        <p>{{ dossier.nb_fichiers }} fichier(s) - Cree le {{ dossier.date_creation }}
+            {% if dossier.get('source') == 'index' %}<span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.7rem; margin-left:0.5rem;">Archive - fichiers non disponibles sur ce serveur</span>{% endif %}
+        </p>
     </div>
     <div style="display:flex; gap:0.5rem; align-items:center;">
         <a href="{{ url_for('revision_guidee', nom=dossier.nom) }}" class="btn btn-sm btn-outline" style="white-space:nowrap; border-color:#8b5cf6; color:#8b5cf6;">Revision</a>

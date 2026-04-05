@@ -18,7 +18,9 @@
                     {{ d.nom }}
                 </a>
             </h3>
-            <p>{{ d.nb_fichiers }} fichier(s) - Cree le {{ d.date_creation }}</p>
+            <p>{{ d.nb_fichiers }} fichier(s) - Cree le {{ d.date_creation }}
+                {% if d.get('source') == 'index' %}<span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.65rem; margin-left:0.5rem;">Archive (fichiers non disponibles)</span>{% endif %}
+            </p>
             <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
                 {% for f in d.fichiers | sort %}
                 {% set ext = f.rsplit('.', 1)[-1] | lower if '.' in f else '' %}
