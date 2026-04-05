@@ -59,16 +59,27 @@ def review_dossier(fichiers: dict, ao: dict, criteres_attribution: list = None) 
             "conforme": False,
         }
 
-    # Preparer un resume du dossier (tronquer pour rester dans les limites)
+    # Preparer un resume du dossier
+    # Pieces principales en entier (memoire, lettre, BPU) - les autres tronquees
+    PIECES_PRIORITAIRES = {"memoire", "lettre", "bpu", "dpgf"}
     resume_dossier = ""
     for nom, contenu in fichiers.items():
-        # Limiter chaque fichier a 1500 caracteres pour le resume
-        extrait = contenu[:1500] if len(contenu) > 1500 else contenu
+        nom_lower = nom.lower()
+        is_prioritaire = any(p in nom_lower for p in PIECES_PRIORITAIRES)
+        if is_prioritaire:
+            # Pieces principales : envoyer jusqu'a 6000 chars (suffisant pour voir debut+fin)
+            if len(contenu) > 6000:
+                extrait = contenu[:3000] + "\n[...milieu omis...]\n" + contenu[-3000:]
+            else:
+                extrait = contenu
+        else:
+            # Autres pieces : 2500 chars
+            extrait = contenu[:2500] if len(contenu) > 2500 else contenu
         resume_dossier += f"\n\n--- {nom} ---\n{extrait}"
 
-    # Tronquer le resume total a 15000 caracteres
-    if len(resume_dossier) > 15000:
-        resume_dossier = resume_dossier[:15000] + "\n[... tronque ...]"
+    # Tronquer le resume total a 40000 caracteres
+    if len(resume_dossier) > 40000:
+        resume_dossier = resume_dossier[:40000] + "\n[... reste omis ...]"
 
     # Bloc criteres d'attribution
     criteres_bloc = ""
@@ -131,10 +142,16 @@ Verifie :
 4. COMPLETUDE : toutes les pieces essentielles sont-elles presentes (memoire, lettre, BPU, DC1/DC2) ?
 5. INFORMATIONS ENTREPRISE : SIRET, NDA, representant legal sont-ils corrects partout ?
 
+ATTENTION - Regles anti faux-positifs :
+- Le SIRET 98900455100010 est VALIDE (14 chiffres, format correct). Ne le signale pas comme invalide.
+- Les documents peuvent avoir ete TRONQUES pour la review (milieu omis). Ne signale PAS comme "document incomplet" ou "texte coupe" un document dont tu ne vois que le debut et la fin. Juge la qualite sur ce que tu vois.
+- Si budget_estime ou date_limite sont "None", signale-le comme "information manquante dans les donnees AO" (severite "mineur"), pas comme probleme critique du dossier.
+- Un document est reellement tronque UNIQUEMENT s'il se termine au milieu d'un mot ou d'une phrase sans ponctuation finale.
+
 Sois strict mais juste. Ne signale que les vrais problemes."""
 
     try:
-        reponse = _appel_claude_review(prompt, max_tokens=3000)
+        reponse = _appel_claude_review(prompt, max_tokens=4000)
 
         # Parser le JSON de la reponse
         # Chercher le bloc JSON dans la reponse
@@ -613,7 +630,12 @@ def verifier_coherence_inter_documents(fichiers: dict) -> dict:
         )
         noms_cv = pattern_nom_cv.findall(cv)
         # Nettoyer : garder seulement les noms plausibles (2+ mots ou au moins 4 chars)
-        noms_cv = [n.strip() for n in noms_cv if len(n.strip()) >= 4]
+        # Filtrer : garder seulement les vrais noms (pas les titres de section generiques)
+        FAUX_NOMS = {"Specialites", "Experience", "Formation", "Competences", "Diplomes",
+                      "Pertinence", "Organisation", "Certifications", "References",
+                      "Objectifs", "Parcours", "Profil", "Missions", "Expertises"}
+        noms_cv = [n.strip() for n in noms_cv
+                   if len(n.strip()) >= 4 and n.strip().split()[0] not in FAUX_NOMS]
 
         if noms_cv:
             memoire_lower = memoire.lower()
